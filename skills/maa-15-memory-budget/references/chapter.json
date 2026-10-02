@@ -2,7 +2,7 @@
   "chapter": 15,
   "title": "What an Agent Should Remember: Retrieval, Compression, and Experience",
   "source_path": "Manuscript/part-iv/15-what-an-agent-should-remember.md",
-  "source_sha256": "8703c1f8c275c4b9b2c4a699dd6c2a9b2d9f1b97ecb65140623bfb6174e819e0",
+  "source_sha256": "8366d861583b410f38b592c793c3b20cc77b7b0b56636f264bd21f5ae165377a",
   "notebook": "notebooks/15-memory-budget.ipynb",
   "skill": "maa-15-memory-budget",
   "skill_path": "skills/maa-15-memory-budget/SKILL.md",

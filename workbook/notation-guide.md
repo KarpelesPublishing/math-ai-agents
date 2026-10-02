@@ -20,7 +20,7 @@ appears.
 - Random variables are uppercase and their realized values are the matching lowercase letter, so the
   composite state random variable is written one way and a particular value of it another.
 - Named operations such as `dec`, `Mem`, and `Reach` are roman, never italic single letters.
-- Probability is `\Pr` and expectation is `\mathbb E`. The operator `\mathbb E` carries only that meaning; a plain `E` used as a subscript label, such as a delegated destination in Chapter 27, names a thing and is not an operator.
+- Probability is `\Pr` and expectation is `\mathbb E`. Chapters 1 and 22 typeset the expectation operator as `\mathbb E`; Chapters 6, 7, 10, 11, 13, 15, 16, and 19 typeset the same operator as roman `E` (`\operatorname{E}` or `\mathrm{E}`). Both forms denote one operator. A plain `E` used as a subscript label, such as a delegated destination in Chapter 27, names a thing and is not an operator.
 - Every logarithm states its base or its units at first use.
 - Subscript `t` is time, except where a chapter declares otherwise (Chapter 19's matrix `M_{st}` uses `s` and `t` as run indices). Subscript `m` indexes a member of a declared model family.
 - A few letters change meaning between chapters, for example `\Gamma`, `\alpha`, `\delta`, `\tau`, `C`, `z`, `u`, `\Phi`, and `\lambda`. Each meaning is scoped to the chapter listed beside it and restated where it applies.
@@ -55,7 +55,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 | `\operatorname{dec}` | Decoding map from a distribution to a candidate output | [1](../guide/chapters/01-score-threshold.html) |
 | `\operatorname{eval}_\tau` | Evaluator with threshold, parser, or tolerance `\tau` | [1](../guide/chapters/01-score-threshold.html) |
 | `\theta` | Model parameters, frozen unless a chapter says otherwise | [1](../guide/chapters/01-score-threshold.html) |
-| `\mathbb E` | Expectation (the only meaning of blackboard-bold `E`; a plain subscript label such as Chapter 27's `p_E` is not this operator) | [1](../guide/chapters/01-score-threshold.html) |
+| `\mathbb E` | Expectation, as in Chapters 1 and 22 (Chapters 6, 7, 10, 11, 13, 15, 16, and 19 write the same operator as roman `E`; a plain subscript label such as Chapter 27's `p_E` is not this operator) | [1](../guide/chapters/01-score-threshold.html) |
 | `\mathcal V` | Declared evaluation contract: task distribution, scoring rule and units, sampling settings, budget, and stopping rule | [1](../guide/chapters/01-score-threshold.html) |
 | `q`, `n` | Per-token success probability and target length in the exact-match example, so the score is `q^n` | [1](../guide/chapters/01-score-threshold.html) |
 | `\Gamma(A;B)` | Interaction contrast between component sets | [2](../guide/chapters/02-four-cell-interaction.html) |
@@ -101,12 +101,11 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 | `\operatorname{EU}(a)` | Expected utility of an action | [6](../guide/chapters/06-expected-utility.html) |
 | `\operatorname{CE}` | Certainty equivalent | [6](../guide/chapters/06-expected-utility.html) |
 | `\operatorname{Ret}_t` | Return, the discounted sum of future rewards | [7](../guide/chapters/07-finite-horizon-planning.html) |
-| `a_t` | Action taken at time `t` | [7](../guide/chapters/07-finite-horizon-planning.html) |
 | `r_t` | Reward received on the transition out of `x_t` | [7](../guide/chapters/07-finite-horizon-planning.html) |
 | `\gamma` | Discount factor | [7](../guide/chapters/07-finite-horizon-planning.html) |
 | `\pi(a\mid x)` | Stochastic policy | [7](../guide/chapters/07-finite-horizon-planning.html) |
 | `V^{\pi}`, `V^{\star}` | State value under a policy, and under an optimal policy | [7](../guide/chapters/07-finite-horizon-planning.html) |
-| `Q^{\pi}`, `Q^{\star}` | Action value | [7](../guide/chapters/07-finite-horizon-planning.html) |
+| `Q^{\pi}` | Action value under a policy | [7](../guide/chapters/07-finite-horizon-planning.html) |
 | `\Phi(x)` | Local shaping potential | [7](../guide/chapters/07-finite-horizon-planning.html) |
 | `\mathcal{X}` | The finite state set | [8](../guide/chapters/08-belief-information.html) |
 | `\mathbf{b}_t` | Belief, a distribution over `\mathcal{X}` at time `t` | [8](../guide/chapters/08-belief-information.html) |
@@ -127,6 +126,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 | `\pi_o` | Option `o`'s internal policy, mapping execution information to a primitive action | [10](../guide/chapters/10-option-duration.html) |
 | `\beta_o` | Option `o`'s termination condition | [10](../guide/chapters/10-option-duration.html) |
 | `\mu` | Policy over options: the parent policy that selects which option to run | [10](../guide/chapters/10-option-duration.html) |
+| `a_t` | Action selected at step `t`; in Chapter 11, the next action selected after `t` completed pulls | [11](../guide/chapters/11-bounded-exploration.html) |
 | `\operatorname{Reg}(T)` | Regret accumulated over `T` rounds | [11](../guide/chapters/11-bounded-exploration.html) |
 | `\hat\mu_a` | Empirical mean payoff of action `a` | [11](../guide/chapters/11-bounded-exploration.html) |
 | `N_t(a)` | Number of pulls of action `a` among the `t` completed pulls, before the next decision | [11](../guide/chapters/11-bounded-exploration.html) |
@@ -137,7 +137,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 | `\lambda` | Weighting between the one-step estimate and the realized outcome | [12](../guide/chapters/12-trajectory-credit.html) |
 | `\operatorname{Ret}^{\lambda}_t` | The weighted return that interpolates between them | [12](../guide/chapters/12-trajectory-credit.html) |
 | `\operatorname{Pot}(x)` | Bounded shaping potential on declared state | [13](../guide/chapters/13-finite-policy-learning.html) |
-| `r'_t, G'_0` | Shaped reward and return; original r and G retain meaning | [13](../guide/chapters/13-finite-policy-learning.html) |
+| `r'_t, G'_0` | Shaped reward and return; the original reward `r` and the return keep their meaning (Chapter 13 gives the return a local alias for Chapter 7's `\operatorname{Ret}_t`) | [13](../guide/chapters/13-finite-policy-learning.html) |
 | `\phi` | Trainable policy parameters, distinct from the frozen model parameters `\theta` | [13](../guide/chapters/13-finite-policy-learning.html) |
 | `\hat P(x'\mid x,a)` | Learned transition-model estimate | [14](../guide/chapters/14-transition-model-bound.html) |
 | `\widehat{\operatorname{Obs}}` | Learned observation-kernel estimate | [14](../guide/chapters/14-transition-model-bound.html) |
@@ -151,7 +151,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 | `\operatorname{Cov}(k)` | Coverage at `k`: the chance that at least one of `k` samples is correct | [16](../guide/chapters/16-sample-allocation.html) |
 | `\operatorname{Sel}(k)` | Selection at `k`: the chance that the returned sample is correct | [16](../guide/chapters/16-sample-allocation.html) |
 | `\widehat c_{\mathrm{success}}` | Total attempt cost divided by authorized confirmed completions | [16](../guide/chapters/16-sample-allocation.html) |
-| `\pi(k)` | Measured chance that the selector's top-ranked sample is correct given `k` candidates | [16](../guide/chapters/16-sample-allocation.html) |
+| `\pi(k)` | Measured chance that the selector's top-ranked sample is correct given `k` candidates that contain at least one correct candidate | [16](../guide/chapters/16-sample-allocation.html) |
 | `d` | Probability that the selector scores one correct sample above one incorrect sample | [16](../guide/chapters/16-sample-allocation.html) |
 | `\operatorname{eff}(T,x)` | State resulting from applying tool `T` in state `x` | [17](../guide/chapters/17-effect-and-retry.html) |
 | `\operatorname{resp}(T,x)` | Report returned by tool `T` in state `x` | [17](../guide/chapters/17-effect-and-retry.html) |
@@ -244,7 +244,7 @@ Chapter 25 uses `\phi_t`, `\phi'`, `G`, `\widehat\Delta_G`, `\widehat C_G`, `\ta
 `\theta` keeps its book-wide meaning: frozen model parameters. These local release symbols do not
 rename the book's standing state, action, score, or authority notation.
 
-## Symbols in the focused expansion
+## Notes on symbols in Chapters 13, 16, and 18
 
 `\operatorname{Pot}(x)` in Chapter 13 is a bounded shaping potential; its terminal boundary affects policy comparisons. Chapter 16's cost per authorized confirmed success is undefined when no run succeeds. In Chapter 18, `\operatorname{Exec}_{\mathrm{ui}}` connects a proposed command to a realized operation. `\mathcal A_{\mathrm{rob}}` retains actions feasible throughout the declared belief support. `\operatorname{Fresh}(\Delta)` describes no material interface change under a stated constant-rate model.
 

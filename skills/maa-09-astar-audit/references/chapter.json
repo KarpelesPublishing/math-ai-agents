@@ -2,7 +2,7 @@
   "chapter": 9,
   "title": "Searching the Future",
   "source_path": "Manuscript/part-iii/09-searching-the-future.md",
-  "source_sha256": "93ac681c676686b345ebd549fb17d2466c9f9b5db2e564178f10eb376cd9558e",
+  "source_sha256": "71e534577f8a67e0d4cf6f5e7e9c33f9b70af4039e801210d58ed83ed3cd1c81",
   "notebook": "notebooks/09-astar-audit.ipynb",
   "skill": "maa-09-astar-audit",
   "skill_path": "skills/maa-09-astar-audit/SKILL.md",

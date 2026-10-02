@@ -11,8 +11,8 @@ Pass one complete JSON object. Missing fields are not filled with example values
 {
   "scores": [
     0.2,
-    0.5,
     0.55,
+    0.5,
     0.7
   ],
   "budgets": [

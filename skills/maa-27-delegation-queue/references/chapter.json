@@ -2,7 +2,7 @@
   "chapter": 27,
   "title": "The Mathematics of Delegation",
   "source_path": "Manuscript/part-vi/27-the-mathematics-of-delegation.md",
-  "source_sha256": "12703ffcfc57001cff4a246eccdb293917d895b2d8a0e6981b8cf66d05f727b1",
+  "source_sha256": "7d6f8f9d4eb741339437ca8d6d0f6bb90033da693133cdd73d823fc7ae27623f",
   "notebook": "notebooks/27-delegation-queue.ipynb",
   "skill": "maa-27-delegation-queue",
   "skill_path": "skills/maa-27-delegation-queue/SKILL.md",

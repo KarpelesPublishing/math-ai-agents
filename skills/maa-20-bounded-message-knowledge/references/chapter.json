@@ -2,7 +2,7 @@
   "chapter": 20,
   "title": "Messages, Beliefs, and Consensus",
   "source_path": "Manuscript/part-v/20-messages-beliefs-and-consensus.md",
-  "source_sha256": "08b7fce8dfccffd2d7995fccdef0e70d897ad2e90cc3922f3cb7ee445296de04",
+  "source_sha256": "3185adcb11c5543be7224ed250c4b3ada838e8bff79d395ed181f7d6d49ca3f0",
   "notebook": "notebooks/20-bounded-message-knowledge.ipynb",
   "skill": "maa-20-bounded-message-knowledge",
   "skill_path": "skills/maa-20-bounded-message-knowledge/SKILL.md",

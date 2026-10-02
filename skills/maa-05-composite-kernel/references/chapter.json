@@ -2,7 +2,7 @@
   "chapter": 5,
   "title": "What the Model Becomes Inside an Agent",
   "source_path": "Manuscript/revisions/part-i-v2/05-what-the-model-becomes-inside-an-agent.md",
-  "source_sha256": "8102560f56d8280e747ecc8b3712979cb78908287afe0c470a0cc3aaf1176964",
+  "source_sha256": "466dcf8031dda473ec8808bcf24d5e728739664ed11c5bb36c6100f93c969d8b",
   "notebook": "notebooks/05-composite-kernel.ipynb",
   "skill": "maa-05-composite-kernel",
   "skill_path": "skills/maa-05-composite-kernel/SKILL.md",

@@ -2,7 +2,7 @@
   "chapter": 23,
   "title": "When the Environment Gives Instructions: The Mathematics of Agent Security",
   "source_path": "Manuscript/part-vi/23-when-the-environment-gives-instructions.md",
-  "source_sha256": "f14ee57cb9c1b355a4b107b10197d4ff8f1b368437cf28f75c9d737f4dc79a87",
+  "source_sha256": "03e86886afd3eaf7e35b4fc066f0aa2024768d095f90a5db26fbfea59d6f4960",
   "notebook": "notebooks/23-local-security-monitor.ipynb",
   "skill": "maa-23-local-security-monitor",
   "skill_path": "skills/maa-23-local-security-monitor/SKILL.md",

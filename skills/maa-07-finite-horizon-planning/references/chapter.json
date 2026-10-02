@@ -2,7 +2,7 @@
   "chapter": 7,
   "title": "The Equation That Looks Ahead",
   "source_path": "Manuscript/part-ii/07-the-equation-that-looks-ahead.md",
-  "source_sha256": "3e4445d158ab74abb58c96da4cf59e754f9b574f4fc2b58fb8d7e3acf44051b1",
+  "source_sha256": "33548770f2d3be560a6ec807473b5be345f98a7dd4c0c41e67edf0c97ffad89d",
   "notebook": "notebooks/07-finite-horizon-planning.ipynb",
   "skill": "maa-07-finite-horizon-planning",
   "skill_path": "skills/maa-07-finite-horizon-planning/SKILL.md",

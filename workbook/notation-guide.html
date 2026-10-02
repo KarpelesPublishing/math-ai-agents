@@ -15,7 +15,7 @@ appears.</p>
 <li>Random variables are uppercase and their realized values are the matching lowercase letter, so the
   composite state random variable is written one way and a particular value of it another.</li>
 <li>Named operations such as <code>dec</code>, <code>Mem</code>, and <code>Reach</code> are roman, never italic single letters.</li>
-<li>Probability is <span class="math">&#92;(&#92;Pr&#92;)</span> and expectation is <span class="math">&#92;(&#92;mathbb E&#92;)</span>. The operator <span class="math">&#92;(&#92;mathbb E&#92;)</span> carries only that meaning; a plain <code>E</code> used as a subscript label, such as a delegated destination in Chapter 27, names a thing and is not an operator.</li>
+<li>Probability is <span class="math">&#92;(&#92;Pr&#92;)</span> and expectation is <span class="math">&#92;(&#92;mathbb E&#92;)</span>. Chapters 1 and 22 typeset the expectation operator as <span class="math">&#92;(&#92;mathbb E&#92;)</span>; Chapters 6, 7, 10, 11, 13, 15, 16, and 19 typeset the same operator as roman <code>E</code> (<span class="math">&#92;(&#92;operatorname{E}&#92;)</span> or <span class="math">&#92;(&#92;mathrm{E}&#92;)</span>). Both forms denote one operator. A plain <code>E</code> used as a subscript label, such as a delegated destination in Chapter 27, names a thing and is not an operator.</li>
 <li>Every logarithm states its base or its units at first use.</li>
 <li>Subscript <code>t</code> is time, except where a chapter declares otherwise (Chapter 19's matrix <code>M_{st}</code> uses <code>s</code> and <code>t</code> as run indices). Subscript <code>m</code> indexes a member of a declared model family.</li>
 <li>A few letters change meaning between chapters, for example <span class="math">&#92;(&#92;Gamma&#92;)</span>, <span class="math">&#92;(&#92;alpha&#92;)</span>, <span class="math">&#92;(&#92;delta&#92;)</span>, <span class="math">&#92;(&#92;tau&#92;)</span>, <code>C</code>, <code>z</code>, <code>u</code>, <span class="math">&#92;(&#92;Phi&#92;)</span>, and <span class="math">&#92;(&#92;lambda&#92;)</span>. Each meaning is scoped to the chapter listed beside it and restated where it applies.</li>
@@ -77,7 +77,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 </tr>
 <tr>
 <td><span class="math">&#92;(&#92;mathbb E&#92;)</span></td>
-<td>Expectation (the only meaning of blackboard-bold <code>E</code>; a plain subscript label such as Chapter 27's <code>p_E</code> is not this operator)</td>
+<td>Expectation, as in Chapters 1 and 22 (Chapters 6, 7, 10, 11, 13, 15, 16, and 19 write the same operator as roman <code>E</code>; a plain subscript label such as Chapter 27's <code>p_E</code> is not this operator)</td>
 <td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
 </tr>
 <tr>
@@ -293,11 +293,6 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 <td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
 </tr>
 <tr>
-<td><code>a_t</code></td>
-<td>Action taken at time <code>t</code></td>
-<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
-</tr>
-<tr>
 <td><code>r_t</code></td>
 <td>Reward received on the transition out of <code>x_t</code></td>
 <td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
@@ -318,8 +313,8 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 <td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
 </tr>
 <tr>
-<td><span class="math">&#92;(Q^{&#92;pi}&#92;)</span>, <span class="math">&#92;(Q^{&#92;star}&#92;)</span></td>
-<td>Action value</td>
+<td><span class="math">&#92;(Q^{&#92;pi}&#92;)</span></td>
+<td>Action value under a policy</td>
 <td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
 </tr>
 <tr>
@@ -423,6 +418,11 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 <td style="text-align: right;"><a href="../guide/chapters/10-option-duration.html">10</a></td>
 </tr>
 <tr>
+<td><code>a_t</code></td>
+<td>Action selected at step <code>t</code>; in Chapter 11, the next action selected after <code>t</code> completed pulls</td>
+<td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
+</tr>
+<tr>
 <td><span class="math">&#92;(&#92;operatorname{Reg}(T)&#92;)</span></td>
 <td>Regret accumulated over <code>T</code> rounds</td>
 <td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
@@ -474,7 +474,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 </tr>
 <tr>
 <td><code>r'_t, G'_0</code></td>
-<td>Shaped reward and return; original r and G retain meaning</td>
+<td>Shaped reward and return; the original reward <code>r</code> and the return keep their meaning (Chapter 13 gives the return a local alias for Chapter 7's <span class="math">&#92;(&#92;operatorname{Ret}&#95;t&#92;)</span>)</td>
 <td style="text-align: right;"><a href="../guide/chapters/13-finite-policy-learning.html">13</a></td>
 </tr>
 <tr>
@@ -544,7 +544,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 </tr>
 <tr>
 <td><span class="math">&#92;(&#92;pi(k)&#92;)</span></td>
-<td>Measured chance that the selector's top-ranked sample is correct given <code>k</code> candidates</td>
+<td>Measured chance that the selector's top-ranked sample is correct given <code>k</code> candidates that contain at least one correct candidate</td>
 <td style="text-align: right;"><a href="../guide/chapters/16-sample-allocation.html">16</a></td>
 </tr>
 <tr>
@@ -974,7 +974,7 @@ additionally make the ratio a fraction between zero and one. Negative contrasts 
 <code>c</code>, <span class="math">&#92;(&#92;varepsilon&#95;{&#92;rm safe}&#92;)</span>, and <span class="math">&#92;(&#92;mathcal G&#92;)</span> only for its constructed procedure-release rule.
 <span class="math">&#92;(&#92;theta&#92;)</span> keeps its book-wide meaning: frozen model parameters. These local release symbols do not
 rename the book's standing state, action, score, or authority notation.</p>
-<h2>Symbols in the focused expansion</h2>
+<h2>Notes on symbols in Chapters 13, 16, and 18</h2>
 <p><span class="math">&#92;(&#92;operatorname{Pot}(x)&#92;)</span> in Chapter 13 is a bounded shaping potential; its terminal boundary affects policy comparisons. Chapter 16's cost per authorized confirmed success is undefined when no run succeeds. In Chapter 18, <span class="math">&#92;(&#92;operatorname{Exec}&#95;{&#92;mathrm{ui}}&#92;)</span> connects a proposed command to a realized operation. <span class="math">&#92;(&#92;mathcal A&#95;{&#92;mathrm{rob}}&#92;)</span> retains actions feasible throughout the declared belief support. <span class="math">&#92;(&#92;operatorname{Fresh}(&#92;Delta)&#92;)</span> describes no material interface change under a stated constant-rate model.</p>
 <h2>Using the guide</h2>
 <p>Local indices, declared aliases, and diagram labels retain their

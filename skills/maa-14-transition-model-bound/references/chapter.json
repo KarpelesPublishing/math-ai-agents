@@ -2,7 +2,7 @@
   "chapter": 14,
   "title": "Building a World Inside",
   "source_path": "Manuscript/part-iv/14-building-a-world-inside.md",
-  "source_sha256": "25b759dde27b35dfe9430afefd3af6ef5b474ca0a7269197f9ddd12a86c63d08",
+  "source_sha256": "b05eb6981e7ab8fb77e86e7236efdcfbef82dfe2aa99ce3db690a099f12cacf3",
   "notebook": "notebooks/14-transition-model-bound.ipynb",
   "skill": "maa-14-transition-model-bound",
   "skill_path": "skills/maa-14-transition-model-bound/SKILL.md",

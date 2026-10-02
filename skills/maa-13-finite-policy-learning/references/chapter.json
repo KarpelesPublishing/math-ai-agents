@@ -2,7 +2,7 @@
   "chapter": 13,
   "title": "Learning to Choose: Training an Agent from Trajectories",
   "source_path": "Manuscript/part-iii/13-learning-to-choose.md",
-  "source_sha256": "219fa92c83802afdeb0fabeb3ab0fc731341c11ef41a6763e3bbb01730913197",
+  "source_sha256": "c7a59b429f5f75a0ae08aa3479d95f49341dba631ace4dab3920c70627ea571d",
   "notebook": "notebooks/13-finite-policy-learning.ipynb",
   "skill": "maa-13-finite-policy-learning",
   "skill_path": "skills/maa-13-finite-policy-learning/SKILL.md",

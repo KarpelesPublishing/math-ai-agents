@@ -38,6 +38,8 @@ class ChapterMathTests(unittest.TestCase):
         m=evaluate(2)['metrics'];self.assertAlmostEqual(m['interaction'],.45);self.assertAlmostEqual(m['fraction_share'],.75)
         t=evaluate(2,case='transfer')['metrics'];self.assertAlmostEqual(t['interaction'],-.15);self.assertIsNone(t['fraction_share']);self.assertEqual(t['positive_amount'],0)
         self.assertFalse(evaluate(2,case='changed')['metrics']['budget_matched'])
+        # Transfer cells follow the book's Chapter 2 order: p only 0.55 (gain 0.35), i only 0.50 (gain 0.30).
+        tr=fixture(2,'transfer')['scores'];self.assertAlmostEqual(tr[1]-tr[0],.35);self.assertAlmostEqual(tr[2]-tr[0],.30);self.assertAlmostEqual(t['signed_share'],-.30)
         d=fixture(2);d['scores']=[.2,.2,.2,.2];m=evaluate(2,d)['metrics'];self.assertIsNone(m['signed_share'])
     def test_03_frozen_fit_and_leak_rejection(self):
         m=evaluate(3)['metrics'];c=evaluate(3,case='changed')['metrics'];self.assertAlmostEqual(m['slope'],.1);self.assertAlmostEqual(m['intercept'],.1);self.assertAlmostEqual(m['test_rmse'],0)
@@ -100,6 +102,10 @@ class ChapterMathTests(unittest.TestCase):
         c=evaluate(9,case='changed')['metrics'];self.assertEqual(c['path_cost'],5);self.assertEqual(c['optimal_cost'],3);self.assertFalse(c['admissible'])
         d=fixture(9);d['edges'][0]['cost']=-1
         with self.assertRaises(ValueError):evaluate(9,d)
+    def test_09_zero_cost_edges_and_cycle_stay_optimal(self):
+        # The chapter assumes strictly positive costs; the notebook also accepts zero-cost edges (finite graph, reopening).
+        d={'nodes':['S','A','B','G'],'start':'S','goal':'G','edges':[{'from':'S','to':'A','cost':0},{'from':'A','to':'B','cost':0},{'from':'B','to':'A','cost':0},{'from':'B','to':'G','cost':1},{'from':'S','to':'G','cost':2}],'heuristic':{'S':1,'A':1,'B':1,'G':0}}
+        m=evaluate(9,d)['metrics'];self.assertEqual(m['path'],['S','A','B','G']);self.assertEqual(m['path_cost'],1);self.assertEqual(m['optimal_cost'],1);self.assertTrue(m['admissible'])
     def test_10_duration_interruption_and_disabled(self):
         m=evaluate(10)['metrics'];self.assertAlmostEqual(m['options'][0]['value'],6.038);self.assertAlmostEqual(m['options'][0]['continuation_discount'],.729)
         c=evaluate(10,case='changed')['metrics'];self.assertAlmostEqual(c['options'][0]['value'],-1.9);self.assertFalse(c['options'][0]['complete']);self.assertEqual(c['best_executed_value'],'archive')
@@ -125,6 +131,12 @@ class ChapterMathTests(unittest.TestCase):
         self.assertEqual(evaluate(12,case='changed')['metrics']['returns'],[3,3]);t=evaluate(12,case='transfer')['metrics'];self.assertEqual(t['td_zero_values'],t['td_lambda_values'])
         d=fixture(12);d['terminal']='true'
         with self.assertRaises(ValueError):evaluate(12,d)
+    def test_12_backward_trace_matches_forward_lambda_return_without_repeats(self):
+        # Equation (12.4) forward view with values fixed; online accumulating traces agree when no state repeats.
+        d=fixture(12);V=d['values'];st=d['states'];rs=d['rewards'];g=d['discount'];lam=d['lambda'];a=d['learning_rate'];N=len(rs)
+        for t in range(N):
+            ret=sum((1-lam)*lam**(k-1)*(sum(g**j*rs[t+j] for j in range(k))+g**k*V[st[t+k]]) for k in range(1,N-t))+lam**(N-t-1)*sum(g**j*rs[t+j] for j in range(N-t))
+            self.assertAlmostEqual(evaluate(12)['metrics']['td_lambda_values'][st[t]],V[st[t]]+a*(ret-V[st[t]]))
     def test_13_learning_expected_metrics_and_shaping(self):
         m=evaluate(13)['metrics'];self.assertEqual(m['verifier_optimal_action'],1);self.assertEqual(m['task_optimal_action'],0);self.assertTrue(m['policy_invariant_shaping_condition'])
         for r in m['runs']:

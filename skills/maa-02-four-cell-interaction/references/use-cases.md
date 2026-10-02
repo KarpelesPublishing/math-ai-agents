@@ -16,7 +16,7 @@ Means alone also do not supply uncertainty. Replicate-level matched outcomes or 
 
 ## New inputs
 
-For the transfer scores, the isolated gains are 0.30 and 0.35, while the joint gain is 0.50. Gamma is -0.15, and the signed ratio is -0.30. The positive amount is zero. The intact configuration still outperforms the baseline, so negative interaction does not mean the assembled system is useless.
+For the transfer scores, the isolated gains are 0.35 for the first operation and 0.30 for the second (the chapter's p and i), while the joint gain is 0.50. Gamma is -0.15, and the signed ratio is -0.30. The positive amount is zero. The intact configuration still outperforms the baseline, so negative interaction does not mean the assembled system is useless.
 
 Use a local ablation table only after declaring which two operations are varied and what stays fixed. Include the neither configuration, even when it seems uninteresting. Its score determines the decomposition. If budgets or task populations differ, export that comparability failure alongside the arithmetic and specify the matched measurements needed next.
 

@@ -20,7 +20,7 @@
 </ul>
 <h2>The question and its mathematics</h2>
 <p>A<em> orders queued states by f(n)=g(n)+h(n), where g is the best discovered path cost from the start and h estimates remaining cost. An admissible heuristic satisfies h(n)&lt;=d</em>(n,goal). A consistent heuristic satisfies h(u)&lt;=c(u,v)+h(v) for every edge and h(goal)=0.</p>
-<p>With nonnegative costs and an admissible heuristic, a search that reopens improved states can stop when the goal is popped and recover an optimal path. Consistency is a stronger local condition that simplifies the behavior of expanded states. The implementation permits reopening by inserting a state again whenever its best g improves; obsolete queue entries are skipped.</p>
+<p>With nonnegative costs and an admissible heuristic, a search that reopens improved states can stop when the goal is popped and recover an optimal path. The chapter's worked graphs assume strictly positive edge costs; this finite-graph implementation also accepts zero-cost edges. That is a deliberate, valid widening: a state is queued again only when its g strictly improves, so the search terminates on a finite graph even with zero-cost cycles, and with an admissible heuristic the first popped goal is still optimal. The chapter's statements that rely on a positive-cost step are not claimed for zero-cost edges. Consistency is a stronger local condition that simplifies the behavior of expanded states. The implementation permits reopening by inserting a state again whenever its best g improves; obsolete queue entries are skipped.</p>
 <p>The audit computes exact remaining costs using Dijkstra's algorithm on reversed edges. This is feasible because the teaching graph is fully known. It does not mean a deployed search gets an optimal heuristic for free. Path cost, expansion count, and declared heuristic expense are separate metrics with separate units. A faster search can still consume more total compute if each heuristic call is expensive.</p>
 <h2>A calculation you can run</h2>
 <p>Register nodes and nonnegative weighted directed edges. Give every node a finite nonnegative heuristic. The function first calculates exact graph distances for diagnostic comparison, then runs A* using the supplied values. It records each expanded node's g and f, reconstructs the first popped goal path, and counts heuristic calls.</p>
@@ -119,10 +119,10 @@ Execution: completed locally; constructed inputs are not deployment measurements
     <g id="xtick_1">
      <g id="line2d_1">
       <defs>
-       <path id="m7fc5997f55" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+       <path id="m96fb5dc5ad" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m7fc5997f55" x="71.473146" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m96fb5dc5ad" x="71.473146" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -132,7 +132,7 @@ Execution: completed locally; constructed inputs are not deployment measurements
     <g id="xtick_2">
      <g id="line2d_2">
       <g>
-       <use xlink:href="#m7fc5997f55" x="306.581172" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m96fb5dc5ad" x="306.581172" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -142,7 +142,7 @@ Execution: completed locally; constructed inputs are not deployment measurements
     <g id="xtick_3">
      <g id="line2d_3">
       <g>
-       <use xlink:href="#m7fc5997f55" x="541.689197" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m96fb5dc5ad" x="541.689197" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -156,14 +156,14 @@ Execution: completed locally; constructed inputs are not deployment measurements
    <g id="matplotlib.axis_2">
     <g id="ytick_1">
      <g id="line2d_4">
-      <path d="M 47.962344 189.323228  L 565.2 189.323228  " clip-path="url(#pc367207281)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 47.962344 189.323228  L 565.2 189.323228  " clip-path="url(#p856ee74575)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_5">
       <defs>
-       <path id="m696f259e3d" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+       <path id="m938fbc1fd1" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m696f259e3d" x="47.962344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m938fbc1fd1" x="47.962344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -172,11 +172,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_2">
      <g id="line2d_6">
-      <path d="M 47.962344 148.293706  L 565.2 148.293706  " clip-path="url(#pc367207281)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 47.962344 148.293706  L 565.2 148.293706  " clip-path="url(#p856ee74575)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_7">
       <g>
-       <use xlink:href="#m696f259e3d" x="47.962344" y="148.293706" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m938fbc1fd1" x="47.962344" y="148.293706" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
@@ -185,11 +185,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_3">
      <g id="line2d_8">
-      <path d="M 47.962344 107.264184  L 565.2 107.264184  " clip-path="url(#pc367207281)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 47.962344 107.264184  L 565.2 107.264184  " clip-path="url(#p856ee74575)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_9">
       <g>
-       <use xlink:href="#m696f259e3d" x="47.962344" y="107.264184" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m938fbc1fd1" x="47.962344" y="107.264184" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
@@ -198,11 +198,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_4">
      <g id="line2d_10">
-      <path d="M 47.962344 66.234663  L 565.2 66.234663  " clip-path="url(#pc367207281)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 47.962344 66.234663  L 565.2 66.234663  " clip-path="url(#p856ee74575)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_11">
       <g>
-       <use xlink:href="#m696f259e3d" x="47.962344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#m938fbc1fd1" x="47.962344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -214,14 +214,14 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
    </g>
    <g id="line2d_12">
-    <path d="M 71.473146 189.323228  L 306.581172 107.264184  L 541.689197 66.234663  " clip-path="url(#pc367207281)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <path d="M 71.473146 189.323228  L 306.581172 107.264184  L 541.689197 66.234663  " clip-path="url(#p856ee74575)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
     <defs>
-     <path id="m263b8d8235" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+     <path id="m1d1d163e94" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
     </defs>
-    <g clip-path="url(#pc367207281)">
-     <use xlink:href="#m263b8d8235" x="71.473146" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
-     <use xlink:href="#m263b8d8235" x="306.581172" y="107.264184" style="fill: #31586b; stroke: #31586b"/>
-     <use xlink:href="#m263b8d8235" x="541.689197" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+    <g clip-path="url(#p856ee74575)">
+     <use xlink:href="#m1d1d163e94" x="71.473146" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m1d1d163e94" x="306.581172" y="107.264184" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m1d1d163e94" x="541.689197" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
     </g>
    </g>
    <g id="patch_3">
@@ -239,7 +239,7 @@ Execution: completed locally; constructed inputs are not deployment measurements
   </g>
  </g>
  <defs>
-  <clipPath id="pc367207281">
+  <clipPath id="p856ee74575">
    <rect x="47.962344" y="60.080234" width="517.237656" height="135.397422"/>
   </clipPath>
  </defs>
@@ -324,10 +324,10 @@ Execution: completed locally; constructed inputs are not deployment measurements
     <g id="xtick_1">
      <g id="line2d_1">
       <defs>
-       <path id="m91d0faa588" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+       <path id="mbb5fddf9de" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#m91d0faa588" x="62.538601" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb5fddf9de" x="62.538601" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_1">
@@ -337,7 +337,7 @@ Execution: completed locally; constructed inputs are not deployment measurements
     <g id="xtick_2">
      <g id="line2d_2">
       <g>
-       <use xlink:href="#m91d0faa588" x="301.901172" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb5fddf9de" x="301.901172" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_2">
@@ -347,7 +347,7 @@ Execution: completed locally; constructed inputs are not deployment measurements
     <g id="xtick_3">
      <g id="line2d_3">
       <g>
-       <use xlink:href="#m91d0faa588" x="541.263743" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mbb5fddf9de" x="541.263743" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_3">
@@ -361,14 +361,14 @@ Execution: completed locally; constructed inputs are not deployment measurements
    <g id="matplotlib.axis_2">
     <g id="ytick_1">
      <g id="line2d_4">
-      <path d="M 38.602344 189.323228  L 565.2 189.323228  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 38.602344 189.323228  L 565.2 189.323228  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_5">
       <defs>
-       <path id="md1bac39be9" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+       <path id="mc1ecef59d8" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
-       <use xlink:href="#md1bac39be9" x="38.602344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mc1ecef59d8" x="38.602344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_5">
@@ -377,11 +377,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_2">
      <g id="line2d_6">
-      <path d="M 38.602344 164.705515  L 565.2 164.705515  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 38.602344 164.705515  L 565.2 164.705515  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_7">
       <g>
-       <use xlink:href="#md1bac39be9" x="38.602344" y="164.705515" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mc1ecef59d8" x="38.602344" y="164.705515" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_6">
@@ -390,11 +390,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_3">
      <g id="line2d_8">
-      <path d="M 38.602344 140.087802  L 565.2 140.087802  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 38.602344 140.087802  L 565.2 140.087802  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_9">
       <g>
-       <use xlink:href="#md1bac39be9" x="38.602344" y="140.087802" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mc1ecef59d8" x="38.602344" y="140.087802" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_7">
@@ -403,11 +403,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_4">
      <g id="line2d_10">
-      <path d="M 38.602344 115.470089  L 565.2 115.470089  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 38.602344 115.470089  L 565.2 115.470089  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_11">
       <g>
-       <use xlink:href="#md1bac39be9" x="38.602344" y="115.470089" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mc1ecef59d8" x="38.602344" y="115.470089" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_8">
@@ -416,11 +416,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_5">
      <g id="line2d_12">
-      <path d="M 38.602344 90.852376  L 565.2 90.852376  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 38.602344 90.852376  L 565.2 90.852376  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_13">
       <g>
-       <use xlink:href="#md1bac39be9" x="38.602344" y="90.852376" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mc1ecef59d8" x="38.602344" y="90.852376" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_9">
@@ -429,11 +429,11 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
     <g id="ytick_6">
      <g id="line2d_14">
-      <path d="M 38.602344 66.234663  L 565.2 66.234663  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+      <path d="M 38.602344 66.234663  L 565.2 66.234663  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
      </g>
      <g id="line2d_15">
       <g>
-       <use xlink:href="#md1bac39be9" x="38.602344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
+       <use xlink:href="#mc1ecef59d8" x="38.602344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
       </g>
      </g>
      <g id="text_10">
@@ -445,14 +445,14 @@ Execution: completed locally; constructed inputs are not deployment measurements
     </g>
    </g>
    <g id="line2d_16">
-    <path d="M 62.538601 189.323228  L 301.901172 164.705515  L 541.263743 66.234663  " clip-path="url(#p7188afed6e)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <path d="M 62.538601 189.323228  L 301.901172 164.705515  L 541.263743 66.234663  " clip-path="url(#peb3ea0afb6)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
     <defs>
-     <path id="mf4257c97c3" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+     <path id="m18bf64c700" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
     </defs>
-    <g clip-path="url(#p7188afed6e)">
-     <use xlink:href="#mf4257c97c3" x="62.538601" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
-     <use xlink:href="#mf4257c97c3" x="301.901172" y="164.705515" style="fill: #31586b; stroke: #31586b"/>
-     <use xlink:href="#mf4257c97c3" x="541.263743" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+    <g clip-path="url(#peb3ea0afb6)">
+     <use xlink:href="#m18bf64c700" x="62.538601" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m18bf64c700" x="301.901172" y="164.705515" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m18bf64c700" x="541.263743" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
     </g>
    </g>
    <g id="patch_3">
@@ -470,7 +470,7 @@ Execution: completed locally; constructed inputs are not deployment measurements
   </g>
  </g>
  <defs>
-  <clipPath id="p7188afed6e">
+  <clipPath id="peb3ea0afb6">
    <rect x="38.602344" y="60.080234" width="526.597656" height="135.397422"/>
   </clipPath>
  </defs>

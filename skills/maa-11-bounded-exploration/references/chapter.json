@@ -2,7 +2,7 @@
   "chapter": 11,
   "title": "The Mathematics of Curiosity",
   "source_path": "Manuscript/part-iii/11-the-mathematics-of-curiosity.md",
-  "source_sha256": "a4dfe3b58ed562b76cc796c5fd2d0bc2d59e86ade9a85f3b783724c39ee1eb1e",
+  "source_sha256": "777b9a2314ac240aa23ad6cac4270d00e0234d6a96c4dc82ee078449bdfcab66",
   "notebook": "notebooks/11-bounded-exploration.ipynb",
   "skill": "maa-11-bounded-exploration",
   "skill_path": "skills/maa-11-bounded-exploration/SKILL.md",

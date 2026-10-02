@@ -12,7 +12,7 @@ Work through the questions before turning to the solutions.
 
 ## Technical Requirements
 
-The original eighteen problems and five expansion problems require only the book and a way to calculate; a calculator is optional. To run the optional simulator probes, use Python 3.10 or later and a terminal on Windows, macOS, or Linux. The script uses the standard library and calls no external model or service. Obtain the companion files from the book's companion materials and keep the `scripts` folder beneath the working folder. Run the commands in "Simulator probes" and "Running the expansion probes" from that working folder.
+The original eighteen problems and five expansion problems require only the book and a way to calculate; a calculator is optional. To run the optional simulator probes, use Python 3.10 or later and a terminal on Windows, macOS, or Linux. The script uses the standard library and calls no external model or service. Obtain the companion files from the book's companion materials and keep the `scripts` folder beneath the working folder. Run "Simulator probes" from that folder, and "Running the expansion probes" from the package root.
 
 The complete laboratory package adds 29 notebooks (one for each of the 27 chapters, an orientation, and a document-release capstone) and 28 assistant skills (one for each chapter plus a master skill). Open guide/index.html to read the executed calculations without installing Python. Open START-HERE.md for the launcher, editable inputs, and skill installation. Notebook execution requires Python 3.11 or later and the listed notebook dependencies; the standard-library chapter commands also support Python 3.10. The master skill routes the implemented methods and their input contracts. Its calculations use declared local models unless the reader supplies compatible data, and their assumptions remain part of the result. The standalone workbook preserves these original problems and adds chapter exercises with separate solutions.
 
@@ -172,7 +172,7 @@ Change the guarantee: the destination now returns on time with probability 0.60.
 
 ## Expansion problems
 
-The five problems below extend the existing eighteen. They use the same document-release contract: an intended object, current version and recipient, current authority, a budget, and a confirmed effect. Their numerical inputs are constructed. Solve them before inspecting the separate solutions.
+The five problems below extend the existing eighteen. E.1 and E.3 use the document-release contract: an intended object, current version and recipient, current authority, a budget, and a confirmed effect. E.2, E.4, E.5 use abstract cases. Their numerical inputs are constructed. Solve them before inspecting the separate solutions.
 
 ### E.1 Computer use: the saved coordinate
 
@@ -301,7 +301,7 @@ budgets = [10, 10, 10, 20]
 Transfer case (any field not listed keeps its default value):
 
 ```text
-scores = [0.2, 0.5, 0.55, 0.7]
+scores = [0.2, 0.55, 0.5, 0.7]
 budgets = [8, 8, 8, 8]
 ```
 
@@ -1533,7 +1533,7 @@ To investigate the other named faults, change one case at a time:
 5. For Chapter 10's simulator exercise, keep both fields equal to `v2` and add `"fault": "document_changed"`. Expect `abstained` with `actual_effect` equal to `restart_required`: the release option restarts instead of inheriting its predecessor's approval.
 6. For Chapter 13's simulator exercise, add `"policy": "trained"` to the stale row (`approval_for` equal to `v1`), then repeat with `"policy": "fixed"`. Both report `abstained`; with `approval_for` equal to `v2`, both report `authorized_release`. The policy label does not change what the approval authorizes.
 
-`scripts/document_release_simulator.py` makes this constructed trace reproducible. Try matching version and approval scope for authorized release. Then change only approval scope from `v2` to `v1`; outcome must be abstention. Change only fault to `dropped_acknowledgement`; proposal remains release, while actual effect becomes pending and another release is blocked. Finally inject `duplicate_request` or `late_cancellation`; those are distinct effects, not proof that a request stayed safely idempotent. The manifest records seed, fault, proposal, actual effect, cost, recovery time, and remaining budget. It is a deterministic teaching harness, not a model of a production document service.
+`scripts/document_release_simulator.py` makes this constructed trace reproducible. Try matching version and approval scope for authorized release. Then change only approval scope from `v2` to `v1`; outcome must be abstention. Change only fault to `dropped_acknowledgement`; proposal remains release, while actual effect becomes pending with outcome abstained; treat another release as blocked. Finally inject `duplicate_request` or `late_cancellation`; those are distinct effects, not proof that a request stayed safely idempotent. The manifest records seed, fault, proposal, actual effect, cost, recovery time, and remaining budget. It is a deterministic teaching harness, not a model of a production document service.
 
 
 ## Running the original expansion probes
@@ -1543,8 +1543,8 @@ Extract the complete companion package and open a terminal in its root folder. E
 
 1. Run the computer-use fixture. Inspect reached document, effect document, denial, and pending confirmation.
 2. Run the learning fixture. Compare actual updated policies with the fixed baseline and separate sampled evaluation from exact expected values.
-3. Run orchestration at capacity two, then capacity one. Compare elapsed time and work costs before interpreting team performance.
-4. Run resources with a three-second deadline, then ten seconds. Retain zero-success procedures with an unavailable ratio.
+3. Run orchestration at capacity two, then capacity one, using a copy with `service_capacity` set to 1. Compare elapsed time and work costs before interpreting team performance.
+4. Run resources with a three-second deadline, then ten seconds, using a copy with `deadline` set to 10. Retain zero-success procedures with an unavailable ratio.
 5. Run evaluation with two repetitions. Compare task-first repetition with powers of the aggregate mean.
 
 ```text

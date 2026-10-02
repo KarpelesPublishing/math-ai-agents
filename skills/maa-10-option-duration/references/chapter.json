@@ -2,7 +2,7 @@
   "chapter": 10,
   "title": "Plans Within Plans: Hierarchical Actions and Reusable Skills",
   "source_path": "Manuscript/part-iii/10-plans-within-plans.md",
-  "source_sha256": "159f162b058587aaec0ddd6ed4d0ddf76d79806ab82bd7939a0eacf16b3f84b6",
+  "source_sha256": "ed9441f3227bb1b766903397abab72049933cbccbdce830732ae400ccb3db2bd",
   "notebook": "notebooks/10-option-duration.ipynb",
   "skill": "maa-10-option-duration",
   "skill_path": "skills/maa-10-option-duration/SKILL.md",

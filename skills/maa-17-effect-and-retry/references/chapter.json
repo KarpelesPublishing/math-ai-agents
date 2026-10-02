@@ -2,7 +2,7 @@
   "chapter": 17,
   "title": "State and Consequence",
   "source_path": "Manuscript/part-iv/17-state-and-consequence.md",
-  "source_sha256": "fddb6c4378d51814f6bfded2c832e6671c478ce86a1ccec9ffe6776619184b29",
+  "source_sha256": "b431fe6cf065ca328eca697bfe8d9dd1c898963d6e5512e826a93d4296680d02",
   "notebook": "notebooks/17-effect-and-retry.ipynb",
   "skill": "maa-17-effect-and-retry",
   "skill_path": "skills/maa-17-effect-and-retry/SKILL.md",
