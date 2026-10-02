@@ -293,7 +293,7 @@ class Chapter4ReaderTests(unittest.TestCase):
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
         text = (LAB.parent / chapter["source_path"]).read_text(encoding="utf-8")
         inline = {norm(m) for m in re.findall(r"\$([^$\n]+)\$", text)}
-        alts = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        alts = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertGreaterEqual(len(alts), 4)
         for tex in alts:
             self.assertTrue(norm(html.unescape(tex)) in allowed or norm(html.unescape(tex)) in inline, tex)

@@ -286,7 +286,7 @@ class Chapter21ReaderTests(unittest.TestCase):
             v = x + z
             self.assertAlmostEqual(2 * v, D + z)
         self.assertNotAlmostEqual(0.5 + 0.5, 1 + 0.5)  # demand 0.5, q_middle 0.5: 1.0, not the displayed 1.5
-        alts = [html.unescape(t) for t in re.findall(r'alt="Equation: ([^"]+)"', self.page)]
+        alts = [html.unescape(t) for t in re.findall(r'data-tex="([^"]+)"', self.page)]
         self.assertFalse([t for t in alts if "middle" in t])
         self.assertNotIn("q_middle", self.section_text("C21-D01"))
 
@@ -377,7 +377,7 @@ class Chapter21ReaderTests(unittest.TestCase):
         allowed |= {norm(t) for t in re.findall(r"`([^`\n]+)`", text)}
         allowed |= {norm(t) for t in re.findall(r"\\\((.*?)\\\)", text)}
         shown = []
-        shown += [norm(html.unescape(t)) for t in re.findall(r'alt="Equation: ([^"]+)"', self.page)]
+        shown += [norm(html.unescape(t)) for t in re.findall(r'data-tex="([^"]+)"', self.page)]
         self.assertTrue(shown)
         for tex in shown:
             self.assertIn(tex, allowed)

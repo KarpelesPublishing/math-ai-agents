@@ -94,7 +94,7 @@ class Chapter3ReaderTests(unittest.TestCase):
         text = (LAB.parent / chapter["source_path"]).read_text(encoding="utf-8")
         self.assertNotIn("Manuscript/chapters/", chapter["source_path"])
         # Read the equation strings from the page itself (alt text or TeX source), not from the module.
-        alts = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        alts = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertEqual(len(alts), 3)  # (3.1), (3.3) and (3.2) are pre-rendered; the slope line is typeset from its TeX
         body = norm(text)
         for tex in alts:

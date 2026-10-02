@@ -585,7 +585,7 @@ Coverage is 1-0.6^5=0.92224. Selected success is 0.92224*0.9=0.830016, because t
 
 Why prefer n1 under shared error?
 
-With a shared error, coverage stays 0.4 whatever the count. For two or more candidates selected success is 0.4*0.9=0.36 and the selector adds cost, so one candidate (success 0.4) is preferred.
+With a shared error, coverage stays 0.4 whatever the count. A bank with a correct candidate then holds only correct candidates, so for two or more candidates selected success is 0.4*1+0.6*0=0.4 whatever the selector accuracy. Success ties at 0.4, but the extra samples and the selector add cost, so one candidate (cost 1) is preferred.
 
 ## Question 3
 

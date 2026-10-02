@@ -91,12 +91,15 @@ The product of the number of values over a demonstration's controls is its numbe
 def name(**controls) -> tuple[matplotlib.figure.Figure, dict, str]:
     ...
     return fig, metrics, interpretation
+    # or, with alt text written for this state's figure (engine 1.1.0 and later):
+    return fig, metrics, interpretation, alt
 ```
 
 - **Arguments.** One keyword parameter per control key. It receives the raw value from `values` (not the label).
 - **Figure.** A Matplotlib figure. Use `readerkit.new_figure()` (one panel 6.6 x 4.3 in, two panels 10.4 x 4.3 in). Do not close it; do not call `plt.show()`. The builder applies the house style (11.5 point text, 10.5 point ticks) before every call.
 - **Metrics.** A non-empty dict of label to display value. Values are `str`, `int` or `float`. Pre-format numbers as strings (`readerkit.fmt(x, 2)`) so the number of decimals is deliberate. Never return `None`, `bool`, NaN or infinity: write `undefined (reason)` with `readerkit.undefined("no case is answered")`.
 - **Interpretation.** One paragraph about **this** state. It must contain a hand-sized calculation a reader can redo with a pencil, written in ASCII: `0.85 x 100 + 0.15 x 0 - 0 = 85.0`. Use `x` for multiplication, `/` for division and `sqrt(...)` for square roots. Wrap negative numbers in parentheses inside sums (`readerkit.signed`).
+- **Alt text (optional).** A fourth return value, a non-empty `str`, describes what this state's figure shows for a reader who cannot see it (for example "Two curves; the selected-success curve sits on the dashed blind line at 0.40 for every k."). The image's `alt` becomes `Figure: <demo title>. <alt>`. Without it the `alt` is `Figure: <demo title>. <interpretation>`, as before. Alt text obeys the text rules.
 - **Determinism.** Same inputs, same output. If you need randomness, fix a seed inside the function and say so in `assumptions`. Prefer exact grids and closed forms.
 - **Imports.** `math`, `numpy`, `matplotlib`, `readerkit`, plus any module listed through the configuration's `python_paths`. Do not read files.
 
@@ -105,7 +108,7 @@ The figure, metrics and interpretation for every state are checked:
 | Check | Rule |
 |-|-|
 | Runs | Every combination runs without an exception. |
-| Return shape | `(Figure, non-empty dict, non-empty str)`. |
+| Return shape | `(Figure, non-empty dict, non-empty str)`, or the same with a fourth non-empty `str` (alt text). |
 | Axis labels | Every visible axes has a non-empty x label and y label. |
 | Finite data | Lines, scatter offsets, bars and images contain no NaN or infinity. Leave undefined points out and say so. |
 | Metrics | Display values are finite; no `nan`, `inf` words in metrics or interpretation. |
@@ -142,7 +145,7 @@ All paths are relative to `project.root`, which is relative to the configuration
 | `module_pattern` | no | Default `ch{number:02d}.py`. |
 | `output_dir` | no | Default `readers`. |
 | `python_paths` | no | Extra import directories for chapter modules (shared project code). |
-| `chapter_list` | yes | Either `{"inline": [{"number", "title", "slug", ...}]}` or `{"path", "items_key", "fields": {"number", "title", "slug"}, "slug_mode": "value" or "path_stem", "equations": {"field", "tex", "asset"}}`. Every listed chapter appears on the index; unbuilt ones say "In preparation" and are not linked. |
+| `chapter_list` | yes | Either `{"inline": [{"number", "title", "slug", ...}]}` or `{"path", "items_key", "fields": {"number", "title", "slug"}, "slug_mode": "value" or "path_stem", "equations": {"field", "tex", "asset", "number", "alt"}}`. In `equations`, `number` (default key `number`) and `alt` (default key `alt`) are optional fields of each equation entry: the equation's printed number and a spoken form for its alt text. Every listed chapter appears on the index; unbuilt ones say "In preparation" and are not linked. |
 | `canonical_text` | no | How to find the chapter text: `manifest` (`path`, `base`, `list_key`, `id_key`, `id_format`, `path_key`), and/or `paths` (`{"6": "..."}`, with `base`), and/or `field` (`field_base`) from the chapter list; `forbidden` substrings that must never be used; `required` (default false: a missing file skips the heading check with a note). |
 | `links` | no | `index`, `notebook`, `skill`, `guide`: `{"href": pattern, "label": text, "require_target": true}`. Patterns use `{slug}`, `{number}`, `{number02}` and any string field of the chapter list entry. A link whose target file does not exist is omitted with a note, so a project without notebooks or skills still builds. |
 | `math.mathjax_script` | no | Relative path to a local MathJax `tex-svg.js`, used only for equations that have no pre-rendered SVG asset. |
@@ -154,7 +157,7 @@ All paths are relative to `project.root`, which is relative to the configuration
 
 Each string in a demo's `equations` must match, after normalization, either an equation in the canonical chapter text or an equation recorded in the chapter list. Normalization removes whitespace, braces, `\tag{...}`, the spacing commands `\, \; \: \! \quad \qquad`, and trailing `.`, `,` or `;`. Equations searched in the chapter text: display `\[...\]` and `$$...$$`, inline `\(...\)`, `$...$`, and backtick spans. Anything else is rejected, so you cannot paraphrase or invent a formula. Copy the TeX from the chapter, drop the `\tag`, and keep the rest.
 
-Rendering: if the chapter list records an SVG asset for the equation, the SVG is embedded (works with no script at all, `alt` holds the TeX). Otherwise the TeX is placed in `\[...\]` for the local MathJax file named in the configuration; without scripts, readers see the TeX source.
+Rendering: if the chapter list records an SVG asset for the equation, the SVG is embedded (works with no script at all). Its `alt` is readable text: `Equation (16.3): <alt>` when the chapter list entry has an `alt` (spoken form, checked by the text rules), otherwise `Equation (16.3), written in LaTeX: <TeX>` with `\tag`, spacing commands and `\left`/`\right`/`\big` sizing removed. The number comes from the entry's `number` field and is left out when it is not a plain number such as `16.3`. The exact TeX is kept in the image's `data-tex` attribute, which is what equation tests should read. The image is sized by width (the SVG's `ex` width x 0.55 em) with `max-width:100%` and `height:auto`, so a wide equation shrinks to fit its column instead of overflowing; the container keeps `overflow-x:auto` as a fallback. Otherwise the TeX is placed in `\[...\]` for the local MathJax file named in the configuration (its SVG output also gets `max-width:100%` and `height:auto`); without scripts, readers see the TeX source.
 
 ## A7. Commands
 
@@ -169,7 +172,7 @@ python engine/build_readers.py --config reader.config.json --chapters N --out DI
 
 ## A8. Engine tests
 
-`node engine/dom_harness.js READER.html` parses the page, checks the no-script view (default figure, alt text containing the interpretation, metrics, labelled and disabled selects, noscript note, skip link, heading order, `aria-live`), then runs the page's own script and drives every select through every state, comparing image, alt text, metrics, interpretation and selected values, and checks the reset button. It is a controlled harness, not a browser.
+`node engine/dom_harness.js READER.html` parses the page, checks the no-script view (default figure, alt text that starts `Figure: <demo title>.` and describes the figure, metrics, labelled and disabled selects, noscript note, skip link, heading order, `aria-live`), then runs the page's own script and drives every select through every state, comparing image, alt text, metrics, interpretation and selected values, and checks the reset button. It is a controlled harness, not a browser.
 
 
 # Part B. This book's choices (*The Mathematics of AI Agents*)
@@ -195,6 +198,8 @@ Use only the canonical chapter. The configuration resolves it from `Build/holist
 ## B3. Equations for this book
 
 `chapter-map.json` records each chapter's display equations with pre-rendered SVGs in `assets/math`; use those when you can, because they render with no script. Some chapters have only one or two display equations (Chapter 15 has one, Chapter 20 has two). Then use the chapter's inline math (`$...$` or backtick TeX in the chapter file), which the validator also accepts and which renders through the laboratory's local MathJax copy. Two demonstrations may show the same equation. Never write an equation that is not in the chapter.
+
+The `chapter-map.json` equation entries carry a `number` (for example `16.3`) but no `alt` field, so equation images in this book use the fallback alt text `Equation (16.3), written in LaTeX: ...`. Chapter tests read the exact TeX from the image's `data-tex` attribute.
 
 ## B4. Shared calculations
 

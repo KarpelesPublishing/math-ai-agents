@@ -223,7 +223,7 @@ class Chapter15ReaderTests(unittest.TestCase):
             t = re.sub(r"\\[,;:!]", "", t)
             return re.sub(r"[\s{}]", "", t)
         flat = norm(source)
-        found = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        found = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertEqual(len(found), 2)  # Equation (15.1) in Demonstrations 1 and 3
         for inline in (r"2\varepsilon", r"0.6\times8+0.4\times0=4.8"):
             self.assertIn(inline, flat)

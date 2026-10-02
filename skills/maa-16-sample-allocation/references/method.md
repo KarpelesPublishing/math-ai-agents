@@ -2,7 +2,7 @@
 
 Under independent equal candidate correctness p, the probability that at least one of n candidates is correct is C_n=1-(1-p)^n. Under one shared good/bad condition, C_n=p for every positive n. Equal marginals do not distinguish those joint laws.
 
-For n>1, this implementation defines selected success as q C_n, where q is the probability that the selector chooses a correct candidate conditional on one existing. When n=1 the selector is bypassed, so success is p. This convention matters: paying an unreliable selector can make two samples worse than one.
+For n>1 with independent errors, this implementation defines selected success as q C_n, where q is the probability that the selector chooses a correct candidate conditional on one existing. Under the shared condition a bank that holds a correct candidate holds only correct candidates, so any choice from it is correct and selected success equals C_n=p whatever q is. When n=1 the selector is bypassed, so success is p. This convention matters: with independent errors, paying an unreliable selector can make two samples worse than one.
 
 Expense is n c_sample+c_selector and serial latency is n t_sample+t_selector for multiple candidates. Single-candidate allocation omits selector overhead. Feasibility requires both quantities to lie within declared limits. The selected allocation maximizes success, breaking ties toward lower expense. A candidate count with high oracle coverage is not necessarily feasible or operationally best.
 

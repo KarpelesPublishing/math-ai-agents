@@ -165,7 +165,8 @@ function checkReader(file) {
     const img = section.querySelector('figure.plot img');
     assert.equal(img.getAttribute('src'), state.image, demo.id + ': default figure not in HTML');
     assert.equal(img.getAttribute('alt'), state.alt, demo.id + ': default alt text');
-    assert.ok(state.alt.includes(state.interpretation), demo.id + ': alt text must state the interpretation');
+    const altPrefix = 'Figure: ' + demo.title + '. ';
+    assert.ok(state.alt.startsWith(altPrefix) && state.alt.trim().length > altPrefix.length, demo.id + ': alt text must name the figure and describe it');
     assert.equal(section.querySelector('.interpretation').textContent, state.interpretation, demo.id + ': default interpretation not in HTML');
     assert.equal(section.querySelector('.interpretation').getAttribute('aria-live'), 'polite');
     const shown = section.querySelectorAll('.metrics .metric').map(g => [g.querySelector('dt').textContent, g.querySelector('dd').textContent]);

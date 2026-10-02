@@ -203,7 +203,7 @@ class Chapter8ReaderTests(unittest.TestCase):
         chapter = next(c for c in json.loads((LAB / "chapter-map.json").read_text()) if c["chapter"] == 8)
         norm = lambda t: re.sub(r"[\s{}]", "", re.sub(r"\\[,;:!]", "", re.sub(r"\\tag\{[^}]*\}", "", t))).rstrip(".")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
-        alts = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        alts = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertTrue(alts)
         for tex in alts:
             self.assertIn(norm(html.unescape(tex)), allowed)

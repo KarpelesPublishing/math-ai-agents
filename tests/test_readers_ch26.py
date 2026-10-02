@@ -215,7 +215,7 @@ class Chapter26ReaderTests(unittest.TestCase):
             return re.sub(r"[\s{}]", "", t).rstrip(".,;")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
         inline = {norm(x) for x in re.findall(r"`([^`]+)`", text)}
-        alts = [norm(html.unescape(a)) for a in re.findall(r'alt="Equation: ([^"]+)"', self.page)]
+        alts = [norm(html.unescape(a)) for a in re.findall(r'data-tex="([^"]+)"', self.page)]
         self.assertEqual(len(alts), 3)  # 26.1 to 26.3 as pre-rendered images; the curve formulas are inline TeX
         for a in alts:
             self.assertTrue(a in allowed or a in inline, a)

@@ -105,10 +105,10 @@ MARK_N = 5   # the notebook's worked case
 
 def lab_rows(selector, shared):
     # Under one shared failure a bank holds a correct sample only when every sample is correct, so
-    # the selector's top pick is correct with chance 1 whatever its quality: the laboratory is
-    # called with a perfect selector for that state and the selector control is not used.
+    # the selector's top pick is correct with chance 1 whatever its quality. The laboratory function
+    # applies this itself (selected success equals coverage), so the selector setting has no effect there.
     data = {
-        "candidate_success": P_LAB, "selector_accuracy": 1.0 if shared else float(selector),
+        "candidate_success": P_LAB, "selector_accuracy": float(selector),
         "sample_cost": 1, "sample_latency": 1, "selector_cost": 1, "selector_latency": 1,
         "deadline": 1000, "budget": 1000, "shared_error": bool(shared), "sample_counts": COUNTS,
     }

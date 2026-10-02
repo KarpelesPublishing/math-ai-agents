@@ -224,7 +224,7 @@ class Chapter14ReaderTests(unittest.TestCase):
             t = re.sub(r"\\[,;:!]", "", t)
             return re.sub(r"[\s{}]", "", t).rstrip(".")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
-        alts = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        alts = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertEqual(len(alts), 4)
         for tex in alts:
             self.assertIn(norm(html.unescape(tex)), allowed)

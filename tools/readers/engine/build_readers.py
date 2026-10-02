@@ -35,7 +35,7 @@ import tempfile
 from pathlib import Path
 
 ENGINE = Path(__file__).resolve().parent
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "1.1.0"
 DEPENDENCIES = ("numpy", "matplotlib", "jinja2")
 sys.dont_write_bytecode = True
 
@@ -248,7 +248,11 @@ class Project:
                 for eq in raw.get(eq_spec["field"], []) or []:
                     tex = eq if isinstance(eq, str) else eq.get(eq_spec.get("tex", "tex"), "")
                     asset = None if isinstance(eq, str) else eq.get(eq_spec.get("asset", "asset"))
-                    equations.append({"tex": tex, "asset": self.path(asset) if asset else None})
+                    label = None if isinstance(eq, str) else eq.get(eq_spec.get("number", "number"))
+                    spoken = None if isinstance(eq, str) else eq.get(eq_spec.get("alt", "alt"))
+                    equations.append({"tex": tex, "asset": self.path(asset) if asset else None,
+                                      "number": str(label) if label is not None else None,
+                                      "alt": spoken if isinstance(spoken, str) and spoken.strip() else None})
             chapters[number] = {"number": number, "title": raw[fields["title"]], "slug": slug, "raw": raw, "equations": equations}
         return dict(sorted(chapters.items()))
 
@@ -372,6 +376,9 @@ def validate_chapter_static(project, number, module):
     allowed = {normalize_tex(t) for t in text_equations(source)} if source else set()
     allowed |= {normalize_tex(e["tex"]) for e in project.chapters.get(number, {}).get("equations", [])}
     allowed.discard("")
+    for e_i, eq in enumerate(project.chapters.get(number, {}).get("equations", [])):
+        if eq.get("alt"):
+            check_text(project, f"chapter list equation {e_i + 1} alt", eq["alt"], errors)
 
     ids = set()
     for i, demo in enumerate(demos, 1):
@@ -550,6 +557,12 @@ def control_display(control, index):
     return display_value(control["values"][index])
 
 
+def state_alt(demo, interpretation, alt=None):
+    """Alt text for one state's figure: the module's own alt when given, else the interpretation."""
+    text = alt.strip() if isinstance(alt, str) and alt.strip() else interpretation.strip()
+    return f"Figure: {demo['title']}. {text}"
+
+
 def render_demo(project, module, demo, errors):
     """Render every state. Returns dict key -> state, or None after errors."""
     import matplotlib.pyplot as plt
@@ -568,13 +581,18 @@ def render_demo(project, module, demo, errors):
             errors.append(f"{where}: figure function raised {type(exc).__name__}: {exc}")
             plt.close("all")
             continue
-        if not (isinstance(result, tuple) and len(result) == 3):
-            errors.append(f"{where}: function must return (figure, metrics, interpretation)")
+        if not (isinstance(result, tuple) and len(result) in (3, 4)):
+            errors.append(f"{where}: function must return (figure, metrics, interpretation) or (figure, metrics, interpretation, alt)")
             plt.close("all")
             continue
-        fig, metrics, interpretation = result
+        fig, metrics, interpretation = result[:3]
+        given_alt = result[3] if len(result) == 4 else None
         if not hasattr(fig, "savefig") or not isinstance(metrics, dict) or not metrics or not isinstance(interpretation, str) or not interpretation.strip():
             errors.append(f"{where}: return (matplotlib Figure, non-empty dict, non-empty str)")
+            plt.close("all")
+            continue
+        if len(result) == 4 and not (isinstance(given_alt, str) and given_alt.strip()):
+            errors.append(f"{where}: the optional fourth return value (alt text) must be a non-empty str")
             plt.close("all")
             continue
         errors.extend(inspect_figure(fig, project, where))
@@ -592,12 +610,31 @@ def render_demo(project, module, demo, errors):
         check_text(project, f"{where} interpretation", interpretation, errors, computed=True)
         if not (HAND_CALC.search(interpretation) or any(HAND_CALC.search(v) for _, v in shown)):
             errors.append(f"{where}: no hand-sized calculation (for example '0.85 x 100 + 0.15 x 0 = 85.0') in the interpretation or metrics")
-        alt = f"Figure: {demo['title']}. {interpretation.strip()}"
+        if given_alt is not None:
+            check_text(project, f"{where} alt", given_alt, errors, computed=True)
+        alt = state_alt(demo, interpretation, given_alt)
         states[state_key(indices)] = {
             "image": svg_data_uri(svg), "alt": alt, "metrics": shown,
             "interpretation": interpretation.strip(), "selected": selected,
         }
     return states
+
+
+def alt_tex(tex):
+    """LaTeX shortened for alt text: no tag, spacing commands, delimiter sizing or repeated spaces."""
+    t = re.sub(r"\\tag\*?\{[^{}]*\}", "", tex)
+    t = re.sub(r"\\!", "", t)
+    t = re.sub(r"\\(?:qquad|quad)(?![A-Za-z])|\\[,;:]", " ", t)
+    t = re.sub(r"\\(?:left|right|[bB]igg?[lr]?)(?![A-Za-z])", "", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def equation_alt(tex, number=None, alt=None):
+    """Readable alt text for an equation image: the chapter list's alt when given, else its LaTeX."""
+    label = f"Equation ({number})" if number and re.fullmatch(r"[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*", str(number)) else "Equation"
+    if isinstance(alt, str) and alt.strip():
+        return f"{label}: {alt.strip()}"
+    return f"{label}, written in LaTeX: {alt_tex(tex)}"
 
 
 def equation_blocks(project, number, demo):
@@ -610,7 +647,10 @@ def equation_blocks(project, number, demo):
             svg = clean_svg(entry["asset"].read_text(encoding="utf-8"))
             match = re.search(r'height="([\d.]+)ex"', svg)
             height = round(float(match.group(1)) * 0.55, 2) if match else 1.6
-            blocks.append({"kind": "svg", "src": svg_data_uri(svg), "tex": tex, "height": height})
+            match = re.search(r'width="([\d.]+)ex"', svg)
+            width = round(float(match.group(1)) * 0.55, 2) if match else None
+            blocks.append({"kind": "svg", "src": svg_data_uri(svg), "tex": tex, "height": height, "width": width,
+                           "alt": equation_alt(tex, entry.get("number"), entry.get("alt"))})
         else:
             blocks.append({"kind": "tex", "tex": tex})
     return blocks

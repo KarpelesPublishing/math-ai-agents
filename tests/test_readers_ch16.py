@@ -159,6 +159,13 @@ class Chapter16ReaderTests(unittest.TestCase):
         self.assertIn("0.64 x 0.50 = 0.32", low["interpretation"])
         self.assertAlmostEqual(cov(0.4, 2) * 0.5, 0.32)
 
+    def test_d02_reader_passes_the_selector_setting_to_the_lab_unchanged(self):
+        # The laboratory function now handles the shared failure itself, so the reader no longer
+        # substitutes a perfect selector for that state.
+        source = (LAB / "tools" / "readers" / "chapters" / "ch16.py").read_text(encoding="utf-8")
+        self.assertNotIn("1.0 if shared", source)
+        self.assertIn('"selector_accuracy": float(selector)', source)
+
     def test_d03_sixty_unit_allocations(self):
         cases = {"Book values: 0.73 and 0.785": (0.73, 0.785), "Strong: 0.95 for both": (0.95, 0.95),
                  "Weak: 0.50 for both": (0.5, 0.5), "Worse than random: 0.15 for both": (0.15, 0.15)}
@@ -236,10 +243,21 @@ class Chapter16ReaderTests(unittest.TestCase):
             return re.sub(r"[\s{}]", "", t).rstrip(".,;")
 
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
-        shown = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        shown = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertGreaterEqual(len(shown), 8)
         for tex in shown:
             self.assertIn(norm(html.unescape(tex)), allowed)
+        # g6-10: the alt text names the equation by number instead of being raw TeX alone
+        alts = re.findall(r'<p class="equation"><img [^>]*alt="([^"]+)"', self.page)
+        self.assertEqual(len(alts), len(shown))
+        numbers = {e["number"] for e in chapter["equations"]}
+        for alt in alts:
+            match = re.match(r"Equation \((16\.\d)\), written in LaTeX: ", html.unescape(alt))
+            self.assertIsNotNone(match, alt)
+            self.assertIn(match.group(1), numbers)
+        # g6-17: equation images are sized by width and may shrink to the column
+        self.assertNotIn("max-width:none", self.page)
+        self.assertIn(".equation img{display:block;max-width:100%;height:auto", self.page)
 
     def test_links_and_offline(self):
         for href in ("../../notebooks/16-sample-allocation.ipynb", "../../skills/maa-16-sample-allocation/SKILL.md"):

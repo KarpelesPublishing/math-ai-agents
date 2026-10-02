@@ -33,7 +33,7 @@
 <p>{{ demo.explanation }}</p>
 <div class="formula" role="group" aria-label="Equations from the chapter">
 {% for eq in demo.equation_blocks %}
-{% if eq.kind == 'svg' %}<p class="equation"><img src="{{ eq.src }}" alt="Equation: {{ eq.tex }}" style="height:{{ eq.height }}em"></p>{% else %}<p class="equation tex">\[{{ eq.tex }}\]</p>{% endif %}
+{% if eq.kind == 'svg' %}<p class="equation"><img src="{{ eq.src }}" alt="{{ eq.alt }}" data-tex="{{ eq.tex }}" style="{% if eq.width %}width:{{ eq.width }}em{% else %}height:{{ eq.height }}em;max-width:none{% endif %}"></p>{% else %}<p class="equation tex">\[{{ eq.tex }}\]</p>{% endif %}
 {% endfor %}
 <p class="symbols">{{ demo.symbols }}</p>
 </div>

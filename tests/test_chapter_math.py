@@ -164,6 +164,25 @@ class ChapterMathTests(unittest.TestCase):
         m=evaluate(16)['metrics'];self.assertEqual(m['selected_allocation']['samples'],5);self.assertAlmostEqual(m['selected_allocation']['coverage'],.92224);self.assertAlmostEqual(m['selected_allocation']['selected_success'],.830016)
         self.assertEqual(evaluate(16,case='changed')['metrics']['selected_allocation']['samples'],1)
         d=fixture(16);d['budget']=0;self.assertIsNone(evaluate(16,d)['metrics']['selected_allocation'])
+    def test_16_shared_failure_selection_equals_coverage(self):
+        # Hand check: under one shared failure all samples are right or all are wrong, so a bank with a
+        # correct sample holds only correct samples and any pick is correct. Sel(n) = p x 1 + (1 - p) x 0 = p.
+        rows=evaluate(16,case='changed')['metrics']['allocations']
+        self.assertEqual([r['samples'] for r in rows],[1,2,3,5])
+        for r in rows:
+            with self.subTest(samples=r['samples']):
+                self.assertAlmostEqual(r['coverage'],.4);self.assertAlmostEqual(r['selected_success'],.4*1+(1-.4)*0)
+        # Tie on success 0.4; cost 1 (one sample, no selector) beats 2+1, 3+1 and 5+1.
+        best=evaluate(16,case='changed')['metrics']['selected_allocation'];self.assertEqual((best['samples'],best['cost']),(1,1.0))
+        for q in (0.0,0.3,0.9,1.0):
+            d=fixture(16,'changed');d['selector_accuracy']=q;d['sample_counts']=[2,7]
+            with self.subTest(selector_accuracy=q):
+                self.assertEqual([r['selected_success'] for r in evaluate(16,d)['metrics']['allocations']],[.4,.4])
+        # Independent errors still multiply: Sel(2) = (1 - 0.6^2) x 0.3 = 0.64 x 0.3 = 0.192.
+        d=fixture(16);d['selector_accuracy']=.3;d['sample_counts']=[2]
+        self.assertAlmostEqual(evaluate(16,d)['metrics']['allocations'][0]['selected_success'],.192)
+        assumptions=' '.join(evaluate(16,case='changed')['assumptions'])
+        self.assertIn('q is not used',assumptions)
     def test_17_effect_ack_verification_and_key_contract(self):
         m=evaluate(17)['metrics'];self.assertEqual(m['effects'],2);self.assertEqual(m['duplicate_effects'],1);self.assertTrue(m['confirmed']);self.assertFalse(m['unresolved']);self.assertAlmostEqual(m['retry_expected_cost'],8.2)
         c=evaluate(17,case='changed')['metrics'];self.assertEqual(c['effects'],1);self.assertFalse(c['unresolved']);self.assertEqual(c['preferred_next_step'],'stop')

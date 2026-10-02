@@ -4,11 +4,11 @@
 
 Default coverage at n=5 is 1-0.6^5=0.92224. Selected success is 0.9 times that value, or 0.830016. Cost and serial latency are both 6, so this allocation exactly fits the limits and wins among the listed options.
 
-Under shared error, every multiple-candidate row has coverage 0.4 and selected success 0.36. The single candidate bypasses selection and remains at 0.4 with lower expense. It therefore wins. More samples now add cost without improving justified completion, even though each candidate has the same marginal correctness as before.
+Under shared error, every multiple-candidate row has coverage 0.4 and selected success 0.4: a bank with a correct candidate holds only correct candidates, so the selector's 0.9 accuracy makes no difference. The single candidate bypasses selection and also delivers 0.4, with lower expense. It therefore wins the tie. More samples now add cost without improving justified completion, even though each candidate has the same marginal correctness as before.
 
 ## Changed assumption
 
-The formula q C_n is a declared selector model. Real selector accuracy can depend on candidate count, task difficulty, disagreement, or the distribution of wrong answers. A constant q should not be adopted merely because it makes the curve easy to draw. Measure it on held-out candidate sets or state its uncertainty.
+The formula q C_n for independent errors is a declared selector model. Real selector accuracy can depend on candidate count, task difficulty, disagreement, or the distribution of wrong answers. A constant q should not be adopted merely because it makes the curve easy to draw. Measure it on held-out candidate sets or state its uncertainty.
 
 Independence is another strong assumption. Repeated samples from one shared flawed context can agree for the wrong reason. The changed construction is deliberately extreme, showing why marginal correctness alone cannot justify the usual saturation curve.
 

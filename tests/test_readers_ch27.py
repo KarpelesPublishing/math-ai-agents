@@ -226,7 +226,7 @@ class Chapter27ReaderTests(unittest.TestCase):
             return re.sub(r"[\s{}]", "", t).rstrip(".,;")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
         allowed |= {norm(m) for m in re.findall(r"`([^`]+)`", CHAPTER_TEXT.read_text(encoding="utf-8"))}
-        alts = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        alts = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertEqual(len(alts), 3)  # (27.2), (27.3), (27.4) are pre-rendered; the inline M/M/1 formula is typeset as TeX
         self.assertIn(r"1/(\mu-f\lambda)", html.unescape(self.page))
         for tex in alts:

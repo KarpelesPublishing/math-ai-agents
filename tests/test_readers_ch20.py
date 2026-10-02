@@ -232,7 +232,7 @@ class Chapter20ReaderTests(unittest.TestCase):
         norm = lambda t: re.sub(r"[\s{}]", "", re.sub(r"\\[,;:!]|\\q?quad", "", re.sub(r"\\tag\{[^}]*\}", "", t))).rstrip(".")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
         allowed.add(norm(r"\operatorname{Know}_i(F)"))
-        alts = re.findall(r'alt="Equation: ([^"]+)"', self.page)
+        alts = re.findall(r'data-tex="([^"]+)"', self.page)
         self.assertGreaterEqual(len(alts), 1)
         for tex in alts:
             self.assertIn(norm(html.unescape(tex)), allowed)

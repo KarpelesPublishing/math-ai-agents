@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -113,6 +114,142 @@ class EnginePureFunctionTests(unittest.TestCase):
                              capture_output=True, text=True, timeout=60)
         self.assertNotEqual(run.returncode, 0)
         self.assertIn("needs the Python packages numpy, matplotlib and jinja2", run.stdout + run.stderr)
+
+
+class AltTextAndEquationLayoutTests(unittest.TestCase):
+    """Engine 1.1.0: optional per-state figure alt, readable equation alt, equations that fit the column."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.engine = load_engine()
+        cls.tmp = Path(tempfile.mkdtemp(prefix="reader-alt-"))
+        cls.asset = cls.tmp / "eq.svg"
+        cls.asset.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="40ex" height="2.5ex" viewBox="0 0 400 25">'
+                             '<text x="0" y="20">A</text></svg>', encoding="utf-8")
+        config = json.loads((FIXTURE / "reader.config.json").read_text())
+        config["project"]["root"] = str(FIXTURE)
+        config["chapter_list"]["inline"][1]["equations"] = [
+            {"tex": "A = s^{2}", "asset": str(cls.asset), "number": "2.1", "alt": "A equals s squared"},
+            {"tex": r"P = 4\,s \tag{2.2}", "asset": str(cls.asset), "number": "2.2"},
+            {"tex": "d = s", "asset": str(cls.asset), "number": "un-numbered display 3"},
+        ]
+        config["chapter_list"]["equations"] = {"field": "equations", "tex": "tex", "asset": "asset"}
+        cls.config = cls.tmp / "reader.config.json"
+        cls.config.write_text(json.dumps(config), encoding="utf-8")
+        cls.project = cls.engine.Project(cls.config)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def demo(self, *equations):
+        return {"id": "C02-D01", "title": "Square", "equations": list(equations)}
+
+    def test_state_alt_falls_back_to_the_interpretation(self):
+        self.assertEqual(self.engine.state_alt(self.demo(), " A = 2 x 2 = 4. "), "Figure: Square. A = 2 x 2 = 4.")
+        self.assertEqual(self.engine.state_alt(self.demo(), "A = 4.", "   "), "Figure: Square. A = 4.")
+
+    def test_state_alt_uses_the_module_alt_when_given(self):
+        alt = self.engine.state_alt(self.demo(), "A = 2 x 2 = 4.", "A square of side 2 shaded inside a 4 by 4 grid.")
+        self.assertEqual(alt, "Figure: Square. A square of side 2 shaded inside a 4 by 4 grid.")
+
+    def test_chapter_list_equation_number_and_alt_are_loaded(self):
+        eqs = self.project.chapters[2]["equations"]
+        self.assertEqual([e["number"] for e in eqs], ["2.1", "2.2", "un-numbered display 3"])
+        self.assertEqual([e["alt"] for e in eqs], ["A equals s squared", None, None])
+
+    def test_equation_alt_is_readable_and_the_tex_is_kept(self):
+        blocks = self.engine.equation_blocks(self.project, 2, self.demo("A = s^{2}", r"P = 4\,s", "d = s"))
+        self.assertEqual([b["kind"] for b in blocks], ["svg", "svg", "svg"])
+        self.assertEqual(blocks[0]["alt"], "Equation (2.1): A equals s squared")
+        self.assertEqual(blocks[1]["alt"], "Equation (2.2), written in LaTeX: P = 4 s")
+        self.assertEqual(blocks[2]["alt"], "Equation, written in LaTeX: d = s")
+        self.assertEqual([b["tex"] for b in blocks], ["A = s^{2}", r"P = 4\,s", "d = s"])
+        self.assertEqual((blocks[0]["width"], blocks[0]["height"]), (22.0, 1.38))
+
+    def test_equation_alt_cleaning(self):
+        alt = self.engine.equation_alt(r"\mathrm{E}\!\left[\frac{m}{k}\right] \;=\; p \tag{9.1}", "9.1")
+        self.assertEqual(alt, r"Equation (9.1), written in LaTeX: \mathrm{E}[\frac{m}{k}] = p")
+
+    def test_equation_alt_obeys_the_text_rules(self):
+        self.project.chapters[2]["equations"][0]["alt"] = "A " + "-" * 2 + " s squared"
+        try:
+            module = types.ModuleType("alt_rule_module")
+            module.CHAPTER = {"number": 2, "title": "Squares", "subtitle": "x", "summary": "x", "demos": [{}]}
+            errors, _ = self.engine.validate_chapter_static(self.project, 2, module)
+        finally:
+            self.project.chapters[2]["equations"][0]["alt"] = "A equals s squared"
+        self.assertTrue(any("equation 1 alt" in e and "double hyphen" in e for e in errors), errors)
+
+    def test_equation_css_lets_images_shrink_to_the_column(self):
+        css = (ENGINE / "static" / "reader.css").read_text(encoding="utf-8")
+        self.assertIn(".equation{margin:6px 0 10px;max-width:100%;overflow-x:auto;overflow-y:hidden}", css)
+        self.assertIn(".equation img{display:block;max-width:100%;height:auto;margin:0 auto}", css)
+        self.assertIn(".equation mjx-container svg{max-width:100%;height:auto}", css)
+        template = (ENGINE / "templates" / "chapter.html.j2").read_text(encoding="utf-8")
+        self.assertIn('alt="{{ eq.alt }}" data-tex="{{ eq.tex }}"', template)
+
+    def test_page_carries_equation_alt_tex_and_width(self):
+        if importlib.util.find_spec("jinja2") is None:
+            self.skipTest(f"jinja2 not installed in {sys.executable}; reader templates cannot be rendered")
+        demo = {"id": "C02-D01", "title": "Square", "question": "How big?", "explanation": "Square the side.",
+                "equations": ["A = s^{2}", r"P = 4\,s"], "symbols": "s is the side.", "prediction": "Guess.",
+                "application": "Scale.", "assumptions": "Constructed.", "check": "Area of side 3?", "answer": "9.",
+                "provenance": "Constructed example.", "source_section": "The area of a square",
+                "controls": [{"key": "side", "label": "Side", "values": [1, 2], "default": 1}]}
+        state = {"image": self.engine.svg_data_uri("<svg></svg>"), "alt": self.engine.state_alt(demo, "A = 1 x 1 = 1."),
+                 "metrics": [["Area", "1"]], "interpretation": "A = 1 x 1 = 1.", "selected": "Side: 1"}
+        view = [{"key": "side", "label": "Side", "options": [{"index": 0, "text": "1", "selected": True},
+                                                              {"index": 1, "text": "2", "selected": False}]}]
+        demos = [{**demo, "states": {"0": state}, "default_key": "0", "controls_view": view, "default_state": state,
+                  "equation_blocks": self.engine.equation_blocks(self.project, 2, demo)}]
+        page = self.engine.render_page(self.project, 2, {"number": 2, "title": "Squares", "subtitle": "x", "summary": "x"}, demos, [])
+        self.assertIn('alt="Equation (2.1): A equals s squared" data-tex="A = s^{2}" style="width:22.0em"', page)
+        self.assertIn('alt="Equation (2.2), written in LaTeX: P = 4 s" data-tex="P = 4\\,s"', page)
+        self.assertNotIn("max-width:none", page)
+        self.assertIn('alt="Figure: Square. A = 1 x 1 = 1."', page)
+
+    def test_render_demo_accepts_an_optional_fourth_alt_value(self):
+        if not all(importlib.util.find_spec(m) for m in ("numpy", "matplotlib")):
+            self.skipTest(f"numpy or matplotlib not installed in {sys.executable}; figures cannot be drawn")
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        def picture(side=1, alt="given"):
+            fig, ax = plt.subplots(figsize=(4, 3))
+            ax.plot([0, side], [0, side * side])
+            ax.set_xlabel("side")
+            ax.set_ylabel("area")
+            interpretation = f"A = {side} x {side} = {side * side}."
+            if alt == "none":
+                return fig, {"Area": side * side}, interpretation
+            if alt == "empty":
+                return fig, {"Area": side * side}, interpretation, " "
+            if alt == "dash":
+                return fig, {"Area": side * side}, interpretation, "A rising line — steep."
+            return fig, {"Area": side * side}, interpretation, f"A line rising from 0 to {side * side}."
+
+        module = types.ModuleType("alt_render_module")
+        module.picture = picture
+        base = {"id": "C02-D01", "title": "Square", "function": "picture"}
+        cases = {
+            "given": ("Figure: Square. A line rising from 0 to 4.", None),
+            "none": ("Figure: Square. A = 2 x 2 = 4.", None),
+            "empty": (None, "fourth return value (alt text) must be a non-empty str"),
+            "dash": (None, "alt: contains em dash"),
+        }
+        for mode, (expected_alt, expected_error) in cases.items():
+            with self.subTest(mode=mode):
+                demo = {**base, "controls": [{"key": "side", "label": "Side", "values": [2], "default": 2},
+                                             {"key": "alt", "label": "Alt", "values": [mode], "default": mode}]}
+                errors = []
+                states = self.engine.render_demo(self.project, module, demo, errors)
+                if expected_error:
+                    self.assertTrue(any(expected_error in e for e in errors), errors)
+                else:
+                    self.assertEqual(errors, [])
+                    self.assertEqual(states["0,0"]["alt"], expected_alt)
 
 
 class EngineBuildTests(unittest.TestCase):
