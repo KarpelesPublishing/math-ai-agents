@@ -31,6 +31,7 @@
     "delays": "Optional list of nonnegative delays in the same time unit; requires change_rate."
   },
   "example_input": "data/examples/ch18.json",
+  "reader": "readers/18-interface-freshness/reader.html",
   "equations": [
     {
       "label": "EQV18-01",

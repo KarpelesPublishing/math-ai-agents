@@ -3,6 +3,8 @@
   "book": "The Mathematics of AI Agents",
   "chapters": 27,
   "status": "source-build",
+  "readers": 27,
+  "readers_index": "readers/index.html",
   "canonical_sources": [
     {
       "chapter": 1,
@@ -29,6 +31,7 @@
         "threshold": "Pass cutoff in [0,1]."
       },
       "example_input": "data/examples/ch01.json",
+      "reader": "readers/01-score-threshold/reader.html",
       "equations": [
         {
           "label": "EQV1-01",
@@ -96,6 +99,7 @@
         "budgets": "Four nonnegative matched resource budgets in the same order."
       },
       "example_input": "data/examples/ch02.json",
+      "reader": "readers/02-four-cell-interaction/reader.html",
       "equations": [
         {
           "label": "EQ02-01",
@@ -163,6 +167,7 @@
         "family": "linear or log, declared before inspecting test outcomes."
       },
       "example_input": "data/examples/ch03.json",
+      "reader": "readers/03-prospective-forecast/reader.html",
       "equations": [
         {
           "label": "EQ03-01",
@@ -222,6 +227,7 @@
         "edges": "Directed edge list with from,to:registered identifiers and allowed:exact boolean."
       },
       "example_input": "data/examples/ch04.json",
+      "reader": "readers/04-permission-reachability/reader.html",
       "equations": [
         {
           "label": "EQV4-01",
@@ -322,6 +328,7 @@
         "assemblies": "Optional rows with name,budget,steps,observation,memory,retrieval,tool. Context maps are square stochastic matrices in the declared context encoding. Chooser stays fixed. Resource allowances must share units; actual consumed work is not measured."
       },
       "example_input": "data/examples/ch05.json",
+      "reader": "readers/05-composite-kernel/reader.html",
       "equations": [
         {
           "label": "chapter-05-display-1",
@@ -412,6 +419,7 @@
         "actions": "Nonempty list of uniquely named alternatives. Each has name:string, probabilities:normalized numeric list, utilities:aligned finite numeric list, cost:nonnegative number. Include abstention explicitly."
       },
       "example_input": "data/examples/ch06.json",
+      "reader": "readers/06-expected-utility/reader.html",
       "equations": [
         {
           "label": "EQV6-01",
@@ -481,6 +489,7 @@
         "states": "Object mapping states to optional terminal:number and actions:list. Action has name,reward:number,probabilities:normalized list,next_states:aligned registered state keys."
       },
       "example_input": "data/examples/ch07.json",
+      "reader": "readers/07-finite-horizon-planning/reader.html",
       "equations": [
         {
           "label": "EQV7-01",
@@ -538,7 +547,7 @@
       "chapter": 8,
       "title": "Acting in the Dark",
       "source_path": "Manuscript/part-ii/08-acting-in-the-dark.md",
-      "source_sha256": "f0008c55449ab2f2ddac0be5350e8c3584decfd86ca51ff9f305fe58682de584",
+      "source_sha256": "9e4f83929b8782f85c613b87329b657ab028e81b67ae26eca15c659f299861e2",
       "notebook": "notebooks/08-belief-information.ipynb",
       "skill": "maa-08-belief-information",
       "skill_path": "skills/maa-08-belief-information/SKILL.md",
@@ -562,6 +571,7 @@
         "observation_cost": "Nonnegative cost paid before the one later action."
       },
       "example_input": "data/examples/ch08.json",
+      "reader": "readers/08-belief-information/reader.html",
       "equations": [
         {
           "label": "EQV8-01",
@@ -650,6 +660,7 @@
         "heuristic_cost": "Nonnegative declared cost of one heuristic evaluation, separate from path cost."
       },
       "example_input": "data/examples/ch09.json",
+      "reader": "readers/09-astar-audit/reader.html",
       "equations": [
         {
           "label": "EQV9-01",
@@ -720,6 +731,7 @@
         "options": "Each option has name,initiation:boolean,rewards:nonempty primitive reward list,terminated:boolean,continuation_value:number."
       },
       "example_input": "data/examples/ch10.json",
+      "reader": "readers/10-option-duration/reader.html",
       "equations": [
         {
           "label": "EQV10-01",
@@ -779,6 +791,7 @@
         "pull_cost": "Nonnegative common cost per pull."
       },
       "example_input": "data/examples/ch11.json",
+      "reader": "readers/11-bounded-exploration/reader.html",
       "equations": [
         {
           "label": "EQV11-01",
@@ -851,6 +864,7 @@
         "values": "Initial finite value for every trajectory state."
       },
       "example_input": "data/examples/ch12.json",
+      "reader": "readers/12-trajectory-credit/reader.html",
       "equations": [
         {
           "label": "EQV12-01",
@@ -924,6 +938,7 @@
         "evaluation_runs": "Positive separate evaluation count."
       },
       "example_input": "data/examples/ch13.json",
+      "reader": "readers/13-finite-policy-learning/reader.html",
       "equations": [
         {
           "label": "EQV13-01",
@@ -994,6 +1009,7 @@
         "horizon": "Integer reward horizon 1..1000 with zero terminal continuation."
       },
       "example_input": "data/examples/ch14.json",
+      "reader": "readers/14-transition-model-bound/reader.html",
       "equations": [
         {
           "label": "EQV14-01",
@@ -1065,6 +1081,7 @@
         "compressed_action_values": "Aligned values after compression."
       },
       "example_input": "data/examples/ch15.json",
+      "reader": "readers/15-memory-budget/reader.html",
       "equations": [
         {
           "label": "EQV15-01",
@@ -1110,6 +1127,7 @@
         "sample_counts": "Nonempty list of positive integer candidate counts up to 1000."
       },
       "example_input": "data/examples/ch16.json",
+      "reader": "readers/16-sample-allocation/reader.html",
       "equations": [
         {
           "label": "EQV16-01",
@@ -1191,6 +1209,7 @@
         "duplicate_cost": "Nonnegative extra harm from a duplicate effect."
       },
       "example_input": "data/examples/ch17.json",
+      "reader": "readers/17-effect-and-retry/reader.html",
       "equations": [
         {
           "label": "EQV17-01",
@@ -1267,6 +1286,7 @@
         "delays": "Optional list of nonnegative delays in the same time unit; requires change_rate."
       },
       "example_input": "data/examples/ch18.json",
+      "reader": "readers/18-interface-freshness/reader.html",
       "equations": [
         {
           "label": "EQV18-01",
@@ -1325,6 +1345,7 @@
         "supervisor_weights": "Normalized changed partner or supervisor distribution over the same columns."
       },
       "example_input": "data/examples/ch19.json",
+      "reader": "readers/19-cross-play-transfer/reader.html",
       "equations": [
         {
           "label": "EQV19-01",
@@ -1392,6 +1413,7 @@
         "drop_probability": "Independent per-message drop probability in [0,1]."
       },
       "example_input": "data/examples/ch20.json",
+      "reader": "readers/20-bounded-message-knowledge/reader.html",
       "equations": [
         {
           "label": "EQV20-01",
@@ -1442,6 +1464,7 @@
         "shortcut_toll": "Nonnegative private incentive charge, excluded from travel-time social cost."
       },
       "example_input": "data/examples/ch21.json",
+      "reader": "readers/21-congestion-incentives/reader.html",
       "equations": [
         {
           "label": "EQV21-01",
@@ -1500,6 +1523,7 @@
         "actions": "Each row has name,reward:finite number,risk:probability,authorized:exact boolean. Abstention must be an explicit row."
       },
       "example_input": "data/examples/ch22.json",
+      "reader": "readers/22-risk-authority-contract/reader.html",
       "equations": [
         {
           "label": "EQV22-01",
@@ -1588,6 +1612,7 @@
         "events": "Ordered data/review/action events. data:instruction_attempt,promoted_to_control booleans; review:valid boolean,version; action:action,authority_source=user/system/untrusted-data,version for publish,executed boolean."
       },
       "example_input": "data/examples/ch23.json",
+      "reader": "readers/23-local-security-monitor/reader.html",
       "equations": [
         {
           "label": "EQV23-01",
@@ -1657,6 +1682,7 @@
         "task_weights": "Optional object of task identifiers to normalized probabilities defining a target mixture."
       },
       "example_input": "data/examples/ch24.json",
+      "reader": "readers/24-matched-capability/reader.html",
       "equations": [
         {
           "label": "EQV24-01",
@@ -1726,6 +1752,7 @@
         "candidates": "Nonempty rows with name,development:binary list,guard:binary list matched to baseline_guard."
       },
       "example_input": "data/examples/ch25.json",
+      "reader": "readers/25-development-guard-gate/reader.html",
       "equations": [
         {
           "label": "EQV25-01",
@@ -1796,6 +1823,7 @@
         "independent_candidate_success": "Probability for a separate constructed independent-candidate saturation curve."
       },
       "example_input": "data/examples/ch26.json",
+      "reader": "readers/26-conditional-bank-ceiling/reader.html",
       "equations": [
         {
           "label": "EQV26-01",
@@ -1856,6 +1884,7 @@
         "tasks": "Rows with name,agent_authorized:boolean,risk:probability,deadline:nonnegative time,human_authorized:boolean,review_received:boolean."
       },
       "example_input": "data/examples/ch27.json",
+      "reader": "readers/27-delegation-queue/reader.html",
       "equations": [
         {
           "label": "EQV27-01",

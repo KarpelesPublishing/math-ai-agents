@@ -22,6 +22,7 @@
     "drop_probability": "Independent per-message drop probability in [0,1]."
   },
   "example_input": "data/examples/ch20.json",
+  "reader": "readers/20-bounded-message-knowledge/reader.html",
   "equations": [
     {
       "label": "EQV20-01",

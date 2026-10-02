@@ -25,6 +25,7 @@
     "shortcut_toll": "Nonnegative private incentive charge, excluded from travel-time social cost."
   },
   "example_input": "data/examples/ch21.json",
+  "reader": "readers/21-congestion-incentives/reader.html",
   "equations": [
     {
       "label": "EQV21-01",

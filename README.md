@@ -2,7 +2,7 @@
 
 A working companion by Jason Karpeles: 27 chapter laboratories, 27 chapter skills, one master skill, an orientation, a document-release capstone, and a workbook with separate solutions. The experiments use local declared models and constructed data. They make no measured claim about deployed agents.
 
-Open [the reading guide](guide/index.html) to inspect executed calculations and charts without installing Python. Read [Start here](START-HERE.md) for the launcher, notebooks, skills, reader inputs and recovery instructions. On Mac, double-click **Open Laboratory.command**.
+Open [the reading guide](guide/index.html) to inspect executed calculations and charts without installing Python. Open [the illustrated readers](readers/index.html) for a chapter-by-chapter picture reader with four interactive demonstrations per chapter. Read [Start here](START-HERE.md) for the launcher, notebooks, skills, reader inputs and recovery instructions. On Mac, double-click **Open Laboratory.command**.
 
 ## What is included
 
@@ -10,7 +10,8 @@ Open [the reading guide](guide/index.html) to inspect executed calculations and 
 - `skills/`: the 27 chapter methods and the `math-ai-agents` master router.
 - `src/math_ai_agents/`: the shared computation used by notebooks and skills.
 - `content/` and `data/examples/`: authored explanations and editable JSON inputs.
-- `guide/`: offline reading pages and a field guide.
+- `guide/`: offline reading pages and a field guide. Each chapter page links to its illustrated reader.
+- `readers/`: 27 illustrated chapter readers and an index (`readers/index.html`). They need only a browser: no Python, no network, no account. Rebuilt by `tools/readers/build_readers.py`; see `MAINTAINING.md`.
 - `workbook/`: questions, separate answers, notation and the preserved original workbench.
 - `assets/`: equation SVGs and local mathematics rendering, with its license.
 - `tests/`: independent mathematical checks and runtime checks.

@@ -24,6 +24,7 @@
     "pull_cost": "Nonnegative common cost per pull."
   },
   "example_input": "data/examples/ch11.json",
+  "reader": "readers/11-bounded-exploration/reader.html",
   "equations": [
     {
       "label": "EQV11-01",

@@ -24,6 +24,7 @@
     "task_weights": "Optional object of task identifiers to normalized probabilities defining a target mixture."
   },
   "example_input": "data/examples/ch24.json",
+  "reader": "readers/24-matched-capability/reader.html",
   "equations": [
     {
       "label": "EQV24-01",

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="{{ b.lang|default('en') }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="{{ b.series_line }}: illustrated chapter readers that work offline.">
+<meta name="generator" content="illustrated reader engine {{ engine_version }}">
+<title>{{ b.series_line }}</title>
+<style>{{ css|safe }}</style>
+</head>
+<body>
+<a class="skip" href="#library">Skip to the chapter list</a>
+<header>
+{% if b.index_back_href %}<nav class="nav" aria-label="Site navigation"><a href="{{ b.index_back_href }}">{{ b.index_back_label|default('Back') }}</a></nav>{% endif %}
+<p class="eyebrow">{{ b.author|default('') }}{% if b.author %} · {% endif %}{{ b.book_title }}</p>
+<h1>{{ b.index_title|default(b.series_line) }}</h1>
+<p class="lead">{{ b.index_lead|default('Each chapter has four illustrated demonstrations. Choose a value, watch the figure and the numbers change, and check a prediction.') }}</p>
+<p class="small">{{ available }} of {{ entries|length }} chapters available. Each reader is one file that works offline.</p>
+{% if b.constructed_notice %}<p class="notice">{{ b.constructed_notice }}</p>{% endif %}
+</header>
+<main>
+<section id="library" aria-labelledby="library-title">
+<h2 id="library-title">Chapters</h2>
+<ol class="catalog">
+{% for e in entries %}
+<li class="chapter-card{% if not e.href %} pending{% endif %}"><span class="chapter-number">Chapter {{ e.number }}</span>{% if e.href %}<a href="{{ e.href }}">{{ e.title }}</a><span class="small">Four illustrated demonstrations</span>{% else %}<span class="title">{{ e.title }}</span><span class="small">In preparation</span>{% endif %}</li>
+{% endfor %}
+</ol>
+</section>
+</main>
+<footer>
+<p>{{ b.book_title }}{% if b.author %} · {{ b.author }}{% endif %}</p>
+{% if b.footer_note %}<p>{{ b.footer_note }}</p>{% endif %}
+</footer>
+</body>
+</html>

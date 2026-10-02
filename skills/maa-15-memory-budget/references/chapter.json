@@ -26,6 +26,7 @@
     "compressed_action_values": "Aligned values after compression."
   },
   "example_input": "data/examples/ch15.json",
+  "reader": "readers/15-memory-budget/reader.html",
   "equations": [
     {
       "label": "EQV15-01",

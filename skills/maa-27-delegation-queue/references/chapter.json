@@ -25,6 +25,7 @@
     "tasks": "Rows with name,agent_authorized:boolean,risk:probability,deadline:nonnegative time,human_authorized:boolean,review_received:boolean."
   },
   "example_input": "data/examples/ch27.json",
+  "reader": "readers/27-delegation-queue/reader.html",
   "equations": [
     {
       "label": "EQV27-01",

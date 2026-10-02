@@ -27,6 +27,7 @@
     "values": "Initial finite value for every trajectory state."
   },
   "example_input": "data/examples/ch12.json",
+  "reader": "readers/12-trajectory-credit/reader.html",
   "equations": [
     {
       "label": "EQV12-01",

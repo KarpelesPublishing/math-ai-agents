@@ -24,6 +24,7 @@
     "candidates": "Nonempty rows with name,development:binary list,guard:binary list matched to baseline_guard."
   },
   "example_input": "data/examples/ch25.json",
+  "reader": "readers/25-development-guard-gate/reader.html",
   "equations": [
     {
       "label": "EQV25-01",

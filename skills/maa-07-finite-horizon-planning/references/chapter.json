@@ -24,6 +24,7 @@
     "states": "Object mapping states to optional terminal:number and actions:list. Action has name,reward:number,probabilities:normalized list,next_states:aligned registered state keys."
   },
   "example_input": "data/examples/ch07.json",
+  "reader": "readers/07-finite-horizon-planning/reader.html",
   "equations": [
     {
       "label": "EQV7-01",

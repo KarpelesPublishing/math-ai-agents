@@ -23,6 +23,7 @@
     "supervisor_weights": "Normalized changed partner or supervisor distribution over the same columns."
   },
   "example_input": "data/examples/ch19.json",
+  "reader": "readers/19-cross-play-transfer/reader.html",
   "equations": [
     {
       "label": "EQV19-01",

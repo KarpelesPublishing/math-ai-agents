@@ -25,6 +25,7 @@
     "independent_candidate_success": "Probability for a separate constructed independent-candidate saturation curve."
   },
   "example_input": "data/examples/ch26.json",
+  "reader": "readers/26-conditional-bank-ceiling/reader.html",
   "equations": [
     {
       "label": "EQV26-01",

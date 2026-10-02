@@ -26,6 +26,7 @@
     "duplicate_cost": "Nonnegative extra harm from a duplicate effect."
   },
   "example_input": "data/examples/ch17.json",
+  "reader": "readers/17-effect-and-retry/reader.html",
   "equations": [
     {
       "label": "EQV17-01",

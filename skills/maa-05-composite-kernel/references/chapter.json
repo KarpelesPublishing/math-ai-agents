@@ -27,6 +27,7 @@
     "assemblies": "Optional rows with name,budget,steps,observation,memory,retrieval,tool. Context maps are square stochastic matrices in the declared context encoding. Chooser stays fixed. Resource allowances must share units; actual consumed work is not measured."
   },
   "example_input": "data/examples/ch05.json",
+  "reader": "readers/05-composite-kernel/reader.html",
   "equations": [
     {
       "label": "chapter-05-display-1",

@@ -23,6 +23,7 @@
     "events": "Ordered data/review/action events. data:instruction_attempt,promoted_to_control booleans; review:valid boolean,version; action:action,authority_source=user/system/untrusted-data,version for publish,executed boolean."
   },
   "example_input": "data/examples/ch23.json",
+  "reader": "readers/23-local-security-monitor/reader.html",
   "equations": [
     {
       "label": "EQV23-01",

@@ -1,0 +1,20 @@
+{
+  "_comment": "Synthetic two-chapter project used by test_readers_engine.py. It proves the engine is not tied to any one book.",
+  "project": {"root": "."},
+  "branding": {
+    "book_title": "A Small Book of Lines",
+    "author": "Fixture Author",
+    "series_line": "A Small Book of Lines, practice reader",
+    "constructed_notice": "All examples are constructed."
+  },
+  "chapter_modules": "chapters",
+  "output_dir": "out",
+  "chapter_list": {"inline": [
+    {"number": 1, "title": "Straight Lines", "slug": "01-lines", "equations": ["y = a x + b"]},
+    {"number": 2, "title": "Squares", "slug": "02-squares"},
+    {"number": 3, "title": "Circles", "slug": "03-circles"}
+  ], "equations": {"field": "equations"}},
+  "canonical_text": {"paths": {"1": "text/ch01.md", "2": "text/ch02.md"}, "forbidden": ["text/old/"]},
+  "links": {"notebook": {"href": "../../notebooks/{slug}.ipynb", "label": "Notebook"}},
+  "text_rules": {"provenance_must_include": "constructed"}
+}

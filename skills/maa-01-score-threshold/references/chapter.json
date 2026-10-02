@@ -23,6 +23,7 @@
     "threshold": "Pass cutoff in [0,1]."
   },
   "example_input": "data/examples/ch01.json",
+  "reader": "readers/01-score-threshold/reader.html",
   "equations": [
     {
       "label": "EQV1-01",

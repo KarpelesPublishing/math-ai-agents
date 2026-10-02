@@ -25,6 +25,7 @@
     "options": "Each option has name,initiation:boolean,rewards:nonempty primitive reward list,terminated:boolean,continuation_value:number."
   },
   "example_input": "data/examples/ch10.json",
+  "reader": "readers/10-option-duration/reader.html",
   "equations": [
     {
       "label": "EQV10-01",

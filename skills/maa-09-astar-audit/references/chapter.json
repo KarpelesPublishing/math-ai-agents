@@ -26,6 +26,7 @@
     "heuristic_cost": "Nonnegative declared cost of one heuristic evaluation, separate from path cost."
   },
   "example_input": "data/examples/ch09.json",
+  "reader": "readers/09-astar-audit/reader.html",
   "equations": [
     {
       "label": "EQV9-01",

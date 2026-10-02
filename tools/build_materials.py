@@ -158,7 +158,7 @@ def build_chapter(n, piece):
              "skill_path": f"skills/{skill_name}/SKILL.md", "method": c["slug"],
              "outcome": c["outcome"], "prerequisites": c["prerequisites"], "routes": c["routes"],
              "input_fields": c["input_fields"], "example_input": f"data/examples/ch{n:02d}.json",
-             "equations": eqs}
+             "reader": f"readers/{n:02d}-{c['slug']}/reader.html", "equations": eqs}
     build_skill(entry, c)
     return entry
 
@@ -290,6 +290,7 @@ def main():
     entries = [build_chapter(n, registry[n]) for n in selected]
     write_json(ROOT / "chapter-map.json", entries)
     write_json(ROOT / "lab-manifest.json", {"lab_version": "1.0.0", "book": "The Mathematics of AI Agents", "chapters": len(entries),
+                                          "readers": len(entries), "readers_index": "readers/index.html",
                                           "status": "pilot" if args.chapters else "source-build", "canonical_sources": entries})
     build_master(entries)
     print(f"Built {len(entries)} chapter notebooks and skills.")

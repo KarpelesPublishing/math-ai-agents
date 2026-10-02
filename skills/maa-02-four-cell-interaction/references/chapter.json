@@ -22,6 +22,7 @@
     "budgets": "Four nonnegative matched resource budgets in the same order."
   },
   "example_input": "data/examples/ch02.json",
+  "reader": "readers/02-four-cell-interaction/reader.html",
   "equations": [
     {
       "label": "EQ02-01",

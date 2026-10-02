@@ -23,6 +23,7 @@
     "actions": "Each row has name,reward:finite number,risk:probability,authorized:exact boolean. Abstention must be an explicit row."
   },
   "example_input": "data/examples/ch22.json",
+  "reader": "readers/22-risk-authority-contract/reader.html",
   "equations": [
     {
       "label": "EQV22-01",

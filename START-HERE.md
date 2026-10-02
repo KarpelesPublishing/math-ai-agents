@@ -10,6 +10,9 @@ The examples use declared local models and fictitious data. They teach calculati
 2. Open `guide/index.html` in a browser.
 3. Select **Start with one successful calculation**. The expected-utility example should show release preferred at probability 0.8 and abstention preferred at probability 0.6.
 4. Choose a chapter, inspect its executed calculation and plots, then attempt its questions before opening the separate solutions.
+5. For a picture-first route, open `readers/index.html`. Each of the 27 chapters has an illustrated reader with interactive demonstrations; each chapter page in the guide links to its reader. Readers need only a browser, with no Python and no network.
+
+Honest limits of the readers: they have not been tested in a real browser with a screen reader or by keyboard alone, and on a 360 px wide screen the figures scroll sideways rather than shrink.
 
 These are reading pages. Their code and outputs are visible, but changing a page does not execute Python. Equations render from local assets; no account or remote mathematics service is needed. Chapter 18 also has a local browser mock-up, `Companion/release-console.html`, linked from the guide index.
 

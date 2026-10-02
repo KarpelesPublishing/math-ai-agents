@@ -24,4 +24,23 @@ Keep chapter content, computational schemas, input examples, notebook explanatio
 
 After rebuilding notebooks, rerun `tools/export_reading.py` so the reading pages show the saved printed output, and recopy `tools/run_skill.py` into every skill by running `tools/build_materials.py`.
 
+## Illustrated readers
+
+The 27 illustrated readers live in `readers/` (index at `readers/index.html`, one `NN-slug/reader.html` per chapter) and are linked from `guide/index.html`, every guide chapter page, `chapter-map.json` (field `reader`) and `lab-manifest.json` (`readers`, `readers_index`). They are static HTML: they need only a browser, with no Python and no network.
+
+Rebuild from the complete project with:
+
+```bash
+.venv/bin/python tools/readers/build_readers.py --chapters all
+.venv/bin/python tools/readers/build_readers.py --chapters all --check
+```
+
+`--check` validates and renders in memory and writes nothing. The authoring and engine contract is `tools/readers/CONTRACT.md`. Do not edit `readers/` by hand; it is build output.
+
+The canonical chapter text for Part I is `Manuscript/revisions/part-i-v2`, never `Manuscript/chapters`. Reader modules (`tools/readers/chapters/`) must follow that source.
+
+After rebuilding readers, rerun `tools/export_reading.py` so the guide links stay in step, then regenerate the ZIP with `tools/package_lab.py`, which includes `readers/` and records every reader file in `file-integrity.json`. The `reader` field in `chapter-map.json` is written by `tools/build_materials.py`; that tool also rewrites the notebooks without saved outputs, so re-execute them afterward with `tools/execute_notebooks.py`. Likewise `tools/build_extras.py` has no options and rewrites notebooks 00 and 28 without their saved outputs; re-execute them with `tools/execute_notebooks.py --chapters 00,28`.
+
+Known limits: the readers were not tested in a real browser with a screen reader or by keyboard alone, and at 360 px width the figures scroll sideways.
+
 The master route helper is an inspectable phrase matcher. The assistant skill chooses methods by the question and input contract. Do not interpret a phrase-match score as semantic accuracy or a guarantee that the chosen method applies.

@@ -28,6 +28,7 @@
     "evaluation_runs": "Positive separate evaluation count."
   },
   "example_input": "data/examples/ch13.json",
+  "reader": "readers/13-finite-policy-learning/reader.html",
   "equations": [
     {
       "label": "EQV13-01",

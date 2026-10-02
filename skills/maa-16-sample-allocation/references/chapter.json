@@ -30,6 +30,7 @@
     "sample_counts": "Nonempty list of positive integer candidate counts up to 1000."
   },
   "example_input": "data/examples/ch16.json",
+  "reader": "readers/16-sample-allocation/reader.html",
   "equations": [
     {
       "label": "EQV16-01",

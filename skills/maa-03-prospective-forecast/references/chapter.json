@@ -25,6 +25,7 @@
     "family": "linear or log, declared before inspecting test outcomes."
   },
   "example_input": "data/examples/ch03.json",
+  "reader": "readers/03-prospective-forecast/reader.html",
   "equations": [
     {
       "label": "EQ03-01",

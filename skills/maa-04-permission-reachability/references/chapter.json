@@ -24,6 +24,7 @@
     "edges": "Directed edge list with from,to:registered identifiers and allowed:exact boolean."
   },
   "example_input": "data/examples/ch04.json",
+  "reader": "readers/04-permission-reachability/reader.html",
   "equations": [
     {
       "label": "EQV4-01",
