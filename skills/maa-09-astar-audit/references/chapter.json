@@ -1,0 +1,71 @@
+{
+  "chapter": 9,
+  "title": "Searching the Future",
+  "source_path": "Manuscript/part-iii/09-searching-the-future.md",
+  "source_sha256": "93ac681c676686b345ebd549fb17d2466c9f9b5db2e564178f10eb376cd9558e",
+  "notebook": "notebooks/09-astar-audit.ipynb",
+  "skill": "maa-09-astar-audit",
+  "skill_path": "skills/maa-09-astar-audit/SKILL.md",
+  "method": "astar-audit",
+  "outcome": "Execute A* and audit supplied heuristic admissibility and cost.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "A-star heuristic admissibility audit",
+    "search expansion and heuristic cost",
+    "misleading future-cost estimate"
+  ],
+  "input_fields": {
+    "nodes": "Unique graph identifiers.",
+    "start": "Registered search start.",
+    "goal": "Registered goal.",
+    "edges": "Directed from/to identifiers with finite nonnegative cost.",
+    "heuristic": "Object mapping each node to a nonnegative estimated remaining cost.",
+    "heuristic_cost": "Nonnegative declared cost of one heuristic evaluation, separate from path cost."
+  },
+  "example_input": "data/examples/ch09.json",
+  "equations": [
+    {
+      "label": "EQV9-01",
+      "number": "9.1",
+      "tex": "f(v) \\;=\\; g(v) \\;+\\; h(v).\n\\tag{9.1}",
+      "asset": "assets/math/d644bc5f6d134538bbc7.svg",
+      "explanations": [
+        "Equation (9.1) gives the cost of the best route that is forced to pass through a particular vertex.",
+        "Add the cheapest way of getting to the vertex to the cheapest way of finishing from it."
+      ]
+    },
+    {
+      "label": "EQV9-02",
+      "number": "9.2",
+      "tex": "\\hat f(v) \\;=\\; \\hat g(v) \\;+\\; \\hat h(v).\n\\tag{9.2}",
+      "asset": "assets/math/c87fd983fba2133d2416.svg",
+      "explanations": [
+        "Equation (9.2) is the computable stand-in for Equation (9.1), and it is what the search actually sorts on.",
+        "Add what the search has already spent reaching the vertex to what it guesses finishing will cost."
+      ]
+    },
+    {
+      "label": "EQV9-03",
+      "number": "9.3",
+      "tex": "\\hat h(v) \\;\\le\\; h(v) \\qquad \\text{for every vertex } v.\n\\tag{9.3}",
+      "asset": "assets/math/0363a1925aa679905892.svg",
+      "explanations": [
+        "Equation (9.3) is the condition under which the search cannot be talked out of the best path.",
+        "Never guess that finishing will cost more than it actually will."
+      ]
+    },
+    {
+      "label": "EQV9-04",
+      "number": "9.4",
+      "tex": "h(u,v) \\;+\\; \\hat h(v) \\;\\ge\\; \\hat h(u).\n\\tag{9.4}",
+      "asset": "assets/math/b63e0576c12f18c007c1.svg",
+      "explanations": [
+        "Equation (9.4) requires the estimate to be consistent with itself from one vertex to the next.",
+        "The true cost of getting from one vertex to another, plus the estimate at the second, must be at least the estimate at the first."
+      ]
+    }
+  ]
+}

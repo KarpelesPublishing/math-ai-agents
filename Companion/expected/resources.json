@@ -1,0 +1,53 @@
+{
+  "kind": "constructed demonstration",
+  "result": {
+    "procedures": [
+      {
+        "name": "A",
+        "cost": 1,
+        "success": 0.6,
+        "latency": 1,
+        "authorized": true,
+        "population_cost_per_success": 1.6666666666666667,
+        "feasible": false
+      },
+      {
+        "name": "B",
+        "cost": 1.5,
+        "success": 0.8,
+        "latency": 2,
+        "authorized": true,
+        "population_cost_per_success": 1.875,
+        "feasible": true
+      },
+      {
+        "name": "C",
+        "cost": 2,
+        "success": 0.85,
+        "latency": 5,
+        "authorized": true,
+        "population_cost_per_success": 2.3529411764705883,
+        "feasible": false
+      },
+      {
+        "name": "Z",
+        "cost": 1,
+        "success": 0.0,
+        "latency": 1,
+        "authorized": true,
+        "population_cost_per_success": null,
+        "feasible": false
+      }
+    ],
+    "pareto_frontier": [
+      "A",
+      "B",
+      "C"
+    ],
+    "zero_success_example": {
+      "total_cost": 5,
+      "successes": 0,
+      "ratio": null
+    }
+  }
+}

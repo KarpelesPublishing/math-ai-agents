@@ -1,0 +1,892 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>26-conditional-bank-ceiling</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 26: How Much More Could the System Become?</h1>
+<p>A candidate bank contains a correct solution to every task. The controller still fails most tasks because its selector repeatedly chooses the wrong candidate. An oracle view of the bank has discovered available capability, not executable capability.</p>
+<p>This notebook places three layers side by side. Oracle coverage asks whether any candidate succeeds on each task. Actual selection checks the chosen candidate. Deployment filtering then removes successes that current authority does not permit. A separate independent-sampling curve illustrates saturation under a declared law. It is deliberately not fitted to the observed bank, because finite candidate overlap and independent future sampling are different assumptions.</p>
+<p><strong>Outcome:</strong> Separate bank oracle coverage, actual choice, and permission-filtered success.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>Let S_ct be the binary success of candidate c on task t and w_t the normalized task weight. Oracle task coverage is O_t=max_c S_ct, giving weighted bank coverage sum_t w_t O_t. A supplied selector chooses c(t), so actual success is A_t=S_(c(t),t). With deployment permission D_t, deployed success is A_t D_t.</p>
+<p>Pointwise, deployed success&lt;=actual success&lt;=oracle coverage. Weighted values inherit that ordering. The inequalities condition on this bank, task distribution, interface, and permission contract. They are not a universal maximum over possible models or future procedures.</p>
+<p>The prefix coverage curve adds candidates in their supplied order and is nondecreasing. Candidate order changes that curve but not final full-bank coverage. The independent construction gives 1-(1-p)^n for equal independent candidate correctness p. Its diminishing increments are a property of that joint law, not evidence that actual candidate diversity is independent or that the bank predicts future progress.</p>
+<h2>A calculation you can run</h2>
+<p>Provide a rectangular candidate-by-task boolean matrix, normalized task weights, one selected candidate index per task, and one deployment permission flag per task. The code validates exact booleans and index ranges. It forms oracle, selected, and deployed task flags, then aggregates them under the target weights.</p>
+<p>The first figure shows prefix coverage of the supplied bank. The second shows a separate independent constructed saturation law. Their labels distinguish observed finite structure from a hypothetical sampling model. In the changed case improve selection while denying deployment on the heaviest task. Predict all three aggregate values before execution. Export the bank identity and task boundary whenever reporting a ceiling.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 26
+inputs = {&#x27;success_matrix&#x27;: [[True, False, False], [False, True, False], [False, False, True]],
+ &#x27;task_weights&#x27;: [0.2, 0.3, 0.5],
+ &#x27;selected_candidates&#x27;: [0, 0, 0],
+ &#x27;deployment_allowed&#x27;: [True, True, True],
+ &#x27;independent_candidate_success&#x27;: 0.4}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 26: conditional-bank-ceiling
+How much capability exists in this finite candidate bank, and how much can selection deploy?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;bank_oracle_coverage&quot;: 1.0,
+  &quot;actual_selection_success&quot;: 0.2,
+  &quot;deployment_success&quot;: 0.2,
+  &quot;oracle_task_flags&quot;: [
+    true,
+    true,
+    true
+  ],
+  &quot;selection_task_flags&quot;: [
+    true,
+    false,
+    false
+  ],
+  &quot;deployment_task_flags&quot;: [
+    true,
+    false,
+    false
+  ]
+}
+
+Interpretation:
+Oracle coverage asks whether some candidate solves each task. Actual selection and deployment filtering can only reduce that finite-bank ceiling.
+
+Assumptions:
+- Bank contents and task distribution are fixed.
+- Selection is supplied per task; oracle selection is not assumed achievable.
+- Independent saturation is a separate constructed sampling law.
+
+Limitations:
+- The bank ceiling is not a universal agent limit or a forecast of future models.
+- Unobserved tasks and candidate classes remain outside the bound.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>The default bank has one specialist for each of three tasks. Oracle coverage is 1. The selector chooses candidate 0 for every task, so actual success is only task 0's weight 0.2. All tasks are deployable, leaving deployed success 0.2.</p>
+<p>The changed selector chooses the correct specialist for every task, raising actual success to 1. Deployment denies task 2, whose weight is 0.5, so deployed success is 0.5. Oracle coverage remains 1. Better selection extracted available capability, but the authority boundary still limits what the system may realize. None of these numbers forecasts a future model's maximum.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  L 565.2 69.080234  L 47.962344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m01318e5334" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m01318e5334" x="71.473146" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="208.636719" transform="rotate(-0 71.473146 208.636719)">1</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m01318e5334" x="306.581172" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="208.636719" transform="rotate(-0 306.581172 208.636719)">2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m01318e5334" x="541.689197" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="208.636719" transform="rotate(-0 541.689197 208.636719)">3</text>
+     </g>
+    </g>
+    <g id="text_4">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="222.6375" transform="rotate(-0 306.581172 222.6375)">candidate bank size</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <path d="M 47.962344 188.359116  L 565.2 188.359116  " clip-path="url(#p37da15c61c)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5">
+      <defs>
+       <path id="m4478d60403" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="188.359116" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="192.157944" transform="rotate(-0 40.962344 192.157944)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <path d="M 47.962344 159.959382  L 565.2 159.959382  " clip-path="url(#p37da15c61c)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="159.959382" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="163.75821" transform="rotate(-0 40.962344 163.75821)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <path d="M 47.962344 131.559648  L 565.2 131.559648  " clip-path="url(#p37da15c61c)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="131.559648" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="135.358477" transform="rotate(-0 40.962344 135.358477)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <path d="M 47.962344 103.159915  L 565.2 103.159915  " clip-path="url(#p37da15c61c)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="103.159915" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="106.958743" transform="rotate(-0 40.962344 106.958743)">0.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_12">
+      <path d="M 47.962344 74.760181  L 565.2 74.760181  " clip-path="url(#p37da15c61c)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="74.760181" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="78.559009" transform="rotate(-0 40.962344 78.559009)">1.0</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="131.559648" transform="rotate(-90 18.656875 131.559648)">task-weighted coverage</text>
+    </g>
+   </g>
+   <g id="line2d_14">
+    <path d="M 71.473146 188.359116  L 306.581172 145.759515  L 541.689197 74.760181  " clip-path="url(#p37da15c61c)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="me83efb6495" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p37da15c61c)">
+     <use xlink:href="#me83efb6495" x="71.473146" y="188.359116" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me83efb6495" x="306.581172" y="145.759515" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me83efb6495" x="541.689197" y="74.760181" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 194.039062  L 47.962344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="63.080234" transform="rotate(-0 47.962344 63.080234)">observed finite bank coverage</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  L 565.2 250.518828  L 47.962344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_4">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m01318e5334" x="71.473146" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="390.075312" transform="rotate(-0 71.473146 390.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m01318e5334" x="306.581172" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="390.075312" transform="rotate(-0 306.581172 390.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m01318e5334" x="541.689197" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="390.075312" transform="rotate(-0 541.689197 390.075312)">3</text>
+     </g>
+    </g>
+    <g id="text_15">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="404.076094" transform="rotate(-0 306.581172 404.076094)">independent candidates</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_18">
+      <path d="M 47.962344 369.79771  L 565.2 369.79771  " clip-path="url(#pf1348d2d5d)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="369.79771" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="373.596538" transform="rotate(-0 40.962344 373.596538)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_20">
+      <path d="M 47.962344 340.214654  L 565.2 340.214654  " clip-path="url(#pf1348d2d5d)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="340.214654" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="344.013482" transform="rotate(-0 40.962344 344.013482)">0.5</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_22">
+      <path d="M 47.962344 310.631598  L 565.2 310.631598  " clip-path="url(#pf1348d2d5d)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="310.631598" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="314.430426" transform="rotate(-0 40.962344 314.430426)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_24">
+      <path d="M 47.962344 281.048542  L 565.2 281.048542  " clip-path="url(#pf1348d2d5d)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="281.048542" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="284.84737" transform="rotate(-0 40.962344 284.84737)">0.7</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_26">
+      <path d="M 47.962344 251.465486  L 565.2 251.465486  " clip-path="url(#pf1348d2d5d)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#m4478d60403" x="47.962344" y="251.465486" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="255.264314" transform="rotate(-0 40.962344 255.264314)">0.8</text>
+     </g>
+    </g>
+    <g id="text_21">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="312.998242" transform="rotate(-90 18.656875 312.998242)">coverage probability</text>
+    </g>
+   </g>
+   <g id="line2d_28">
+    <path d="M 71.473146 369.79771  L 306.581172 298.798375  L 541.689197 256.198775  " clip-path="url(#pf1348d2d5d)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#pf1348d2d5d)">
+     <use xlink:href="#me83efb6495" x="71.473146" y="369.79771" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me83efb6495" x="306.581172" y="298.798375" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me83efb6495" x="541.689197" y="256.198775" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.962344 375.477656  L 47.962344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="244.518828" transform="rotate(-0 47.962344 244.518828)">independent constructed saturation</text>
+   </g>
+  </g>
+  <g id="text_23">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 26: conditional bank ceiling</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p37da15c61c">
+   <rect x="47.962344" y="69.080234" width="517.237656" height="124.958828"/>
+  </clipPath>
+  <clipPath id="pf1348d2d5d">
+   <rect x="47.962344" y="250.518828" width="517.237656" height="124.958828"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 26.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>An oracle ceiling can be mistaken for a deployable system when a report omits the selector. The gap may be large even if every task has a correct candidate somewhere. Evaluating only bank coverage rewards availability without measuring the controller's ability to identify the right answer.</p>
+<p>Another failure transports the finite ceiling to unseen tasks or candidate classes. The stated maximum is conditional on the supplied bank and distribution. Adding a new candidate can raise it; changing task weights can change it; a new interface can change feasibility.</p>
+<p>The independent curve also becomes misleading under shared errors. Candidates may agree because they share a failure mechanism, not because repeated sampling created independent evidence. Use the finite success matrix to study actual overlap, and treat the independent curve as a labeled construction rather than an empirical extrapolation.</p>
+<pre><code>changed_inputs = {&#x27;success_matrix&#x27;: [[True, False, False], [False, True, False], [False, False, True]],
+ &#x27;task_weights&#x27;: [0.2, 0.3, 0.5],
+ &#x27;selected_candidates&#x27;: [0, 1, 2],
+ &#x27;deployment_allowed&#x27;: [True, True, False],
+ &#x27;independent_candidate_success&#x27;: 0.4}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 26: conditional-bank-ceiling
+How much capability exists in this finite candidate bank, and how much can selection deploy?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;bank_oracle_coverage&quot;: 1.0,
+  &quot;actual_selection_success&quot;: 1.0,
+  &quot;deployment_success&quot;: 0.5,
+  &quot;oracle_task_flags&quot;: [
+    true,
+    true,
+    true
+  ],
+  &quot;selection_task_flags&quot;: [
+    true,
+    true,
+    true
+  ],
+  &quot;deployment_task_flags&quot;: [
+    true,
+    true,
+    false
+  ]
+}
+
+Interpretation:
+Oracle coverage asks whether some candidate solves each task. Actual selection and deployment filtering can only reduce that finite-bank ceiling.
+
+Assumptions:
+- Bank contents and task distribution are fixed.
+- Selection is supplied per task; oracle selection is not assumed achievable.
+- Independent saturation is a separate constructed sampling law.
+
+Limitations:
+- The bank ceiling is not a universal agent limit or a forecast of future models.
+- Unobserved tasks and candidate classes remain outside the bound.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  L 565.2 69.080234  L 47.962344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m33b5afee41" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m33b5afee41" x="71.473146" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="208.636719" transform="rotate(-0 71.473146 208.636719)">1</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m33b5afee41" x="306.581172" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="208.636719" transform="rotate(-0 306.581172 208.636719)">2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m33b5afee41" x="541.689197" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="208.636719" transform="rotate(-0 541.689197 208.636719)">3</text>
+     </g>
+    </g>
+    <g id="text_4">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="222.6375" transform="rotate(-0 306.581172 222.6375)">candidate bank size</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <path d="M 47.962344 188.359116  L 565.2 188.359116  " clip-path="url(#p694e1b8451)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5">
+      <defs>
+       <path id="m792e670164" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="188.359116" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="192.157944" transform="rotate(-0 40.962344 192.157944)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <path d="M 47.962344 159.959382  L 565.2 159.959382  " clip-path="url(#p694e1b8451)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="159.959382" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="163.75821" transform="rotate(-0 40.962344 163.75821)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <path d="M 47.962344 131.559648  L 565.2 131.559648  " clip-path="url(#p694e1b8451)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="131.559648" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="135.358477" transform="rotate(-0 40.962344 135.358477)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <path d="M 47.962344 103.159915  L 565.2 103.159915  " clip-path="url(#p694e1b8451)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="103.159915" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="106.958743" transform="rotate(-0 40.962344 106.958743)">0.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_12">
+      <path d="M 47.962344 74.760181  L 565.2 74.760181  " clip-path="url(#p694e1b8451)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="74.760181" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="78.559009" transform="rotate(-0 40.962344 78.559009)">1.0</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="131.559648" transform="rotate(-90 18.656875 131.559648)">task-weighted coverage</text>
+    </g>
+   </g>
+   <g id="line2d_14">
+    <path d="M 71.473146 188.359116  L 306.581172 145.759515  L 541.689197 74.760181  " clip-path="url(#p694e1b8451)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m200254065f" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p694e1b8451)">
+     <use xlink:href="#m200254065f" x="71.473146" y="188.359116" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m200254065f" x="306.581172" y="145.759515" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m200254065f" x="541.689197" y="74.760181" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 194.039062  L 47.962344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="63.080234" transform="rotate(-0 47.962344 63.080234)">observed finite bank coverage</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  L 565.2 250.518828  L 47.962344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_4">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m33b5afee41" x="71.473146" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="390.075312" transform="rotate(-0 71.473146 390.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m33b5afee41" x="306.581172" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="390.075312" transform="rotate(-0 306.581172 390.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m33b5afee41" x="541.689197" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="390.075312" transform="rotate(-0 541.689197 390.075312)">3</text>
+     </g>
+    </g>
+    <g id="text_15">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="404.076094" transform="rotate(-0 306.581172 404.076094)">independent candidates</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_18">
+      <path d="M 47.962344 369.79771  L 565.2 369.79771  " clip-path="url(#p7a4ca446d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="369.79771" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="373.596538" transform="rotate(-0 40.962344 373.596538)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_20">
+      <path d="M 47.962344 340.214654  L 565.2 340.214654  " clip-path="url(#p7a4ca446d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="340.214654" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="344.013482" transform="rotate(-0 40.962344 344.013482)">0.5</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_22">
+      <path d="M 47.962344 310.631598  L 565.2 310.631598  " clip-path="url(#p7a4ca446d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="310.631598" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="314.430426" transform="rotate(-0 40.962344 314.430426)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_24">
+      <path d="M 47.962344 281.048542  L 565.2 281.048542  " clip-path="url(#p7a4ca446d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="281.048542" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="284.84737" transform="rotate(-0 40.962344 284.84737)">0.7</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_26">
+      <path d="M 47.962344 251.465486  L 565.2 251.465486  " clip-path="url(#p7a4ca446d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#m792e670164" x="47.962344" y="251.465486" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="255.264314" transform="rotate(-0 40.962344 255.264314)">0.8</text>
+     </g>
+    </g>
+    <g id="text_21">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="312.998242" transform="rotate(-90 18.656875 312.998242)">coverage probability</text>
+    </g>
+   </g>
+   <g id="line2d_28">
+    <path d="M 71.473146 369.79771  L 306.581172 298.798375  L 541.689197 256.198775  " clip-path="url(#p7a4ca446d8)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p7a4ca446d8)">
+     <use xlink:href="#m200254065f" x="71.473146" y="369.79771" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m200254065f" x="306.581172" y="298.798375" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m200254065f" x="541.689197" y="256.198775" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.962344 375.477656  L 47.962344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="244.518828" transform="rotate(-0 47.962344 244.518828)">independent constructed saturation</text>
+   </g>
+  </g>
+  <g id="text_23">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 26: conditional bank ceiling</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p694e1b8451">
+   <rect x="47.962344" y="69.080234" width="517.237656" height="124.958828"/>
+  </clipPath>
+  <clipPath id="p7a4ca446d8">
+   <rect x="47.962344" y="250.518828" width="517.237656" height="124.958828"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 26.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer bank has oracle coverage 1 because candidate 0 solves both tasks. Selection chooses candidate 1, which solves only task 0, so actual success is 0.5. Task 1 is denied, but it was already a selected failure, leaving deployed success 0.5.</p>
+<p>For local use, define the candidate bank and task success predicate before inspecting selection. Keep permission filtering outside correctness labels so a denied correct answer is not counted as a model error. Report the supported conditional ceiling together with actual selector performance and the missing measurements needed for any proposed expansion. Do not rename a finite bank result an open-ended capability maximum.</p>
+<pre><code>transfer_inputs = {&#x27;success_matrix&#x27;: [[True, True], [True, False]],
+ &#x27;task_weights&#x27;: [0.5, 0.5],
+ &#x27;selected_candidates&#x27;: [1, 1],
+ &#x27;deployment_allowed&#x27;: [True, False],
+ &#x27;independent_candidate_success&#x27;: 0.6}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 26: conditional-bank-ceiling
+How much capability exists in this finite candidate bank, and how much can selection deploy?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;bank_oracle_coverage&quot;: 1.0,
+  &quot;actual_selection_success&quot;: 0.5,
+  &quot;deployment_success&quot;: 0.5,
+  &quot;oracle_task_flags&quot;: [
+    true,
+    true
+  ],
+  &quot;selection_task_flags&quot;: [
+    true,
+    false
+  ],
+  &quot;deployment_task_flags&quot;: [
+    true,
+    false
+  ]
+}
+
+Interpretation:
+Oracle coverage asks whether some candidate solves each task. Actual selection and deployment filtering can only reduce that finite-bank ceiling.
+
+Assumptions:
+- Bank contents and task distribution are fixed.
+- Selection is supplied per task; oracle selection is not assumed achievable.
+- Independent saturation is a separate constructed sampling law.
+
+Limitations:
+- The bank ceiling is not a universal agent limit or a forecast of future models.
+- Unobserved tasks and candidate classes remain outside the bound.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>success_matrix:</strong> Candidate by task matrix of exact boolean task success.</li>
+<li><strong>task_weights:</strong> Normalized task-distribution weights.</li>
+<li><strong>selected_candidates:</strong> Zero-based candidate index chosen for each task.</li>
+<li><strong>deployment_allowed:</strong> Exact boolean deployment permission for each task.</li>
+<li><strong>independent_candidate_success:</strong> Probability for a separate constructed independent-candidate saturation curve.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch26.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 26: conditional-bank-ceiling
+How much capability exists in this finite candidate bank, and how much can selection deploy?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;bank_oracle_coverage&quot;: 1.0,
+  &quot;actual_selection_success&quot;: 0.5,
+  &quot;deployment_success&quot;: 0.5,
+  &quot;oracle_task_flags&quot;: [
+    true,
+    true
+  ],
+  &quot;selection_task_flags&quot;: [
+    true,
+    false
+  ],
+  &quot;deployment_task_flags&quot;: [
+    true,
+    false
+  ]
+}
+
+Interpretation:
+Oracle coverage asks whether some candidate solves each task. Actual selection and deployment filtering can only reduce that finite-bank ceiling.
+
+Assumptions:
+- Bank contents and task distribution are fixed.
+- Selection is supplied per task; oracle selection is not assumed achievable.
+- Independent saturation is a separate constructed sampling law.
+
+Limitations:
+- The bank ceiling is not a universal agent limit or a forecast of future models.
+- Unobserved tasks and candidate classes remain outside the bound.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>What are default oracle,actual,deployed values?</p>
+</li>
+<li>
+<p>Why is changed deployment 0.5 despite perfect selection?</p>
+</li>
+<li>
+<p>Can adding a candidate reduce oracle prefix coverage?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch26.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Available capability, selected capability, and deployed capability are different quantities. This notebook verifies their ordering and exposes selector and authority gaps under a fixed task distribution. The changed case improves selection while limiting deployment; the transfer checks overlap. Prefix coverage is finite-bank evidence, while independent saturation is a separate construction. Any ceiling remains conditional on bank, distribution, interface, and permissions, without forecasting universal future capability.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-26-conditional-bank-ceiling/SKILL.md"><code>maa-26-conditional-bank-ceiling</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 26.1</h3>
+<p><img alt="Equation 26.1" src="../../assets/math/8c0ce21a65e838ffa6e4.svg" /></p>
+<p>Averages each task's finite-pool chance that a size-<code>k</code> subset contains a unit-test-passing candidate.</p>
+<p>The shared <code>k</code> stays within every <code>n_i</code>, and each term removes the all-failing-subset probability.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\widehat{\operatorname{Cov}}_{\mathcal K}(k)
+= \frac{1}{|\mathcal K|}\sum_{i\in\mathcal K}
+\left(1 - \frac{\binom{n_i-c_i}{k}}{\binom{n_i}{k}}\right),
+\qquad 1\le k\le \min_{i\in\mathcal K}n_i.
+\tag{26.1}
+</code></pre>
+<h3>Equation 26.2</h3>
+<p><img alt="Equation 26.2" src="../../assets/math/2dd89b58bbec985c8a65.svg" /></p>
+<p>States that a selector cannot return a correct candidate more often than correct candidates appear in its bank.</p>
+<p>Selection can lose available successes; it cannot create a correct candidate absent from generation.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Sel}(k) \le \operatorname{Cov}(k).
+\tag{26.2}
+</code></pre>
+<h3>Equation 26.3</h3>
+<p><img alt="Equation 26.3" src="../../assets/math/cf8ade37c7be05477e86.svg" /></p>
+<p>Names available success left undispatched by the actual selector under one matched candidate bank and evaluator.</p>
+<p>A large gap points toward selection or evidence; a small gap points back toward generation or budget.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Cov}(k)-\operatorname{Sel}(k) \ge 0.
+\tag{26.3}
+</code></pre></body></html>

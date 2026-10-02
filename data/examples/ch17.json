@@ -1,0 +1,20 @@
+{
+  "idempotent": false,
+  "events": [
+    {
+      "kind": "request",
+      "key": "send-2",
+      "payload": "packet-B",
+      "effect": true,
+      "ack": false
+    },
+    {
+      "kind": "verify",
+      "observed_effect": true
+    }
+  ],
+  "verify_cost": 0.5,
+  "retry_cost": 0.1,
+  "effect_probability": 0.6,
+  "duplicate_cost": 4
+}

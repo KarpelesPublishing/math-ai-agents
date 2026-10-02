@@ -1,0 +1,21 @@
+{
+  "nodes": [
+    "queued",
+    "approved",
+    "sent"
+  ],
+  "start": "queued",
+  "goal": "sent",
+  "edges": [
+    {
+      "from": "queued",
+      "to": "approved",
+      "allowed": false
+    },
+    {
+      "from": "approved",
+      "to": "sent",
+      "allowed": true
+    }
+  ]
+}

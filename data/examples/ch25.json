@@ -1,0 +1,21 @@
+{
+  "baseline_guard": [
+    false,
+    true
+  ],
+  "minimum_guard_gain": 0.1,
+  "guard_reused": true,
+  "candidates": [
+    {
+      "name": "proposal",
+      "development": [
+        true,
+        true
+      ],
+      "guard": [
+        true,
+        true
+      ]
+    }
+  ]
+}

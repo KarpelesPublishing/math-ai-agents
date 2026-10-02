@@ -1,0 +1,85 @@
+{
+  "slug": "bounded-exploration",
+  "question": "How much does a finite exploration policy pay to learn which action is better?",
+  "outcome": "Compare greedy, UCB, and Thompson choices in a declared stationary bandit.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A controller has two tools and limited opportunities to learn which one works more often. Always choosing the current favorite can waste the budget if early evidence was misleading. Always exploring can waste it even after the better tool is apparent. Curiosity is therefore a resource decision, not an unlimited appetite for information.\n\nThis notebook compares three finite policies against a constructed Bernoulli world. The true arm means are supplied to the simulator for scoring, while each policy chooses using its own observed successes. The chart measures pseudo-regret rather than presenting a lucky reward trace as proof of superiority. Change the arm ordering and seed before drawing a policy conclusion.",
+  "math_explanation": "After n_a pulls and s_a successes, the empirical mean is s_a/n_a. Greedy choice selects the largest empirical mean. UCB adds an exploration bonus sqrt(2 ln t / n_a), where t is the number of completed pulls (Equation 11.2 with c equal to the square root of two), favoring arms whose uncertainty remains large relative to their evidence.\n\nThompson sampling uses a Beta(1,1) prior for each Bernoulli arm. Its posterior is Beta(s_a+1,n_a-s_a+1). Each round draws one candidate mean from each posterior and chooses the largest draw. A posterior sample is a decision device, not a certificate that an arm's true mean equals that sampled value.\n\nCumulative pseudo-regret is sum_t [max_a mu_a-mu_(A_t)]. It uses the simulator's known means and measures expected reward forgone by choices. Realized net reward sums observed zero/one outcomes minus pull costs. These differ because sampling noise can favor a worse arm in a finite run. Information value is another quantity: it prices how evidence improves a future decision, not the historical cumulative shortfall.\n\nA separate one-pull information calculation uses the final Beta posterior. For each possible sampled arm, it averages the best posterior mean after a hypothetical success or failure, then subtracts the best current posterior mean. The net value also subtracts one pull cost. This is the Bayesian value of information for one later arm choice, not cumulative regret or a recommendation to continue the original budget.",
+  "method": "Supply arm means, a finite round budget, seed, and common pull cost. Each policy initializes untried arms once while budget remains, then uses its own decision rule. The simulator samples outcomes with a local seeded random generator, preserving offline reproducibility without modifying global random state.\n\nThe report gives pull counts, successes, pseudo-regret, and realized net reward for all policies. Curves show cumulative pseudo-regret by round. They are nondecreasing because each known-mean shortfall is nonnegative. Compare how frequently each policy visits the better arm, but do not rank policies statistically from a single seed. The changed case swaps means, testing whether early sampling and tie order affect the finite outcome.\n\nThe returned policy table also contains posterior means and gross/net one-pull information values. Inspect those separately from the regret chart: a policy can have accumulated regret even when an additional observation no longer changes its preferred action.",
+  "worked_interpretation": "In the default world, the optimal mean is 0.7 and the other arm's mean is 0.4. Every pull of the worse arm contributes 0.3 pseudo-regret; a pull of the best contributes zero. Therefore each policy's final regret must equal 0.3 times its worse-arm pull count, independent of realized successes.\n\nThe common cost 0.05 changes net observed reward but not pseudo-regret between arms, because it applies equally to every pull. The changed world reverses which arm is optimal. Counts and trajectories can change substantially even though the mean gap stays 0.3. That is a finite exploration diagnostic, not an empirical result about real tools.",
+  "failure_explanation": "Stationarity is a central assumption. If an arm's success probability changes with time, task type, or another agent's behavior, the single mean no longer describes the process. A policy can then look stubborn because its accumulated evidence belongs to a different world.\n\nThe seeded comparison also does not provide a confidence interval for policy performance. Policies consume random numbers differently, especially Thompson sampling, so the same seed is a reproducibility device rather than perfectly matched outcome exposure. Use repeated independently declared seeds and a suitable comparison design for statistical claims.\n\nA simulator oracle is not a deployed capability. Real logs usually do not reveal the true means needed for pseudo-regret. When those means are unavailable, report observed reward and an evaluation design instead of treating empirical averages as known truths.",
+  "transfer_explanation": "The transfer problem has three arms, with gaps 0.6,0.3,0 relative to the best mean 0.8. Its pseudo-regret must equal 0.6 n_0+0.3 n_1. Check that identity against each returned count vector.\n\nFor a local exploration plan, specify budget, outcome predicate, arm availability, and the evidence supporting stationarity. Different tool costs require an extended objective rather than the equal-cost comparison here. Keep exploration expense separate from any proposed value-of-information calculation. If the real task asks whether one extra observation is worthwhile, use the belief and information method rather than relabeling regret.",
+  "summary": "Greedy, UCB, and posterior sampling make different finite exploration choices. The notebook separates known-mean pseudo-regret from realized net reward and records the seed and pull counts. Swapped means and a three-arm transfer case test the calculation. Its conclusions are conditional on stationary independent Bernoulli rewards. A favorable run does not demonstrate universal policy superiority, and known simulator means must not be mistaken for calibrated deployed-tool estimates.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "means": [
+      0.4,
+      0.7
+    ],
+    "rounds": 120,
+    "seed": 7,
+    "pull_cost": 0.05
+  },
+  "changed": {
+    "means": [
+      0.7,
+      0.4
+    ],
+    "rounds": 120,
+    "seed": 7,
+    "pull_cost": 0.05
+  },
+  "transfer": {
+    "means": [
+      0.2,
+      0.5,
+      0.8
+    ],
+    "rounds": 90,
+    "seed": 19,
+    "pull_cost": 0.1
+  },
+  "input_fields": {
+    "means": "Arm success probabilities in [0,1], known only to this constructed simulator.",
+    "rounds": "Integer pull budget 1..10000.",
+    "seed": "Nonnegative integer random seed.",
+    "pull_cost": "Nonnegative common cost per pull."
+  },
+  "exercises": [
+    {
+      "question": "Express default regret through counts.",
+      "answer": "0.3 times the number of pulls of arm 0."
+    },
+    {
+      "question": "Does common pull cost change arm pseudo-regret?",
+      "answer": "No; identical cost cancels in the expected-reward comparison."
+    },
+    {
+      "question": "Express transfer regret.",
+      "answer": "The best transfer mean is 0.8, so each pull of arm 0 costs 0.8-0.2=0.6 and each pull of arm 1 costs 0.8-0.5=0.3. Regret is 0.6*n0+0.3*n1, where n0 and n1 count pulls of arms 0 and 1; pulls of the best arm add none."
+    }
+  ],
+  "routes": [
+    "bounded UCB exploration budget",
+    "Thompson posterior bandit sampling",
+    "pseudo-regret versus information value"
+  ],
+  "acceptance_checks": [
+    "Pull counts sum to round budget.",
+    "Regret equals the independent mean-gap calculation.",
+    "Repeated same input gives identical seeded results."
+  ]
+}

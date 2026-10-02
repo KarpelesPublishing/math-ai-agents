@@ -1,0 +1,113 @@
+{
+  "slug": "sample-allocation",
+  "question": "How many candidates should the controller generate under cost and deadline constraints?",
+  "outcome": "Separate candidate coverage from actual selector success and choose a feasible allocation.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "Generating another answer can improve the chance that some answer is correct. It does not ensure that the controller can recognize it. A selector that shares the same misconception can confidently choose the wrong candidate while total compute rises.\n\nThis notebook separates coverage, selection, cost, and time. You provide several candidate allocations, a correctness construction, and a conditional selector accuracy. The method removes allocations that miss the budget or deadline, then chooses the feasible one with the greatest declared selected success. The changed case replaces independent candidate errors with a shared failure condition. Marginal correctness stays fixed while the benefit of additional sampling changes.",
+  "math_explanation": "Under independent equal candidate correctness p, the probability that at least one of n candidates is correct is C_n=1-(1-p)^n. Under one shared good/bad condition, C_n=p for every positive n. Equal marginals do not distinguish those joint laws.\n\nFor n>1, this implementation defines selected success as q C_n, where q is the probability that the selector chooses a correct candidate conditional on one existing. When n=1 the selector is bypassed, so success is p. This convention matters: paying an unreliable selector can make two samples worse than one.\n\nExpense is n c_sample+c_selector and serial latency is n t_sample+t_selector for multiple candidates. Single-candidate allocation omits selector overhead. Feasibility requires both quantities to lie within declared limits. The selected allocation maximizes success, breaking ties toward lower expense. A candidate count with high oracle coverage is not necessarily feasible or operationally best.",
+  "method": "Provide candidate counts and all probability, cost, latency, deadline, and dependence inputs. Numeric validation rejects negative resource values, invalid probabilities, and unsupported counts. For each allocation the function calculates coverage, selected success, expense, latency, and feasibility, preserving every row for inspection.\n\nThe two figures compare oracle coverage and selector completion by sample count. Their gap is the selector boundary, not an error bar. The selected allocation may skip the visually highest point if it violates a resource constraint. In the changed case keep every scalar fixed and enable shared_error. Predict which row now wins and explain why sampling no longer improves coverage. Export dependence and selector assumptions with the result.",
+  "worked_interpretation": "Default coverage at n=5 is 1-0.6^5=0.92224. Selected success is 0.9 times that value, or 0.830016. Cost and serial latency are both 6, so this allocation exactly fits the limits and wins among the listed options.\n\nUnder shared error, every multiple-candidate row has coverage 0.4 and selected success 0.36. The single candidate bypasses selection and remains at 0.4 with lower expense. It therefore wins. More samples now add cost without improving justified completion, even though each candidate has the same marginal correctness as before.",
+  "failure_explanation": "The formula q C_n is a declared selector model. Real selector accuracy can depend on candidate count, task difficulty, disagreement, or the distribution of wrong answers. A constant q should not be adopted merely because it makes the curve easy to draw. Measure it on held-out candidate sets or state its uncertainty.\n\nIndependence is another strong assumption. Repeated samples from one shared flawed context can agree for the wrong reason. The changed construction is deliberately extreme, showing why marginal correctness alone cannot justify the usual saturation curve.\n\nResource models also need care. Parallel generation changes latency, and a deadline can alter selector behavior. This notebook uses serial time and fixed overhead. If no row is feasible, the selected allocation is unavailable; it does not invent a smaller budget or recommend exceeding a hard limit.",
+  "transfer_explanation": "The transfer case gives single-candidate success 0.7. Multiple candidates face selector accuracy 0.5 and overhead that makes them miss the three-unit deadline or six-unit budget. The feasible recommendation is one candidate, even though an oracle would see broader coverage in a larger bank.\n\nFor local allocation data, distinguish candidate success evidence from selector evidence. Record whether failures are independent, shared, or simply unknown. Unknown dependence calls for a measurement design or sensitivity constructions, not an automatic independence assumption. Use run-level evaluation after executing the chosen allocation to test actual authorized confirmed completion.",
+  "summary": "Sampling, selection, and feasible completion are separate layers. Independent coverage can rise with candidate count, while shared failures prevent that gain and selector mistakes consume it. Cost and deadlines filter allocations before choice. The default uses five samples, the shared-error case prefers one, and the transfer checks overhead limits. The result is conditional on declared probabilities and serial resource accounting, without turning repeated agreement into correctness evidence.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "candidate_success": 0.4,
+    "selector_accuracy": 0.9,
+    "sample_cost": 1,
+    "sample_latency": 1,
+    "selector_cost": 1,
+    "selector_latency": 1,
+    "deadline": 6,
+    "budget": 6,
+    "shared_error": false,
+    "sample_counts": [
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  "changed": {
+    "candidate_success": 0.4,
+    "selector_accuracy": 0.9,
+    "sample_cost": 1,
+    "sample_latency": 1,
+    "selector_cost": 1,
+    "selector_latency": 1,
+    "deadline": 6,
+    "budget": 6,
+    "shared_error": true,
+    "sample_counts": [
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  "transfer": {
+    "candidate_success": 0.7,
+    "selector_accuracy": 0.5,
+    "sample_cost": 2,
+    "sample_latency": 1,
+    "selector_cost": 3,
+    "selector_latency": 2,
+    "deadline": 3,
+    "budget": 6,
+    "shared_error": false,
+    "sample_counts": [
+      1,
+      2,
+      4
+    ]
+  },
+  "input_fields": {
+    "candidate_success": "Marginal correctness probability in [0,1].",
+    "selector_accuracy": "Conditional probability of choosing a correct candidate when one exists.",
+    "sample_cost": "Nonnegative cost per generated candidate.",
+    "sample_latency": "Nonnegative serial time per candidate.",
+    "selector_cost": "Nonnegative selector expense for n>1.",
+    "selector_latency": "Nonnegative selector time for n>1.",
+    "deadline": "Nonnegative total time limit.",
+    "budget": "Nonnegative total expense limit.",
+    "shared_error": "Exact boolean choosing shared versus independent correctness construction.",
+    "sample_counts": "Nonempty list of positive integer candidate counts up to 1000."
+  },
+  "exercises": [
+    {
+      "question": "Compute default n=5 coverage and selection.",
+      "answer": "Coverage is 1-0.6^5=0.92224. Selected success is 0.92224*0.9=0.830016, because the selector finds a correct candidate with probability 0.9 when one exists."
+    },
+    {
+      "question": "Why prefer n1 under shared error?",
+      "answer": "With a shared error, coverage stays 0.4 whatever the count. For two or more candidates selected success is 0.4*0.9=0.36 and the selector adds cost, so one candidate (success 0.4) is preferred."
+    },
+    {
+      "question": "What if no allocation is feasible?",
+      "answer": "selected_allocation is unavailable; revise the allowed contract or abstain."
+    }
+  ],
+  "routes": [
+    "candidate selector compute allocation",
+    "shared-error sampling saturation",
+    "sample budget deadline frontier"
+  ],
+  "acceptance_checks": [
+    "Selected allocation meets both resource limits.",
+    "Default coverage increases under independence.",
+    "Shared errors make one candidate optimal here."
+  ]
+}

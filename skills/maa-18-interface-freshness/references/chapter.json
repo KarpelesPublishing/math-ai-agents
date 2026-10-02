@@ -1,0 +1,66 @@
+{
+  "chapter": 18,
+  "title": "When an Action Has Coordinates",
+  "source_path": "Manuscript/part-iv/18-when-an-action-has-coordinates.md",
+  "source_sha256": "125a53a64575aad3a246ecaef60c22f743fd1d6504d6f20ccf0ca9f5b49ebe75",
+  "notebook": "notebooks/18-interface-freshness.ipynb",
+  "skill": "maa-18-interface-freshness",
+  "skill_path": "skills/maa-18-interface-freshness/SKILL.md",
+  "method": "interface-freshness",
+  "outcome": "Compare coordinate, semantic, and version-bound action contracts.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "coordinate stale layout action",
+    "semantic versus version-bound interface",
+    "current permission observation age"
+  ],
+  "input_fields": {
+    "observation_age": "Nonnegative elapsed time since observation.",
+    "max_age": "Nonnegative freshness limit in the same time unit.",
+    "observed_version": "Version seen in the observation.",
+    "current_version": "Version at action time.",
+    "current_permission": "Exact boolean current authorization.",
+    "effect_confirmed": "Exact boolean receipt of desired effect confirmation.",
+    "coordinate_target": "Current object located at previously observed coordinates.",
+    "semantic_target": "Current object resolved by semantic interface.",
+    "wanted_target": "Intended object identifier.",
+    "change_rate": "Optional nonnegative rate of invalidating interface changes per unit time. When given, Fresh(delay)=exp(-rate*delay) from Equation 18.3 is reported.",
+    "delays": "Optional list of nonnegative delays in the same time unit; requires change_rate."
+  },
+  "example_input": "data/examples/ch18.json",
+  "equations": [
+    {
+      "label": "EQV18-01",
+      "number": "18.1",
+      "tex": "P_{\\mathrm{ui}}(x'\\mid x,a)\n=\n\\sum_{\\tilde a\\in\\operatorname{Act}_{\\mathrm{ui}}}\n\\operatorname{Exec}_{\\mathrm{ui}}(\\tilde a\\mid x,a)\nP(x'\\mid x,\\tilde a).\n\\tag{18.1}",
+      "asset": "assets/math/755fe6a5928a4b2e29ce.svg",
+      "explanations": [
+        "Equation (18.1) composes an interface's execution law with the world transitions caused by its realized operations.",
+        "For each operation the command might realize in the current state, multiply its execution probability by its next-state law, then add those possibilities."
+      ]
+    },
+    {
+      "label": "EQV18-02",
+      "number": "18.2",
+      "tex": "\\mathcal A_{\\mathrm{rob}}(\\mathbf b)\n=\n\\bigcap_{x:\\,\\mathbf b(x)>0}\\mathcal A_{\\mathrm{auth}}(x).\n\\tag{18.2}",
+      "asset": "assets/math/4b0b524edbcf02f6262f.svg",
+      "explanations": [
+        "Equation (18.2) retains actions authorized in every state still considered possible.",
+        "An action survives only if each state with positive belief weight permits it."
+      ]
+    },
+    {
+      "label": "EQV18-03",
+      "number": "18.3",
+      "tex": "\\operatorname{Fresh}(\\Delta)\n=\n\\exp(-\\lambda_{\\mathrm{ui}}\\Delta).\n\\tag{18.3}",
+      "asset": "assets/math/2f33e21b021d2dab73fc.svg",
+      "explanations": [
+        "Equation (18.3) gives the chance that a coordinate binding remains valid over a delay in the stated constant-rate construction.",
+        "Longer delay and a higher material-change rate both lower the chance that no invalidating change has occurred."
+      ]
+    }
+  ]
+}

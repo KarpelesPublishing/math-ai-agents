@@ -1,0 +1,142 @@
+{
+  "slug": "transition-model-bound",
+  "question": "How much value error can this approximate world model introduce?",
+  "outcome": "Calculate uniform transition error, actual fixed-policy finite values, and conditional bounds.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A planner evaluates tomorrow through an approximate transition model. Small one-step errors can matter more when the controller looks farther ahead. Yet a large worst-case bound does not mean the actual planning error reached it. Both quantities deserve separate places in the report.\n\nThis notebook compares two finite kernels under one fixed policy and one common immediate reward vector. It computes their transition mismatch, propagates finite-horizon values, and plots actual value error beside the chapter's conditional horizon bound. The changed case lengthens the horizon without changing the model. The transfer case makes the kernels identical, giving an exact zero-error check before any more complicated interpretation.",
+  "math_explanation": "For each state, total variation between the true and modeled transition rows is half the sum of absolute probability differences. Uniform error epsilon is the maximum of those row distances. An average row error cannot replace that maximum in a uniform bound.\n\nWith common expected immediate rewards in [0,R], one fixed policy, and discount gamma<1, the chapter's discounted value bound is gamma epsilon R/(1-gamma)^2. This quantity applies under those prerequisites; it is not an estimate fitted to the finite error curve. Reward-model mismatch would need another term.\n\nFor H rewards and zero terminal continuation, the undiscounted finite-horizon bound is R epsilon H(H-1)/2. It also bounds the discounted finite calculation because discounting can only reduce these nonnegative error contributions. The implementation computes V_h=r+gamma P V_(h-1) and modeled W_h=r+gamma Q W_(h-1), starting both at zero, then records max_s |V_h(s)-W_h(s)|.\n\nThe kernels already absorb a fixed policy. A state-value bound alone does not provide the uniform action-value error and action gap needed to certify a choice ranking. Keep that missing prerequisite explicit.",
+  "method": "Provide two aligned square probability matrices and one nonnegative reward vector. Every row must sum to one. Declare discount and horizon. The function computes the uniform total-variation error, maximum reward, both finite value recurrences, the actual maximum error at each horizon, and the two conditional bounds.\n\nFigures use reward horizon on the horizontal axis and reward units on the vertical axis. Plotting bound and actual error separately avoids disguising a small error beneath a large envelope. In the changed case increase horizon from five to twenty and predict how the quadratic envelope changes. Inspect the actual curve independently; it need not grow at the same rate. Export common-reward and fixed-policy assumptions with the numerical result.",
+  "worked_interpretation": "Both default row distances are 0.02, so epsilon=0.02. With R=1 and gamma=0.9, the discounted infinite bound is 1.8. At horizon 5 the finite bound is 0.02(5)(4)/2=0.2. The actual finite error is calculated from the two recurrences and must remain below the finite envelope.\n\nAt horizon 20 the finite bound grows to 3.8, even though each transition row changed by the same amount. That growth is a sensitivity statement under a worst-case construction. It does not say that the actual error became 3.8, and it does not establish that any particular action ranking reversed.\n\nTwo bounds are reported and both are valid. At horizon 20 the finite-horizon bound (3.8) is the looser one and the discounted infinite-horizon bound (1.8) the tighter, so the tightest valid statement is their minimum. The finite bound is not a stronger warning.",
+  "failure_explanation": "A common misuse inserts average model error into a uniform bound. A model may be accurate on frequently observed states and badly wrong at the one state that changes the plan. The maximum row distance protects the stated domain, while an average describes a different estimand.\n\nAnother misuse compares reward functions that differ and then attributes all value error to transition mismatch. This input contract intentionally supplies only one common reward vector. If the model invents immediate reward, the implementation's bound assumptions no longer apply.\n\nFinally, an error bound is not a decision certificate. Even a small value bound can overwhelm a smaller action gap, and this fixed-policy state calculation does not inspect alternative actions. Use it to audit model sensitivity, then state the extra action-value and gap information required for ranking guarantees.",
+  "transfer_explanation": "The transfer kernels are identical. Epsilon is zero, finite values agree at every stage, and both bounds are zero. This identity is a useful check of matrix alignment and recurrence behavior. If an implementation returned nonzero error here, investigate the computation before interpreting a more realistic model.\n\nFor reader data, explain how the true kernel was measured or constructed. Usually a deployed world does not provide exact transition probabilities. In that case the calculated epsilon is conditional on estimates and their support, not a known universal error. Preserve uncertainty or specify the measurements needed to bound it on the relevant policy domain.",
+  "summary": "Transition models accumulate errors through future value. Uniform total variation, common immediate rewards, and a fixed policy are essential to the implemented bounds. The notebook separates actual finite error from conditional envelopes and checks the identical-kernel case. Extending horizon changes sensitivity without changing one-step mismatch. A bound is neither a measured planning error nor an action-ranking certificate; report its prerequisites and the evidence supporting the supplied kernels.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "true_transition": [
+      [
+        0.9,
+        0.1
+      ],
+      [
+        0.2,
+        0.8
+      ]
+    ],
+    "model_transition": [
+      [
+        0.88,
+        0.12
+      ],
+      [
+        0.22,
+        0.78
+      ]
+    ],
+    "rewards": [
+      0,
+      1
+    ],
+    "discount": 0.9,
+    "horizon": 5
+  },
+  "changed": {
+    "true_transition": [
+      [
+        0.9,
+        0.1
+      ],
+      [
+        0.2,
+        0.8
+      ]
+    ],
+    "model_transition": [
+      [
+        0.88,
+        0.12
+      ],
+      [
+        0.22,
+        0.78
+      ]
+    ],
+    "rewards": [
+      0,
+      1
+    ],
+    "discount": 0.9,
+    "horizon": 20
+  },
+  "transfer": {
+    "true_transition": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "model_transition": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "rewards": [
+      1,
+      2
+    ],
+    "discount": 0.5,
+    "horizon": 4
+  },
+  "input_fields": {
+    "true_transition": "Square row-stochastic true kernel after fixing a policy.",
+    "model_transition": "Same-size approximate row-stochastic kernel for that policy.",
+    "rewards": "Common immediate state reward vector, finite and nonnegative.",
+    "discount": "Gamma in [0,0.9999].",
+    "horizon": "Integer reward horizon 1..1000 with zero terminal continuation."
+  },
+  "exercises": [
+    {
+      "question": "Compute default epsilon.",
+      "answer": "Each row has half L1 distance 0.02; maximum is 0.02."
+    },
+    {
+      "question": "Compute horizon 20 finite bound.",
+      "answer": "With the common reward bound 1 and epsilon 0.02, the finite-horizon bound is 1*0.02*20*19/2=3.8."
+    },
+    {
+      "question": "What if the reward model also differs?",
+      "answer": "This transition-only bound is insufficient; add a declared reward-error term."
+    }
+  ],
+  "routes": [
+    "uniform total variation model audit",
+    "fixed-policy planning error bound",
+    "horizon model-error sensitivity"
+  ],
+  "acceptance_checks": [
+    "Actual finite error stays below stated envelope.",
+    "Identical kernels give zero epsilon and error.",
+    "Rows must be normalized and rewards shared."
+  ]
+}

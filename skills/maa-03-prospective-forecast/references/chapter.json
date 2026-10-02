@@ -1,0 +1,60 @@
+{
+  "chapter": 3,
+  "title": "How to Predict Emergence",
+  "source_path": "Manuscript/revisions/part-i-v2/03-the-smooth-curve-and-the-sudden-skill.md",
+  "source_sha256": "13f4a60fe62e8a25a242f2b13498abe42bd7ab3dcb54bb7d7fec6c497adec3b6",
+  "notebook": "notebooks/03-prospective-forecast.ipynb",
+  "skill": "maa-03-prospective-forecast",
+  "skill_path": "skills/maa-03-prospective-forecast/SKILL.md",
+  "method": "prospective-forecast",
+  "outcome": "Fit a declared curve on development data and score a separate test.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "freeze prospective capability forecast",
+    "development test leakage audit",
+    "score unseen curve prediction"
+  ],
+  "input_fields": {
+    "development_x": "At least two development scales with variation.",
+    "development_y": "Aligned finite development observations.",
+    "test_x": "Separate unseen scales, with no development overlap.",
+    "test_y": "Aligned withheld observations used only for scoring.",
+    "family": "linear or log, declared before inspecting test outcomes."
+  },
+  "example_input": "data/examples/ch03.json",
+  "equations": [
+    {
+      "label": "EQ03-01",
+      "number": "3.1",
+      "tex": "L(C)=aC^b+c.\n\\tag{3.1}",
+      "asset": "assets/math/90f0aa7fdfb7e63b6cf0.svg",
+      "explanations": [
+        "Equation (3.1) is a fitted curve that lets a handful of completed training runs predict the loss of a much larger run that has not finished.",
+        "`C` is training compute and `a`, `b`, `c` are constants chosen to fit the smaller runs, so a larger `C` reads off a prediction."
+      ]
+    },
+    {
+      "label": "EQ03-02",
+      "number": "3.2",
+      "tex": "\\Gamma_m=f_\\psi(z_m)+\\epsilon_m.\n\\tag{3.2}",
+      "asset": "assets/math/71ad5d194fa8ee0de514.svg",
+      "explanations": [
+        "Equation (3.2) proposes that a member's measured interaction is explained by declared features plus leftover error, which is a modeling choice rather than an existing result.",
+        "The measured interaction for member `m` equals a fitted function of the declared features `z_m`, plus the part that fit misses."
+      ]
+    },
+    {
+      "label": "EQ03-03",
+      "number": "3.3",
+      "tex": "\\operatorname{pass}_\\tau(q_m)=\\mathbf{1}\\{q_m\\geq\\tau\\}.\n\\tag{3.3}",
+      "asset": "assets/math/a432c7b620a94ad9171b.svg",
+      "explanations": [
+        "Equation (3.3) turns a continuous success probability into a single pass-or-fail bit using a cutoff chosen in advance.",
+        "Compare the member's success probability against the threshold and report one when it reaches the threshold, zero otherwise."
+      ]
+    }
+  ]
+}

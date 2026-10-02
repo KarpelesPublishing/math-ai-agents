@@ -1,0 +1,7 @@
+{
+  "demand": 0.5,
+  "capacity": 1,
+  "constant_time": 1,
+  "shortcut_overhead": 0,
+  "shortcut_toll": 0
+}

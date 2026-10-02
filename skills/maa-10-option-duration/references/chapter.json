@@ -1,0 +1,60 @@
+{
+  "chapter": 10,
+  "title": "Plans Within Plans: Hierarchical Actions and Reusable Skills",
+  "source_path": "Manuscript/part-iii/10-plans-within-plans.md",
+  "source_sha256": "159f162b058587aaec0ddd6ed4d0ddf76d79806ab82bd7939a0eacf16b3f84b6",
+  "notebook": "notebooks/10-option-duration.ipynb",
+  "skill": "maa-10-option-duration",
+  "skill_path": "skills/maa-10-option-duration/SKILL.md",
+  "method": "option-duration",
+  "outcome": "Compute option returns with duration discounting and explicit completion.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "variable-duration option return",
+    "skill interruption termination contract",
+    "option deadline continuation discount"
+  ],
+  "input_fields": {
+    "discount": "Gamma in [0,1].",
+    "deadline": "Nonnegative integer primitive-step deadline.",
+    "start_time": "Nonnegative elapsed time, same unit as deadline.",
+    "interrupt_after": "Optional nonnegative integer executed-step cap for each option.",
+    "options": "Each option has name,initiation:boolean,rewards:nonempty primitive reward list,terminated:boolean,continuation_value:number."
+  },
+  "example_input": "data/examples/ch10.json",
+  "equations": [
+    {
+      "label": "EQV10-01",
+      "number": "10.1",
+      "tex": "o=(\\mathcal{I}_o,\\pi_o,\\beta_o).\n\\tag{10.1}",
+      "asset": "assets/math/7197ed5ea6f0ca3a60f7.svg",
+      "explanations": [
+        "Equation (10.1) separates where an option may start, how it acts while running, and how it stops.",
+        "Start only in `\\mathcal{I}_o`; use `\\pi_o` for primitive choices; use `\\beta_o` to determine termination."
+      ]
+    },
+    {
+      "label": "EQV10-02",
+      "number": "10.2",
+      "tex": "Q^{\\mu}(x,o)=\\operatorname E_\\mu\\!\\left[\n\\sum_{k=0}^{\\tau-1}\\gamma^k r_{t+k}\n+\\gamma^\\tau V^\\mu(x_{t+\\tau})\\;\\middle|\\;x_t=x,o_t=o\n\\right].\n\\tag{10.2}",
+      "asset": "assets/math/fce95d2aa964417b0ea0.svg",
+      "explanations": [
+        "Equation (10.2) values rewards inside an option and value remaining after variable-duration completion.",
+        "Discount internal primitive rewards, then discount continuation by actual primitive steps used."
+      ]
+    },
+    {
+      "label": "EQV10-03",
+      "number": "10.3",
+      "tex": "T_{\\mathrm{release}}=\\max\\{2+3+1,\\;4\\}=6\\text{ minutes},\n\\qquad C_{\\mathrm{tools}}=4+7+2+3=16\\text{ credits}.\n\\tag{10.3}",
+      "asset": "assets/math/83bd672b4dcd183bfb16.svg",
+      "explanations": [
+        "Equation (10.3) keeps completion delay separate from total tool cost in parallel workflow.",
+        "Take longest dependency chain for time; add all required activity credits for cost."
+      ]
+    }
+  ]
+}

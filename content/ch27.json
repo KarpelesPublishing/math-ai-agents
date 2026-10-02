@@ -1,0 +1,138 @@
+{
+  "slug": "delegation-queue",
+  "question": "Can human review supply missing authority within the workflow's capacity and timing contract?",
+  "outcome": "Compute a review queue diagnostic and identify required handoff packets and release blockers.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A controller reaches the edge of its authority and asks for review. That is often the correct action, but delegation does not make the remaining work disappear. A reviewer has finite service capacity, and a growing queue can consume the deadline before approval arrives.\n\nThis notebook combines an authority handoff predicate with a simple review queue. It identifies tasks that may proceed autonomously, tasks requiring a review packet, and tasks whose declared mean review time exceeds their deadline. The method keeps review receipt separate from human authority. Its output is a local scheduling and authorization diagnostic, not a sent message or a prediction that a particular reviewer will answer on time.",
+  "math_explanation": "Let total arrival rate be lambda and delegated fraction f. Effective review arrival is lambda_review=lambda f. Under an M/M/1 construction with service rate mu, the queue is stable when lambda_review<mu. Mean system time, including service, is W=1/(mu-lambda_review). At or above capacity no finite stationary mean exists, so the output remains unavailable.\n\nA task requires delegation when the agent lacks authority or its declared risk exceeds the autonomous threshold. In this simplified contract, autonomous release requires current agent authority and acceptable risk. Delegated release requires human authority, a received review, and a mean-time diagnostic that does not exceed the task deadline.\n\nThe last predicate is deliberately a planning convention, not a pathwise guarantee. Queue mean W is not a measured duration for an individual task. A receipt may in reality arrive earlier or later. The returned flag identifies incompatibility between the declared capacity plan and deadline, and should not be mistaken for evidence that a specific observed review was late.",
+  "method": "Supply arrival and service rates in the same time unit, delegated fraction, risk threshold, and task rows. Exact booleans distinguish current agent authority, human authority, and review receipt. Validation requires positive service rate, valid probabilities, and nonnegative deadlines.\n\nThe function calculates effective load, stability, and mean sojourn when available. It then emits delegation-required, queue-mean-exceeds-deadline, release, and review-packet-required flags for each task. The sensitivity figure varies review arrivals below service capacity and shows how mean time grows near saturation. In the changed case increase the delegated fraction while preserving total arrivals and service rate. Predict which releases the capacity contract will block.",
+  "worked_interpretation": "Default review load is 4(0.5)=2, below service rate 3. Mean sojourn is 1/(3-2)=1 time unit. Routine is authorized and below the agent risk limit, so it can proceed autonomously. Release requires delegation but has human authority and a received review, with deadline 2 exceeding the mean diagnostic, so it passes the declared release contract.\n\nSensitive lacks a received review and requires a packet. With delegated fraction 0.9, review load becomes 3.6, exceeding capacity. The stationary mean is unavailable and delegated release is blocked by the capacity plan. Routine remains autonomous. Review capacity did not change the underlying authority predicate.\n\nThe mean-versus-deadline flag is a planning diagnostic, not a probability of meeting the deadline. If the M/M/1 first-come-first-served assumption held exactly, sojourn time would be exponential with rate 3-2=1, so with deadline 2 the chance of meeting it would be 1-exp(-2), about 0.865, even though the mean 1 is below 2. This probability is a hand calculation, not a field the lab reports.",
+  "failure_explanation": "Delegation can fail when it becomes an automatic escape from uncertainty without a capacity model. Sending every doubtful task to a fixed reviewer raises arrival load and can make the queue unstable. The sensitivity curve shows that even stable load near capacity creates large mean delays.\n\nA queue calculation can also be overread. M/M/1 assumes Poisson arrivals, exponential service, one reviewer, and stationary rates. Real review teams may batch work, prioritize cases, or have correlated arrivals. A single mean cannot prove deadline compliance or determine an actual task's elapsed review time.\n\nAuthority remains independent. A review receipt from someone without the required permission cannot authorize release. Conversely, the method's mean-time flag is not evidence that an already received review was late. Preserve actual timestamps for empirical deadline checks and use this output as a capacity-design diagnostic.",
+  "transfer_explanation": "The transfer review load is 1 with service rate 2, so mean sojourn is 1. The task deadline is 0.5, below that planning mean. Despite human authority and a declared receipt, the simplified capacity contract does not approve release. This flags the planning mismatch rather than asserting the actual receipt arrived after 0.5.\n\nFor local use, draft a handoff packet containing current state, missing authority, risk, observations, proposed action, and deadline. Do not send it automatically from this computation. Measure real arrival and service patterns before adopting the queue law, and preserve review timestamps when evaluating individual deadline outcomes.",
+  "summary": "Delegation transfers work to a bounded human service. The notebook calculates conditional queue stability and mean time, then keeps authority and review receipts explicit in a task contract. More delegation can overload review even when it is individually sensible. The changed case exposes saturation; the transfer exposes a deadline-planning mismatch. Queue means support capacity design, while actual deadline compliance requires timestamps and permission requires a valid authority source.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "arrival_rate": 4,
+    "service_rate": 3,
+    "delegation_fraction": 0.5,
+    "agent_risk_limit": 0.1,
+    "tasks": [
+      {
+        "name": "routine",
+        "agent_authorized": true,
+        "risk": 0.02,
+        "deadline": 2,
+        "human_authorized": false,
+        "review_received": false
+      },
+      {
+        "name": "release",
+        "agent_authorized": false,
+        "risk": 0.05,
+        "deadline": 2,
+        "human_authorized": true,
+        "review_received": true
+      },
+      {
+        "name": "sensitive",
+        "agent_authorized": false,
+        "risk": 0.2,
+        "deadline": 2,
+        "human_authorized": true,
+        "review_received": false
+      }
+    ]
+  },
+  "changed": {
+    "arrival_rate": 4,
+    "service_rate": 3,
+    "delegation_fraction": 0.9,
+    "agent_risk_limit": 0.1,
+    "tasks": [
+      {
+        "name": "routine",
+        "agent_authorized": true,
+        "risk": 0.02,
+        "deadline": 2,
+        "human_authorized": false,
+        "review_received": false
+      },
+      {
+        "name": "release",
+        "agent_authorized": false,
+        "risk": 0.05,
+        "deadline": 2,
+        "human_authorized": true,
+        "review_received": true
+      },
+      {
+        "name": "sensitive",
+        "agent_authorized": false,
+        "risk": 0.2,
+        "deadline": 2,
+        "human_authorized": true,
+        "review_received": false
+      }
+    ]
+  },
+  "transfer": {
+    "arrival_rate": 1,
+    "service_rate": 2,
+    "delegation_fraction": 1,
+    "agent_risk_limit": 0.05,
+    "tasks": [
+      {
+        "name": "approval",
+        "agent_authorized": false,
+        "risk": 0.01,
+        "deadline": 0.5,
+        "human_authorized": true,
+        "review_received": true
+      }
+    ]
+  },
+  "input_fields": {
+    "arrival_rate": "Nonnegative incoming task rate per declared time unit.",
+    "service_rate": "Positive reviewer service rate in the same unit.",
+    "delegation_fraction": "Fraction in [0,1] entering review.",
+    "agent_risk_limit": "Probability threshold in [0,1] for autonomous task handling.",
+    "tasks": "Rows with name,agent_authorized:boolean,risk:probability,deadline:nonnegative time,human_authorized:boolean,review_received:boolean."
+  },
+  "exercises": [
+    {
+      "question": "Compute default review mean.",
+      "answer": "Effective arrival 2; mean 1/(3-2)=1."
+    },
+    {
+      "question": "Why is changed stationary mean unavailable?",
+      "answer": "Arrival 3.6 exceeds service 3, so the M/M/1 queue is unstable."
+    },
+    {
+      "question": "Does mean 1 prove the transfer receipt arrived after 0.5?",
+      "answer": "No. It is a planning diagnostic; individual timing needs observed timestamps."
+    }
+  ],
+  "routes": [
+    "human delegation review capacity",
+    "authority handoff queue deadline",
+    "M-M-1 review saturation"
+  ],
+  "acceptance_checks": [
+    "Default mean is 1 under stable load.",
+    "Overcapacity mean is unavailable.",
+    "Missing review receipt blocks delegated release."
+  ]
+}

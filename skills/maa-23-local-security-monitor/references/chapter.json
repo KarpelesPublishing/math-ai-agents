@@ -1,0 +1,68 @@
+{
+  "chapter": 23,
+  "title": "When the Environment Gives Instructions: The Mathematics of Agent Security",
+  "source_path": "Manuscript/part-vi/23-when-the-environment-gives-instructions.md",
+  "source_sha256": "f14ee57cb9c1b355a4b107b10197d4ff8f1b368437cf28f75c9d737f4dc79a87",
+  "notebook": "notebooks/23-local-security-monitor.ipynb",
+  "skill": "maa-23-local-security-monitor",
+  "skill_path": "skills/maa-23-local-security-monitor/SKILL.md",
+  "method": "local-security-monitor",
+  "outcome": "Replay a fictitious attack trace against capability, provenance, and review checks.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "untrusted data control promotion",
+    "capability provenance monitor trace",
+    "stale review adversarial publish"
+  ],
+  "input_fields": {
+    "capabilities": "List of permitted action names in the local contract.",
+    "current_version": "Current protected document version.",
+    "events": "Ordered data/review/action events. data:instruction_attempt,promoted_to_control booleans; review:valid boolean,version; action:action,authority_source=user/system/untrusted-data,version for publish,executed boolean."
+  },
+  "example_input": "data/examples/ch23.json",
+  "equations": [
+    {
+      "label": "EQV23-01",
+      "number": "23.1",
+      "tex": "\\mathcal C_{\\mathrm{child}}\\subseteq\\mathcal C_{\\mathrm{parent}}.\n\\tag{23.1}",
+      "asset": "assets/math/fae92fb7f1ff352e87db.svg",
+      "explanations": [
+        "Bounds a delegated process's capability set by its parent's, so nothing reached through delegation can exceed the parent's own authority.",
+        "A child inherits at most what it is given; delegation can narrow authority, never widen it."
+      ]
+    },
+    {
+      "label": "EQV23-02",
+      "number": "23.2",
+      "tex": "M_{t+1}=\\operatorname{Mon}(M_t,e_t).\n\\tag{23.2}",
+      "asset": "assets/math/6e64e529954cfb809340.svg",
+      "explanations": [
+        "Advances the monitor's record from its previous state and one observed event, so authorization can be re-checked against current knowledge.",
+        "Only real, observed events move `M_t` forward; a sentence claiming an event happened is not the event."
+      ]
+    },
+    {
+      "label": "EQV23-03",
+      "number": "23.3",
+      "tex": "\\operatorname{Publish}(\\delta,v,r,M_t)=1 \\iff (\\delta,v,r)\\in\\operatorname{Approved}(M_t).\n\\tag{23.3}",
+      "asset": "assets/math/679b0268a3ff46a285ee.svg",
+      "explanations": [
+        "Authorizes release only when the exact document, version, and recipient triple currently appears in the monitor's approval record.",
+        "No partial match counts: the right document at the wrong version, or the right version to the wrong recipient, both fail the lookup."
+      ]
+    },
+    {
+      "label": "EQV23-04",
+      "number": "23.4",
+      "tex": "\\operatorname{Risk}(\\mathcal F)=\\max_{f\\in\\mathcal F}\\Pr[\\text{violation}\\mid f].\n\\tag{23.4}",
+      "asset": "assets/math/ccccf4aef7aa7f16f306.svg",
+      "explanations": [
+        "Defines exposure as the single worst violation chance across a declared attack family, not an average over the family.",
+        "One member of `\\mathcal F` sets the value; a family with nine safe attacks and one dangerous one still reports the dangerous one's chance."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Chapter 8: Acting in the Dark"
+  short_description: "Calculate and interpret Chapter 8 agent methods"
+  default_prompt: "Use $maa-08-belief-information to analyze my supplied inputs and explain the result."
+policy:
+  allow_implicit_invocation: true

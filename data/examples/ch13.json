@@ -1,0 +1,22 @@
+{
+  "rewards": [
+    0,
+    1
+  ],
+  "success_probabilities": [
+    0,
+    1
+  ],
+  "terminal_potentials": [
+    2,
+    0
+  ],
+  "episodes": 100,
+  "seeds": [
+    7,
+    17
+  ],
+  "learning_rate": 0.1,
+  "discount": 1,
+  "evaluation_runs": 100
+}

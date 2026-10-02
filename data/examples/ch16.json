@@ -1,0 +1,16 @@
+{
+  "candidate_success": 0.7,
+  "selector_accuracy": 0.5,
+  "sample_cost": 2,
+  "sample_latency": 1,
+  "selector_cost": 3,
+  "selector_latency": 2,
+  "deadline": 3,
+  "budget": 6,
+  "shared_error": false,
+  "sample_counts": [
+    1,
+    2,
+    4
+  ]
+}

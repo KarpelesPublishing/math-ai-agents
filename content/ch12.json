@@ -1,0 +1,123 @@
+{
+  "slug": "trajectory-credit",
+  "question": "How should a late consequence change values assigned to earlier states?",
+  "outcome": "Compare Monte Carlo, TD(0), and accumulating TD(lambda) updates on one trajectory.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "The draft step earns no immediate reward. The review step produces the eventual benefit. If the controller learns only from immediate outcomes, it may never give preparation the credit it deserves. If it waits for every complete episode, it may learn slowly or fail to use partial traces.\n\nThis notebook puts three credit rules beside the same trajectory. Monte Carlo uses the discounted later return. TD(0) bootstraps from the next state's current value. Eligibility traces spread a later TD error backward through recently visited states. The changed case marks the end as truncation rather than true termination, exposing the value that can be lost when those two boundaries are confused.",
+  "math_explanation": "For a complete trajectory, the return target is G_t=r_t+gamma G_(t+1), with terminal continuation zero. For a truncated trace, this implementation initializes the final continuation from the supplied value estimate instead. The backward recurrence makes that distinction visible in every earlier target.\n\nMonte Carlo updates V(s_t) by alpha[G_t-V(s_t)]. TD(0) uses delta_t=r_t+gamma V(s_(t+1))-V(s_t), replacing the next value with zero only at true terminal transition. Accumulating TD(lambda) first adds one to the current state's eligibility, updates every value by alpha delta_t e_t(s), then decays eligibility by gamma lambda.\n\nAll three rules receive the same reward sequence and initial values, but their online updates differ. A state revisited within the trace can accumulate eligibility or receive multiple updates. This notebook implements one sequential pass, not an asymptotic convergence experiment. Lambda controls how far a later error reaches backward; it does not manufacture missing future rewards.",
+  "method": "Give the ordered state list, rewards, initial values, discount, learning rate, lambda, and exact terminal flag. The state list must have one more element than the reward list. Values must exist for every named state. The code computes backward return targets, then applies each update rule to its own independent copy of the initial value map.\n\nThe return plot shows the target associated with each transition, while the trace-error plot shows the online TD errors used by eligibility updates. Consult the three final value maps to compare credit assignment. In the changed case the final state's estimate is 2 and terminal is false. Predict how that bootstrap changes the targets before running the calculation.",
+  "worked_interpretation": "Default returns are [1,1]. With alpha=0.5, Monte Carlo assigns draft and review values 0.5. TD(0) updates draft from a zero next value, leaving it at zero, then assigns review 0.5. TD(lambda) carries the later error back with eligibility 0.8, giving draft 0.4 and review 0.5.\n\nIn the changed truncated case, final bootstrap is 2. Returns become [3,3]. Treating that trace as terminal would incorrectly erase the supplied continuation estimate. Whether 2 is a good estimate is a separate question; the credit arithmetic simply makes its dependence explicit.",
+  "failure_explanation": "Bootstrapping can propagate a bad value estimate. Monte Carlo avoids that particular dependence in complete episodes, but it depends on the observed later return and can have high sampling variability. Neither target dominates in every setting.\n\nThe terminal flag is especially important in limited-budget logs. An observation window ending is not proof that the underlying task terminated. Setting terminal true after a timeout can systematically suppress continuation value. Setting it false at actual termination can add imaginary future reward.\n\nTrace conventions also matter. Replacing traces and accumulating traces are different algorithms when states repeat. This implementation uses accumulating traces. Compare it with equations under that convention, and avoid claiming convergence from one pass over a short supplied trajectory. Learning-rate schedules, visitation, and process assumptions would need their own study.",
+  "transfer_explanation": "The transfer case sets lambda to zero. Accumulating TD(lambda) then updates only the currently eligible state before immediate decay, so its final values should agree with TD(0) under the same sequential convention. This is an independent structural check rather than a visual similarity claim.\n\nFor local use, preserve reward timing and state identity, and mark whether the final boundary is real termination or missing observation. If the final value is a fitted estimate, record its provenance. A trajectory-credit report should show targets and bootstrap assumptions as well as updated values, so a surprising change can be traced to evidence rather than hidden continuation.",
+  "summary": "Credit rules differ in which future information they use. Monte Carlo follows the observed return, TD(0) bootstraps locally, and eligibility traces spread later errors through recent states. Terminal versus truncated boundaries alter continuation. The default is hand-checkable, the changed case exposes bootstrap dependence, and lambda zero checks the transfer identity. One finite update demonstrates mechanics, not convergence or reliable learning in a deployed agent.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "states": [
+      "draft",
+      "review",
+      "done"
+    ],
+    "rewards": [
+      0,
+      1
+    ],
+    "discount": 1,
+    "learning_rate": 0.5,
+    "lambda": 0.8,
+    "terminal": true,
+    "values": {
+      "draft": 0,
+      "review": 0,
+      "done": 0
+    }
+  },
+  "changed": {
+    "states": [
+      "draft",
+      "review",
+      "done"
+    ],
+    "rewards": [
+      0,
+      1
+    ],
+    "discount": 1,
+    "learning_rate": 0.5,
+    "lambda": 0.8,
+    "terminal": false,
+    "values": {
+      "draft": 0,
+      "review": 0,
+      "done": 2
+    }
+  },
+  "transfer": {
+    "states": [
+      "a",
+      "b",
+      "c",
+      "d"
+    ],
+    "rewards": [
+      1,
+      0,
+      2
+    ],
+    "discount": 0.9,
+    "learning_rate": 0.2,
+    "lambda": 0,
+    "terminal": true,
+    "values": {
+      "a": 0,
+      "b": 1,
+      "c": 0,
+      "d": 0
+    }
+  },
+  "input_fields": {
+    "states": "Trajectory state identifiers, one more than reward count.",
+    "rewards": "Finite observed immediate rewards.",
+    "discount": "Gamma in [0,1].",
+    "learning_rate": "Step size in [0,1].",
+    "lambda": "Trace decay parameter in [0,1].",
+    "terminal": "Exact boolean distinguishing true termination from truncation.",
+    "values": "Initial finite value for every trajectory state."
+  },
+  "exercises": [
+    {
+      "question": "Compute default trace update to draft.",
+      "answer": "Updating draft uses learning rate 0.5, a temporal-difference error of 1 at review (reward 1, no bootstrap) and trace weight discount times lambda, 1(0.8)=0.8: 0.5*1*0.8=0.4."
+    },
+    {
+      "question": "What are changed return targets?",
+      "answer": "[3,3], because final bootstrap 2 adds to final reward 1."
+    },
+    {
+      "question": "What should lambda = 0 match?",
+      "answer": "TD(0) under the same sequential update convention."
+    }
+  ],
+  "routes": [
+    "Monte Carlo TD credit comparison",
+    "eligibility trace consequence update",
+    "terminal versus truncated bootstrap"
+  ],
+  "acceptance_checks": [
+    "Default MC draft 0.5 versus TD draft 0.",
+    "Default trace draft 0.4.",
+    "Lambda 0 transfer matches TD(0)."
+  ]
+}

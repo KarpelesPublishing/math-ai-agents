@@ -1,0 +1,24 @@
+{
+  "baseline": "old",
+  "candidate": "proposal",
+  "records": [
+    {
+      "procedure": "old",
+      "task": "alpha",
+      "run": "one",
+      "success": true,
+      "cost": 1
+    },
+    {
+      "procedure": "proposal",
+      "task": "beta",
+      "run": "two",
+      "success": false,
+      "cost": 3
+    }
+  ],
+  "task_weights": {
+    "alpha": 0.5,
+    "beta": 0.5
+  }
+}

@@ -1,0 +1,176 @@
+{
+  "slug": "memory-budget",
+  "question": "Which memories deserve a limited retrieval budget, and does compression preserve the decision?",
+  "outcome": "Choose fresh valid records and inspect action preservation under compression.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A controller remembers an earlier approval. The text is relevant, concise, and easy to retrieve. It can still be the wrong memory to use if the approval belongs to an older document version. Memory quality therefore includes authority and freshness, not only similarity or token efficiency.\n\nThis notebook solves a small declared retrieval allocation. Records consume tokens and contribute additive decision value, but stale records and invalid version-bound authority are excluded first. A separate compression diagnostic checks whether the preferred action survives. The example intentionally gives an obsolete approval a very attractive value, making it impossible to confuse a high relevance score with current permission.",
+  "math_explanation": "For record i, let t_i be token cost, v_i declared decision value, and x_i in{0,1} retrieval status. The finite allocation maximizes sum_i v_i x_i subject to sum_i t_i x_i<=B. Freshness requires now-timestamp_i<=ttl_i. An authority-bearing record also requires its version to equal the current version.\n\nThe code uses exact zero-one knapsack dynamic programming over integer budgets. Descending budget updates prevent the same record from being selected repeatedly. Its frontier gives the greatest eligible additive value at every budget from zero to B. These values are supplied judgments, not embedding similarity or empirically learned information gain.\n\nFor compression, the implementation compares argmax_a Q_original(a) with argmax_a Q_compressed(a). Equal choices mean this particular decision is preserved. They do not imply the compressed memory retains every fact or supports every future task. Ties follow list order, so a genuine decision-preservation claim should also inspect whether a meaningful action gap remains.",
+  "method": "Supply records with token counts, value, timestamps, time-to-live, authority flags, and version identifiers. The function checks numeric domains and rejects a timestamp later than now. It constructs freshness and authority validity before allocating budget. Invalid records remain visible in the returned table rather than disappearing without explanation.\n\nThe plot shows the eligible retrieval frontier against token budget. The metrics identify selected and excluded records, used tokens, and compression choices. In the changed case reduce the budget and alter the compressed action values. Predict which record remains affordable and whether the action still matches. The two interventions address separate questions, so report both rather than attributing the entire change to memory quality.",
+  "worked_interpretation": "At budget 6, review-v2 and summary fit exactly and contribute value 11. Old-review is excluded because its authority belongs to v1, despite its declared value 100 and low token cost. Its timestamp is fresh; freshness alone is therefore insufficient.\n\nOriginal action values [4,6] and compressed values [3,5] both prefer action 1. With changed budget 2, only summary is retrieved, giving value 3. Changed compressed values [6,5] prefer action 0, so compression no longer preserves the decision. That flag concerns this supplied value comparison; it does not infer which memory sentence caused the reversal.",
+  "failure_explanation": "Additive record values can overcount redundant memories. Two records that repeat the same fact may contribute less together than the sum of their isolated values. This implementation declares additivity rather than inventing a submodular or semantic model. If redundancy matters, provide a different valuation experiment.\n\nThe authority boundary is equally important. A remembered instruction does not become authorized because it is recent, highly ranked, or compressed into a confident summary. Version checks preserve a limited current-state contract; broader permissions still need a live authority check.\n\nCompression can also preserve today's action while destroying tomorrow's distinction. The argmax diagnostic is task-relative. Test novel decisions and changed state before claiming sufficient memory. Keep excluded-record reasons in the report so token scarcity is not mistaken for intentional retention of unsafe evidence.",
+  "transfer_explanation": "The transfer case excludes expired even though it is cheap and valuable. Current is fresh, version-valid, and consumes the full budget 3, so it is selected with value 4. Both supplied decision vectors prefer action 0, preserving this action under compression.\n\nFor local use, attach timestamps and document versions to records when those affect authority. Give decision values an explicit source, such as a constructed study or measured task benefit. A retrieval recommendation should name records to retain, records to exclude, and the evidence needed to justify their values. Use separate trace analysis when memory is trying to promote untrusted data into control.",
+  "summary": "Memory selection is a decision under cost, freshness, and authority. Exact knapsack allocation chooses among eligible records; action comparison checks a limited compression property. The obsolete approval is excluded despite its high value, the changed budget reduces retrieval, and changed compression reverses the action. These calculations do not perform semantic retrieval or establish universal sufficiency. Preserve the valuation and version contract whenever memory influences an action.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "budget": 6,
+    "now": 10,
+    "current_version": "v2",
+    "records": [
+      {
+        "id": "review-v2",
+        "tokens": 4,
+        "decision_value": 8,
+        "timestamp": 9,
+        "ttl": 3,
+        "authority": true,
+        "version": "v2"
+      },
+      {
+        "id": "summary",
+        "tokens": 2,
+        "decision_value": 3,
+        "timestamp": 8,
+        "ttl": 5,
+        "authority": false,
+        "version": "v1"
+      },
+      {
+        "id": "old-review",
+        "tokens": 1,
+        "decision_value": 100,
+        "timestamp": 9,
+        "ttl": 3,
+        "authority": true,
+        "version": "v1"
+      }
+    ],
+    "original_action_values": [
+      4,
+      6
+    ],
+    "compressed_action_values": [
+      3,
+      5
+    ]
+  },
+  "changed": {
+    "budget": 2,
+    "now": 10,
+    "current_version": "v2",
+    "records": [
+      {
+        "id": "review-v2",
+        "tokens": 4,
+        "decision_value": 8,
+        "timestamp": 9,
+        "ttl": 3,
+        "authority": true,
+        "version": "v2"
+      },
+      {
+        "id": "summary",
+        "tokens": 2,
+        "decision_value": 3,
+        "timestamp": 8,
+        "ttl": 5,
+        "authority": false,
+        "version": "v1"
+      },
+      {
+        "id": "old-review",
+        "tokens": 1,
+        "decision_value": 100,
+        "timestamp": 9,
+        "ttl": 3,
+        "authority": true,
+        "version": "v1"
+      }
+    ],
+    "original_action_values": [
+      4,
+      6
+    ],
+    "compressed_action_values": [
+      6,
+      5
+    ]
+  },
+  "transfer": {
+    "budget": 3,
+    "now": 20,
+    "current_version": "doc-C",
+    "records": [
+      {
+        "id": "expired",
+        "tokens": 1,
+        "decision_value": 10,
+        "timestamp": 10,
+        "ttl": 2,
+        "authority": false,
+        "version": "doc-C"
+      },
+      {
+        "id": "current",
+        "tokens": 3,
+        "decision_value": 4,
+        "timestamp": 19,
+        "ttl": 3,
+        "authority": true,
+        "version": "doc-C"
+      }
+    ],
+    "original_action_values": [
+      1,
+      0
+    ],
+    "compressed_action_values": [
+      2,
+      1
+    ]
+  },
+  "input_fields": {
+    "budget": "Nonnegative integer token budget up to 10000.",
+    "now": "Nonnegative current time.",
+    "current_version": "Current document or state version identifier.",
+    "records": "At most 20 records. Each has id,tokens:positive integer,decision_value:nonnegative number,timestamp,ttl:nonnegative numbers,authority:boolean,version:string.",
+    "original_action_values": "Finite values for each original decision alternative.",
+    "compressed_action_values": "Aligned values after compression."
+  },
+  "exercises": [
+    {
+      "question": "Why exclude old-review?",
+      "answer": "Its authority version v1 differs from current v2, despite being fresh."
+    },
+    {
+      "question": "What is default retrieval value?",
+      "answer": "The budget is 6 tokens. review-v2 (4 tokens, value 8) and summary (2 tokens, value 3) fit exactly, giving 8+3=11 within 6 tokens; old-review is excluded."
+    },
+    {
+      "question": "Does action preservation prove all future information survives?",
+      "answer": "No; it checks only the supplied decision vectors."
+    }
+  ],
+  "routes": [
+    "retrieval knapsack token budget",
+    "stale version-bound memory authority",
+    "decision-preserving compression"
+  ],
+  "acceptance_checks": [
+    "Selected token cost never exceeds budget.",
+    "Invalid authority is never selected.",
+    "Changed compression reverses argmax."
+  ]
+}

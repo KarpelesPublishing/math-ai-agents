@@ -1,0 +1,1291 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>14-transition-model-bound</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 14: Building a World Inside</h1>
+<p>A planner evaluates tomorrow through an approximate transition model. Small one-step errors can matter more when the controller looks farther ahead. Yet a large worst-case bound does not mean the actual planning error reached it. Both quantities deserve separate places in the report.</p>
+<p>This notebook compares two finite kernels under one fixed policy and one common immediate reward vector. It computes their transition mismatch, propagates finite-horizon values, and plots actual value error beside the chapter's conditional horizon bound. The changed case lengthens the horizon without changing the model. The transfer case makes the kernels identical, giving an exact zero-error check before any more complicated interpretation.</p>
+<p><strong>Outcome:</strong> Calculate uniform transition error, actual fixed-policy finite values, and conditional bounds.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>For each state, total variation between the true and modeled transition rows is half the sum of absolute probability differences. Uniform error epsilon is the maximum of those row distances. An average row error cannot replace that maximum in a uniform bound.</p>
+<p>With common expected immediate rewards in [0,R], one fixed policy, and discount gamma&lt;1, the chapter's discounted value bound is gamma epsilon R/(1-gamma)^2. This quantity applies under those prerequisites; it is not an estimate fitted to the finite error curve. Reward-model mismatch would need another term.</p>
+<p>For H rewards and zero terminal continuation, the undiscounted finite-horizon bound is R epsilon H(H-1)/2. It also bounds the discounted finite calculation because discounting can only reduce these nonnegative error contributions. The implementation computes V_h=r+gamma P V_(h-1) and modeled W_h=r+gamma Q W_(h-1), starting both at zero, then records max_s |V_h(s)-W_h(s)|.</p>
+<p>The kernels already absorb a fixed policy. A state-value bound alone does not provide the uniform action-value error and action gap needed to certify a choice ranking. Keep that missing prerequisite explicit.</p>
+<h2>A calculation you can run</h2>
+<p>Provide two aligned square probability matrices and one nonnegative reward vector. Every row must sum to one. Declare discount and horizon. The function computes the uniform total-variation error, maximum reward, both finite value recurrences, the actual maximum error at each horizon, and the two conditional bounds.</p>
+<p>Figures use reward horizon on the horizontal axis and reward units on the vertical axis. Plotting bound and actual error separately avoids disguising a small error beneath a large envelope. In the changed case increase horizon from five to twenty and predict how the quadratic envelope changes. Inspect the actual curve independently; it need not grow at the same rate. Export common-reward and fixed-policy assumptions with the numerical result.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 14
+inputs = {&#x27;true_transition&#x27;: [[0.9, 0.1], [0.2, 0.8]],
+ &#x27;model_transition&#x27;: [[0.88, 0.12], [0.22, 0.78]],
+ &#x27;rewards&#x27;: [0, 1],
+ &#x27;discount&#x27;: 0.9,
+ &#x27;horizon&#x27;: 5}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 14: transition-model-bound
+How much value error can this approximate world model introduce?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;uniform_tv_error&quot;: 0.02,
+  &quot;true_values&quot;: [
+    0.55354113,
+    2.98801774
+  ],
+  &quot;model_values&quot;: [
+    0.6403010023,
+    2.921214829
+  ],
+  &quot;max_finite_value_error&quot;: 0.08675987227,
+  &quot;discounted_infinite_bound&quot;: 1.8,
+  &quot;finite_horizon_bound&quot;: 0.2
+}
+
+Interpretation:
+Both kernels share the same immediate reward vector under one fixed policy. The uniform total-variation error controls the conditional bound; the actual finite error can be much smaller.
+
+Assumptions:
+- Fixed policy absorbed into each transition matrix.
+- Common expected immediate reward in [0,R].
+- Finite calculation has zero terminal continuation; discounted bound assumes gamma below one.
+
+Limitations:
+- A bound is not a measured planning error.
+- This state-value bound alone does not certify an action ranking.
+- Reward-model error would require an additional term.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>Both default row distances are 0.02, so epsilon=0.02. With R=1 and gamma=0.9, the discounted infinite bound is 1.8. At horizon 5 the finite bound is 0.02(5)(4)/2=0.2. The actual finite error is calculated from the two recurrences and must remain below the finite envelope.</p>
+<p>At horizon 20 the finite bound grows to 3.8, even though each transition row changed by the same amount. That growth is a sensitivity statement under a worst-case construction. It does not say that the actual error became 3.8, and it does not establish that any particular action ranking reversed.</p>
+<p>Two bounds are reported and both are valid. At horizon 20 the finite-horizon bound (3.8) is the looser one and the discounted infinite-horizon bound (1.8) the tighter, so the tightest valid statement is their minimum. The finite bound is not a stronger warning.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 54.442344 194.039062  L 565.2 194.039062  L 565.2 69.080234  L 54.442344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m6847970e19" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m6847970e19" x="77.658601" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="208.636719" transform="rotate(-0 77.658601 208.636719)">1</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m6847970e19" x="193.739886" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="193.739886" y="208.636719" transform="rotate(-0 193.739886 208.636719)">2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m6847970e19" x="309.821172" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="208.636719" transform="rotate(-0 309.821172 208.636719)">3</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m6847970e19" x="425.902457" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="425.902457" y="208.636719" transform="rotate(-0 425.902457 208.636719)">4</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m6847970e19" x="541.983743" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="208.636719" transform="rotate(-0 541.983743 208.636719)">5</text>
+     </g>
+    </g>
+    <g id="text_6">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="222.6375" transform="rotate(-0 309.821172 222.6375)">reward horizon</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_6">
+      <path d="M 54.442344 188.359116  L 565.2 188.359116  " clip-path="url(#p3824279c5f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <defs>
+       <path id="m101bde67d3" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="188.359116" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="192.157944" transform="rotate(-0 47.442344 192.157944)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_8">
+      <path d="M 54.442344 162.17214  L 565.2 162.17214  " clip-path="url(#p3824279c5f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="162.17214" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="165.970968" transform="rotate(-0 47.442344 165.970968)">0.02</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_10">
+      <path d="M 54.442344 135.985164  L 565.2 135.985164  " clip-path="url(#p3824279c5f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="135.985164" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="139.783992" transform="rotate(-0 47.442344 139.783992)">0.04</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_12">
+      <path d="M 54.442344 109.798188  L 565.2 109.798188  " clip-path="url(#p3824279c5f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="109.798188" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="113.597016" transform="rotate(-0 47.442344 113.597016)">0.06</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_14">
+      <path d="M 54.442344 83.611212  L 565.2 83.611212  " clip-path="url(#p3824279c5f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="83.611212" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="87.41004" transform="rotate(-0 47.442344 87.41004)">0.08</text>
+     </g>
+    </g>
+    <g id="text_12">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.774375" y="131.559648" transform="rotate(-90 18.774375 131.559648)">reward units</text>
+    </g>
+   </g>
+   <g id="line2d_16">
+    <path d="M 77.658601 188.359116  L 193.739886 164.790837  L 309.821172 133.82212  L 425.902457 102.8271  L 541.983743 74.760181  " clip-path="url(#p3824279c5f)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="me1be85221e" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p3824279c5f)">
+     <use xlink:href="#me1be85221e" x="77.658601" y="188.359116" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="193.739886" y="164.790837" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="309.821172" y="133.82212" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="425.902457" y="102.8271" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="541.983743" y="74.760181" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 54.442344 194.039062  L 54.442344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 54.442344 194.039062  L 565.2 194.039062  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="63.080234" transform="rotate(-0 54.442344 63.080234)">actual finite-horizon value error</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 54.442344 375.477656  L 565.2 375.477656  L 565.2 250.518828  L 54.442344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_6">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m6847970e19" x="77.658601" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="390.075312" transform="rotate(-0 77.658601 390.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m6847970e19" x="193.739886" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="193.739886" y="390.075312" transform="rotate(-0 193.739886 390.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m6847970e19" x="309.821172" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="390.075312" transform="rotate(-0 309.821172 390.075312)">3</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m6847970e19" x="425.902457" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="425.902457" y="390.075312" transform="rotate(-0 425.902457 390.075312)">4</text>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m6847970e19" x="541.983743" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="390.075312" transform="rotate(-0 541.983743 390.075312)">5</text>
+     </g>
+    </g>
+    <g id="text_19">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="404.076094" transform="rotate(-0 309.821172 404.076094)">reward horizon</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_22">
+      <path d="M 54.442344 369.79771  L 565.2 369.79771  " clip-path="url(#p46135c175a)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="369.79771" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="373.596538" transform="rotate(-0 47.442344 373.596538)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_24">
+      <path d="M 54.442344 341.397976  L 565.2 341.397976  " clip-path="url(#p46135c175a)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="341.397976" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="345.196804" transform="rotate(-0 47.442344 345.196804)">0.05</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_26">
+      <path d="M 54.442344 312.998242  L 565.2 312.998242  " clip-path="url(#p46135c175a)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="312.998242" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="316.79707" transform="rotate(-0 47.442344 316.79707)">0.10</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_28">
+      <path d="M 54.442344 284.598509  L 565.2 284.598509  " clip-path="url(#p46135c175a)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="284.598509" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_23">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="288.397337" transform="rotate(-0 47.442344 288.397337)">0.15</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_30">
+      <path d="M 54.442344 256.198775  L 565.2 256.198775  " clip-path="url(#p46135c175a)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_31">
+      <g>
+       <use xlink:href="#m101bde67d3" x="54.442344" y="256.198775" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="259.997603" transform="rotate(-0 47.442344 259.997603)">0.20</text>
+     </g>
+    </g>
+    <g id="text_25">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.774375" y="312.998242" transform="rotate(-90 18.774375 312.998242)">reward units</text>
+    </g>
+   </g>
+   <g id="line2d_32">
+    <path d="M 77.658601 369.79771  L 193.739886 358.437816  L 309.821172 335.718029  L 425.902457 301.638349  L 541.983743 256.198775  " clip-path="url(#p46135c175a)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p46135c175a)">
+     <use xlink:href="#me1be85221e" x="77.658601" y="369.79771" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="193.739886" y="358.437816" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="309.821172" y="335.718029" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="425.902457" y="301.638349" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me1be85221e" x="541.983743" y="256.198775" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 54.442344 375.477656  L 54.442344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 54.442344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_26">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="244.518828" transform="rotate(-0 54.442344 244.518828)">finite-horizon bound</text>
+   </g>
+  </g>
+  <g id="text_27">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 14: transition model bound</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p3824279c5f">
+   <rect x="54.442344" y="69.080234" width="510.757656" height="124.958828"/>
+  </clipPath>
+  <clipPath id="p46135c175a">
+   <rect x="54.442344" y="250.518828" width="510.757656" height="124.958828"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 14.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>A common misuse inserts average model error into a uniform bound. A model may be accurate on frequently observed states and badly wrong at the one state that changes the plan. The maximum row distance protects the stated domain, while an average describes a different estimand.</p>
+<p>Another misuse compares reward functions that differ and then attributes all value error to transition mismatch. This input contract intentionally supplies only one common reward vector. If the model invents immediate reward, the implementation's bound assumptions no longer apply.</p>
+<p>Finally, an error bound is not a decision certificate. Even a small value bound can overwhelm a smaller action gap, and this fixed-policy state calculation does not inspect alternative actions. Use it to audit model sensitivity, then state the extra action-value and gap information required for ranking guarantees.</p>
+<pre><code>changed_inputs = {&#x27;true_transition&#x27;: [[0.9, 0.1], [0.2, 0.8]],
+ &#x27;model_transition&#x27;: [[0.88, 0.12], [0.22, 0.78]],
+ &#x27;rewards&#x27;: [0, 1],
+ &#x27;discount&#x27;: 0.9,
+ &#x27;horizon&#x27;: 20}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 14: transition-model-bound
+How much value error can this approximate world model introduce?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;uniform_tv_error&quot;: 0.02,
+  &quot;true_values&quot;: [
+    2.027264312,
+    4.729704829
+  ],
+  &quot;model_values&quot;: [
+    2.231030443,
+    4.694010975
+  ],
+  &quot;max_finite_value_error&quot;: 0.2037661306,
+  &quot;discounted_infinite_bound&quot;: 1.8,
+  &quot;finite_horizon_bound&quot;: 3.8
+}
+
+Interpretation:
+Both kernels share the same immediate reward vector under one fixed policy. The uniform total-variation error controls the conditional bound; the actual finite error can be much smaller.
+
+Assumptions:
+- Fixed policy absorbed into each transition matrix.
+- Common expected immediate reward in [0,R].
+- Finite calculation has zero terminal continuation; discounted bound assumes gamma below one.
+
+Limitations:
+- A bound is not a measured planning error.
+- This state-value bound alone does not certify an action ranking.
+- Reward-model error would require an additional term.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 54.442344 194.039062  L 565.2 194.039062  L 565.2 69.080234  L 54.442344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m785738a162" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m785738a162" x="77.658601" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="208.636719" transform="rotate(-0 77.658601 208.636719)">1</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m785738a162" x="102.096766" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="102.096766" y="208.636719" transform="rotate(-0 102.096766 208.636719)">2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m785738a162" x="126.534932" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="126.534932" y="208.636719" transform="rotate(-0 126.534932 208.636719)">3</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m785738a162" x="150.973097" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="150.973097" y="208.636719" transform="rotate(-0 150.973097 208.636719)">4</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m785738a162" x="175.411262" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="175.411262" y="208.636719" transform="rotate(-0 175.411262 208.636719)">5</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m785738a162" x="199.849428" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="199.849428" y="208.636719" transform="rotate(-0 199.849428 208.636719)">6</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m785738a162" x="224.287593" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="224.287593" y="208.636719" transform="rotate(-0 224.287593 208.636719)">7</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m785738a162" x="248.725758" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="248.725758" y="208.636719" transform="rotate(-0 248.725758 208.636719)">8</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m785738a162" x="273.163924" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="273.163924" y="208.636719" transform="rotate(-0 273.163924 208.636719)">9</text>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m785738a162" x="297.602089" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="297.602089" y="208.636719" transform="rotate(-0 297.602089 208.636719)">10</text>
+     </g>
+    </g>
+    <g id="xtick_11">
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m785738a162" x="322.040255" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="322.040255" y="208.636719" transform="rotate(-0 322.040255 208.636719)">11</text>
+     </g>
+    </g>
+    <g id="xtick_12">
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m785738a162" x="346.47842" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="346.47842" y="208.636719" transform="rotate(-0 346.47842 208.636719)">12</text>
+     </g>
+    </g>
+    <g id="xtick_13">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m785738a162" x="370.916585" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="370.916585" y="208.636719" transform="rotate(-0 370.916585 208.636719)">13</text>
+     </g>
+    </g>
+    <g id="xtick_14">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m785738a162" x="395.354751" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="395.354751" y="208.636719" transform="rotate(-0 395.354751 208.636719)">14</text>
+     </g>
+    </g>
+    <g id="xtick_15">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m785738a162" x="419.792916" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="419.792916" y="208.636719" transform="rotate(-0 419.792916 208.636719)">15</text>
+     </g>
+    </g>
+    <g id="xtick_16">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m785738a162" x="444.231081" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="444.231081" y="208.636719" transform="rotate(-0 444.231081 208.636719)">16</text>
+     </g>
+    </g>
+    <g id="xtick_17">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m785738a162" x="468.669247" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="468.669247" y="208.636719" transform="rotate(-0 468.669247 208.636719)">17</text>
+     </g>
+    </g>
+    <g id="xtick_18">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m785738a162" x="493.107412" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="493.107412" y="208.636719" transform="rotate(-0 493.107412 208.636719)">18</text>
+     </g>
+    </g>
+    <g id="xtick_19">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m785738a162" x="517.545578" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="517.545578" y="208.636719" transform="rotate(-0 517.545578 208.636719)">19</text>
+     </g>
+    </g>
+    <g id="xtick_20">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m785738a162" x="541.983743" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="208.636719" transform="rotate(-0 541.983743 208.636719)">20</text>
+     </g>
+    </g>
+    <g id="text_21">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="222.6375" transform="rotate(-0 309.821172 222.6375)">reward horizon</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_21">
+      <path d="M 54.442344 188.359116  L 565.2 188.359116  " clip-path="url(#p0bec217a1b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <defs>
+       <path id="m29f19f69b1" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="188.359116" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="192.157944" transform="rotate(-0 47.442344 192.157944)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_23">
+      <path d="M 54.442344 160.484283  L 565.2 160.484283  " clip-path="url(#p0bec217a1b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="160.484283" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_23">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="164.283112" transform="rotate(-0 47.442344 164.283112)">0.05</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_25">
+      <path d="M 54.442344 132.609451  L 565.2 132.609451  " clip-path="url(#p0bec217a1b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_26">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="132.609451" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="136.408279" transform="rotate(-0 47.442344 136.408279)">0.10</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_27">
+      <path d="M 54.442344 104.734619  L 565.2 104.734619  " clip-path="url(#p0bec217a1b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_28">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="104.734619" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_25">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="108.533447" transform="rotate(-0 47.442344 108.533447)">0.15</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_29">
+      <path d="M 54.442344 76.859786  L 565.2 76.859786  " clip-path="url(#p0bec217a1b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_30">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="76.859786" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="80.658614" transform="rotate(-0 47.442344 80.658614)">0.20</text>
+     </g>
+    </g>
+    <g id="text_27">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.774375" y="131.559648" transform="rotate(-90 18.774375 131.559648)">reward units</text>
+    </g>
+   </g>
+   <g id="line2d_31">
+    <path d="M 77.658601 188.359116  L 102.096766 178.324176  L 126.534932 165.138265  L 150.973097 151.941156  L 175.411262 139.990778  L 199.849428 129.643745  L 224.287593 120.858495  L 248.725758 113.444117  L 273.163924 107.176567  L 297.602089 101.847722  L 322.040255 97.281886  L 346.47842 93.337565  L 370.916585 89.903436  L 395.354751 86.892691  L 419.792916 84.237583  L 444.231081 81.884845  L 468.669247 79.792077  L 493.107412 77.925022  L 517.545578 76.255548  L 541.983743 74.760181  " clip-path="url(#p0bec217a1b)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m6864a9ccdd" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p0bec217a1b)">
+     <use xlink:href="#m6864a9ccdd" x="77.658601" y="188.359116" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="102.096766" y="178.324176" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="126.534932" y="165.138265" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="150.973097" y="151.941156" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="175.411262" y="139.990778" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="199.849428" y="129.643745" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="224.287593" y="120.858495" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="248.725758" y="113.444117" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="273.163924" y="107.176567" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="297.602089" y="101.847722" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="322.040255" y="97.281886" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="346.47842" y="93.337565" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="370.916585" y="89.903436" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="395.354751" y="86.892691" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="419.792916" y="84.237583" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="444.231081" y="81.884845" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="468.669247" y="79.792077" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="493.107412" y="77.925022" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="517.545578" y="76.255548" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="541.983743" y="74.760181" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 54.442344 194.039062  L 54.442344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 54.442344 194.039062  L 565.2 194.039062  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_28">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="63.080234" transform="rotate(-0 54.442344 63.080234)">actual finite-horizon value error</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 54.442344 375.477656  L 565.2 375.477656  L 565.2 250.518828  L 54.442344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_21">
+     <g id="line2d_32">
+      <g>
+       <use xlink:href="#m785738a162" x="77.658601" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_29">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="390.075312" transform="rotate(-0 77.658601 390.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_22">
+     <g id="line2d_33">
+      <g>
+       <use xlink:href="#m785738a162" x="102.096766" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_30">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="102.096766" y="390.075312" transform="rotate(-0 102.096766 390.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_23">
+     <g id="line2d_34">
+      <g>
+       <use xlink:href="#m785738a162" x="126.534932" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_31">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="126.534932" y="390.075312" transform="rotate(-0 126.534932 390.075312)">3</text>
+     </g>
+    </g>
+    <g id="xtick_24">
+     <g id="line2d_35">
+      <g>
+       <use xlink:href="#m785738a162" x="150.973097" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_32">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="150.973097" y="390.075312" transform="rotate(-0 150.973097 390.075312)">4</text>
+     </g>
+    </g>
+    <g id="xtick_25">
+     <g id="line2d_36">
+      <g>
+       <use xlink:href="#m785738a162" x="175.411262" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_33">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="175.411262" y="390.075312" transform="rotate(-0 175.411262 390.075312)">5</text>
+     </g>
+    </g>
+    <g id="xtick_26">
+     <g id="line2d_37">
+      <g>
+       <use xlink:href="#m785738a162" x="199.849428" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_34">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="199.849428" y="390.075312" transform="rotate(-0 199.849428 390.075312)">6</text>
+     </g>
+    </g>
+    <g id="xtick_27">
+     <g id="line2d_38">
+      <g>
+       <use xlink:href="#m785738a162" x="224.287593" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_35">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="224.287593" y="390.075312" transform="rotate(-0 224.287593 390.075312)">7</text>
+     </g>
+    </g>
+    <g id="xtick_28">
+     <g id="line2d_39">
+      <g>
+       <use xlink:href="#m785738a162" x="248.725758" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_36">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="248.725758" y="390.075312" transform="rotate(-0 248.725758 390.075312)">8</text>
+     </g>
+    </g>
+    <g id="xtick_29">
+     <g id="line2d_40">
+      <g>
+       <use xlink:href="#m785738a162" x="273.163924" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_37">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="273.163924" y="390.075312" transform="rotate(-0 273.163924 390.075312)">9</text>
+     </g>
+    </g>
+    <g id="xtick_30">
+     <g id="line2d_41">
+      <g>
+       <use xlink:href="#m785738a162" x="297.602089" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_38">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="297.602089" y="390.075312" transform="rotate(-0 297.602089 390.075312)">10</text>
+     </g>
+    </g>
+    <g id="xtick_31">
+     <g id="line2d_42">
+      <g>
+       <use xlink:href="#m785738a162" x="322.040255" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_39">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="322.040255" y="390.075312" transform="rotate(-0 322.040255 390.075312)">11</text>
+     </g>
+    </g>
+    <g id="xtick_32">
+     <g id="line2d_43">
+      <g>
+       <use xlink:href="#m785738a162" x="346.47842" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_40">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="346.47842" y="390.075312" transform="rotate(-0 346.47842 390.075312)">12</text>
+     </g>
+    </g>
+    <g id="xtick_33">
+     <g id="line2d_44">
+      <g>
+       <use xlink:href="#m785738a162" x="370.916585" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_41">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="370.916585" y="390.075312" transform="rotate(-0 370.916585 390.075312)">13</text>
+     </g>
+    </g>
+    <g id="xtick_34">
+     <g id="line2d_45">
+      <g>
+       <use xlink:href="#m785738a162" x="395.354751" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_42">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="395.354751" y="390.075312" transform="rotate(-0 395.354751 390.075312)">14</text>
+     </g>
+    </g>
+    <g id="xtick_35">
+     <g id="line2d_46">
+      <g>
+       <use xlink:href="#m785738a162" x="419.792916" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_43">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="419.792916" y="390.075312" transform="rotate(-0 419.792916 390.075312)">15</text>
+     </g>
+    </g>
+    <g id="xtick_36">
+     <g id="line2d_47">
+      <g>
+       <use xlink:href="#m785738a162" x="444.231081" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_44">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="444.231081" y="390.075312" transform="rotate(-0 444.231081 390.075312)">16</text>
+     </g>
+    </g>
+    <g id="xtick_37">
+     <g id="line2d_48">
+      <g>
+       <use xlink:href="#m785738a162" x="468.669247" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_45">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="468.669247" y="390.075312" transform="rotate(-0 468.669247 390.075312)">17</text>
+     </g>
+    </g>
+    <g id="xtick_38">
+     <g id="line2d_49">
+      <g>
+       <use xlink:href="#m785738a162" x="493.107412" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_46">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="493.107412" y="390.075312" transform="rotate(-0 493.107412 390.075312)">18</text>
+     </g>
+    </g>
+    <g id="xtick_39">
+     <g id="line2d_50">
+      <g>
+       <use xlink:href="#m785738a162" x="517.545578" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_47">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="517.545578" y="390.075312" transform="rotate(-0 517.545578 390.075312)">19</text>
+     </g>
+    </g>
+    <g id="xtick_40">
+     <g id="line2d_51">
+      <g>
+       <use xlink:href="#m785738a162" x="541.983743" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_48">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="390.075312" transform="rotate(-0 541.983743 390.075312)">20</text>
+     </g>
+    </g>
+    <g id="text_49">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="404.076094" transform="rotate(-0 309.821172 404.076094)">reward horizon</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_52">
+      <path d="M 54.442344 369.79771  L 565.2 369.79771  " clip-path="url(#p067f710bdd)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_53">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="369.79771" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_50">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="373.596538" transform="rotate(-0 47.442344 373.596538)">0</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_54">
+      <path d="M 54.442344 339.903253  L 565.2 339.903253  " clip-path="url(#p067f710bdd)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_55">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="339.903253" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_51">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="343.702081" transform="rotate(-0 47.442344 343.702081)">1</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_56">
+      <path d="M 54.442344 310.008797  L 565.2 310.008797  " clip-path="url(#p067f710bdd)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_57">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="310.008797" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_52">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="313.807625" transform="rotate(-0 47.442344 313.807625)">2</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_58">
+      <path d="M 54.442344 280.11434  L 565.2 280.11434  " clip-path="url(#p067f710bdd)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_59">
+      <g>
+       <use xlink:href="#m29f19f69b1" x="54.442344" y="280.11434" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_53">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="283.913168" transform="rotate(-0 47.442344 283.913168)">3</text>
+     </g>
+    </g>
+    <g id="text_54">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="34.6775" y="312.998242" transform="rotate(-90 34.6775 312.998242)">reward units</text>
+    </g>
+   </g>
+   <g id="line2d_60">
+    <path d="M 77.658601 369.79771  L 102.096766 369.19982  L 126.534932 368.004042  L 150.973097 366.210375  L 175.411262 363.818818  L 199.849428 360.829373  L 224.287593 357.242038  L 248.725758 353.056814  L 273.163924 348.273701  L 297.602089 342.892699  L 322.040255 336.913807  L 346.47842 330.337027  L 370.916585 323.162357  L 395.354751 315.389799  L 419.792916 307.019351  L 444.231081 298.051014  L 468.669247 288.484788  L 493.107412 278.320673  L 517.545578 267.558668  L 541.983743 256.198775  " clip-path="url(#p067f710bdd)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p067f710bdd)">
+     <use xlink:href="#m6864a9ccdd" x="77.658601" y="369.79771" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="102.096766" y="369.19982" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="126.534932" y="368.004042" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="150.973097" y="366.210375" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="175.411262" y="363.818818" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="199.849428" y="360.829373" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="224.287593" y="357.242038" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="248.725758" y="353.056814" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="273.163924" y="348.273701" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="297.602089" y="342.892699" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="322.040255" y="336.913807" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="346.47842" y="330.337027" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="370.916585" y="323.162357" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="395.354751" y="315.389799" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="419.792916" y="307.019351" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="444.231081" y="298.051014" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="468.669247" y="288.484788" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="493.107412" y="278.320673" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="517.545578" y="267.558668" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m6864a9ccdd" x="541.983743" y="256.198775" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 54.442344 375.477656  L 54.442344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 54.442344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_55">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="244.518828" transform="rotate(-0 54.442344 244.518828)">finite-horizon bound</text>
+   </g>
+  </g>
+  <g id="text_56">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 14: transition model bound</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p0bec217a1b">
+   <rect x="54.442344" y="69.080234" width="510.757656" height="124.958828"/>
+  </clipPath>
+  <clipPath id="p067f710bdd">
+   <rect x="54.442344" y="250.518828" width="510.757656" height="124.958828"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 14.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer kernels are identical. Epsilon is zero, finite values agree at every stage, and both bounds are zero. This identity is a useful check of matrix alignment and recurrence behavior. If an implementation returned nonzero error here, investigate the computation before interpreting a more realistic model.</p>
+<p>For reader data, explain how the true kernel was measured or constructed. Usually a deployed world does not provide exact transition probabilities. In that case the calculated epsilon is conditional on estimates and their support, not a known universal error. Preserve uncertainty or specify the measurements needed to bound it on the relevant policy domain.</p>
+<pre><code>transfer_inputs = {&#x27;true_transition&#x27;: [[1, 0], [0, 1]],
+ &#x27;model_transition&#x27;: [[1, 0], [0, 1]],
+ &#x27;rewards&#x27;: [1, 2],
+ &#x27;discount&#x27;: 0.5,
+ &#x27;horizon&#x27;: 4}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 14: transition-model-bound
+How much value error can this approximate world model introduce?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;uniform_tv_error&quot;: 0.0,
+  &quot;true_values&quot;: [
+    1.875,
+    3.75
+  ],
+  &quot;model_values&quot;: [
+    1.875,
+    3.75
+  ],
+  &quot;max_finite_value_error&quot;: 0.0,
+  &quot;discounted_infinite_bound&quot;: 0.0,
+  &quot;finite_horizon_bound&quot;: 0.0
+}
+
+Interpretation:
+Both kernels share the same immediate reward vector under one fixed policy. The uniform total-variation error controls the conditional bound; the actual finite error can be much smaller.
+
+Assumptions:
+- Fixed policy absorbed into each transition matrix.
+- Common expected immediate reward in [0,R].
+- Finite calculation has zero terminal continuation; discounted bound assumes gamma below one.
+
+Limitations:
+- A bound is not a measured planning error.
+- This state-value bound alone does not certify an action ranking.
+- Reward-model error would require an additional term.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>true_transition:</strong> Square row-stochastic true kernel after fixing a policy.</li>
+<li><strong>model_transition:</strong> Same-size approximate row-stochastic kernel for that policy.</li>
+<li><strong>rewards:</strong> Common immediate state reward vector, finite and nonnegative.</li>
+<li><strong>discount:</strong> Gamma in [0,0.9999].</li>
+<li><strong>horizon:</strong> Integer reward horizon 1..1000 with zero terminal continuation.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch14.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 14: transition-model-bound
+How much value error can this approximate world model introduce?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;uniform_tv_error&quot;: 0.0,
+  &quot;true_values&quot;: [
+    1.875,
+    3.75
+  ],
+  &quot;model_values&quot;: [
+    1.875,
+    3.75
+  ],
+  &quot;max_finite_value_error&quot;: 0.0,
+  &quot;discounted_infinite_bound&quot;: 0.0,
+  &quot;finite_horizon_bound&quot;: 0.0
+}
+
+Interpretation:
+Both kernels share the same immediate reward vector under one fixed policy. The uniform total-variation error controls the conditional bound; the actual finite error can be much smaller.
+
+Assumptions:
+- Fixed policy absorbed into each transition matrix.
+- Common expected immediate reward in [0,R].
+- Finite calculation has zero terminal continuation; discounted bound assumes gamma below one.
+
+Limitations:
+- A bound is not a measured planning error.
+- This state-value bound alone does not certify an action ranking.
+- Reward-model error would require an additional term.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Compute default epsilon.</p>
+</li>
+<li>
+<p>Compute horizon 20 finite bound.</p>
+</li>
+<li>
+<p>What if the reward model also differs?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch14.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Transition models accumulate errors through future value. Uniform total variation, common immediate rewards, and a fixed policy are essential to the implemented bounds. The notebook separates actual finite error from conditional envelopes and checks the identical-kernel case. Extending horizon changes sensitivity without changing one-step mismatch. A bound is neither a measured planning error nor an action-ranking certificate; report its prerequisites and the evidence supporting the supplied kernels.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-14-transition-model-bound/SKILL.md"><code>maa-14-transition-model-bound</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 14.1</h3>
+<p><img alt="Equation 14.1" src="../../assets/math/52b47c925ae699342ab3.svg" /></p>
+<p>Equation (14.1) measures how wrong the model is about a single step, at its worst state and action.</p>
+<p>For each state and action, add up how much the two distributions disagree, halve it, and take the largest such disagreement anywhere.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\epsilon \;=\; \max_{x,a}\; \tfrac{1}{2}\sum_{x'}\big|\hat P(x'\mid x,a) - P(x'\mid x,a)\big|.
+\tag{14.1}
+</code></pre>
+<h3>Equation 14.2</h3>
+<p><img alt="Equation 14.2" src="../../assets/math/b20fc29975e836ddc4c8.svg" /></p>
+<p>Equation (14.2) bounds how far the value computed inside the model can sit from the value in the world.</p>
+<p>Multiply the one-step error by the discount factor and largest reward, then divide by the square of one minus the discount factor.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\big|\hat V^{\pi}(x) - V^{\pi}(x)\big| \;\le\; \frac{\gamma\,\epsilon\,R}{(1-\gamma)^2}.
+\tag{14.2}
+</code></pre>
+<h3>Equation 14.3</h3>
+<p><img alt="Equation 14.3" src="../../assets/math/02d58a83dac048591dea.svg" /></p>
+<p>Equation (14.3) measures how much better the best action at a state is than the runner-up.</p>
+<p>Subtract the value of the second best action from the value of the best one.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\Delta(x) \;=\; \max_{a}Q^{\pi}(x,a) \;-\; \max_{a \neq a^{*}}Q^{\pi}(x,a).
+\tag{14.3}
+</code></pre>
+<h3>Equation 14.4</h3>
+<p><img alt="Equation 14.4" src="../../assets/math/b90bd3f384ebe300fc72.svg" /></p>
+<p>Equation (14.4) gives the largest positive integer horizon certified to preserve a unique action ranking under the stated finite-model assumptions.</p>
+<p>Within the declared planning cap <span class="math">&#92;(H&#95;{&#92;max}&#92;)</span>, find the largest positive integer horizon at which twice the finite-horizon action-value error still fits inside the action gap.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">H^{*} \;=\; \max\Big\{ H \in \mathbb{Z}_{&gt;0} \;:\; H \leq H_{\max},\;
+R\,\epsilon\,H(H-1) \;&lt;\; \Delta \Big\}.
+\tag{14.4}
+</code></pre></body></html>

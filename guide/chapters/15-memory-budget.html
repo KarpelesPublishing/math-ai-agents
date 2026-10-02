@@ -1,0 +1,677 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>15-memory-budget</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 15: What an Agent Should Remember: Retrieval, Compression, and Experience</h1>
+<p>A controller remembers an earlier approval. The text is relevant, concise, and easy to retrieve. It can still be the wrong memory to use if the approval belongs to an older document version. Memory quality therefore includes authority and freshness, not only similarity or token efficiency.</p>
+<p>This notebook solves a small declared retrieval allocation. Records consume tokens and contribute additive decision value, but stale records and invalid version-bound authority are excluded first. A separate compression diagnostic checks whether the preferred action survives. The example intentionally gives an obsolete approval a very attractive value, making it impossible to confuse a high relevance score with current permission.</p>
+<p><strong>Outcome:</strong> Choose fresh valid records and inspect action preservation under compression.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>For record i, let t_i be token cost, v_i declared decision value, and x_i in{0,1} retrieval status. The finite allocation maximizes sum_i v_i x_i subject to sum_i t_i x_i&lt;=B. Freshness requires now-timestamp_i&lt;=ttl_i. An authority-bearing record also requires its version to equal the current version.</p>
+<p>The code uses exact zero-one knapsack dynamic programming over integer budgets. Descending budget updates prevent the same record from being selected repeatedly. Its frontier gives the greatest eligible additive value at every budget from zero to B. These values are supplied judgments, not embedding similarity or empirically learned information gain.</p>
+<p>For compression, the implementation compares argmax_a Q_original(a) with argmax_a Q_compressed(a). Equal choices mean this particular decision is preserved. They do not imply the compressed memory retains every fact or supports every future task. Ties follow list order, so a genuine decision-preservation claim should also inspect whether a meaningful action gap remains.</p>
+<h2>A calculation you can run</h2>
+<p>Supply records with token counts, value, timestamps, time-to-live, authority flags, and version identifiers. The function checks numeric domains and rejects a timestamp later than now. It constructs freshness and authority validity before allocating budget. Invalid records remain visible in the returned table rather than disappearing without explanation.</p>
+<p>The plot shows the eligible retrieval frontier against token budget. The metrics identify selected and excluded records, used tokens, and compression choices. In the changed case reduce the budget and alter the compressed action values. Predict which record remains affordable and whether the action still matches. The two interventions address separate questions, so report both rather than attributing the entire change to memory quality.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 15
+inputs = {&#x27;budget&#x27;: 6,
+ &#x27;now&#x27;: 10,
+ &#x27;current_version&#x27;: &#x27;v2&#x27;,
+ &#x27;records&#x27;: [{&#x27;id&#x27;: &#x27;review-v2&#x27;,
+              &#x27;tokens&#x27;: 4,
+              &#x27;decision_value&#x27;: 8,
+              &#x27;timestamp&#x27;: 9,
+              &#x27;ttl&#x27;: 3,
+              &#x27;authority&#x27;: True,
+              &#x27;version&#x27;: &#x27;v2&#x27;},
+             {&#x27;id&#x27;: &#x27;summary&#x27;,
+              &#x27;tokens&#x27;: 2,
+              &#x27;decision_value&#x27;: 3,
+              &#x27;timestamp&#x27;: 8,
+              &#x27;ttl&#x27;: 5,
+              &#x27;authority&#x27;: False,
+              &#x27;version&#x27;: &#x27;v1&#x27;},
+             {&#x27;id&#x27;: &#x27;old-review&#x27;,
+              &#x27;tokens&#x27;: 1,
+              &#x27;decision_value&#x27;: 100,
+              &#x27;timestamp&#x27;: 9,
+              &#x27;ttl&#x27;: 3,
+              &#x27;authority&#x27;: True,
+              &#x27;version&#x27;: &#x27;v1&#x27;}],
+ &#x27;original_action_values&#x27;: [4, 6],
+ &#x27;compressed_action_values&#x27;: [3, 5]}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 15: memory-budget
+Which memories deserve a limited retrieval budget, and does compression preserve the decision?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;retrieved_ids&quot;: [
+    &quot;review-v2&quot;,
+    &quot;summary&quot;
+  ],
+  &quot;retrieval_value&quot;: 11.0,
+  &quot;tokens_used&quot;: 6,
+  &quot;excluded_ids&quot;: [
+    &quot;old-review&quot;
+  ],
+  &quot;compression_preserves_action&quot;: true,
+  &quot;original_action&quot;: 1,
+  &quot;compressed_action&quot;: 1
+}
+
+Interpretation:
+Retrieval optimizes declared decision value among records that satisfy freshness and version-bound authority checks. Compression is checked by the action it preserves.
+
+Assumptions:
+- Record values are additive and supplied, not inferred from text similarity.
+- Exact finite subset search; no semantic embedding model.
+
+Limitations:
+- Preserving one decision vector does not prove sufficiency for every future task.
+- Retrieval relevance is not authority.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>At budget 6, review-v2 and summary fit exactly and contribute value 11. Old-review is excluded because its authority belongs to v1, despite its declared value 100 and low token cost. Its timestamp is fresh; freshness alone is therefore insufficient.</p>
+<p>Original action values [4,6] and compressed values [3,5] both prefer action 1. With changed budget 2, only summary is retrieved, giving value 3. Changed compressed values [6,5] prefer action 0, so compression no longer preserves the decision. That flag concerns this supplied value comparison; it does not infer which memory sentence caused the reversal.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 45.082344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 45.082344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m5e2024a2cf" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="68.724055" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="68.724055" y="210.075312" transform="rotate(-0 68.724055 210.075312)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="147.529761" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="147.529761" y="210.075312" transform="rotate(-0 147.529761 210.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="226.335466" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="226.335466" y="210.075312" transform="rotate(-0 226.335466 210.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="305.141172" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="305.141172" y="210.075312" transform="rotate(-0 305.141172 210.075312)">3</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="383.946877" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="383.946877" y="210.075312" transform="rotate(-0 383.946877 210.075312)">4</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="462.752583" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="462.752583" y="210.075312" transform="rotate(-0 462.752583 210.075312)">5</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m5e2024a2cf" x="541.558288" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.558288" y="210.075312" transform="rotate(-0 541.558288 210.075312)">6</text>
+     </g>
+    </g>
+    <g id="text_8">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="305.141172" y="224.076094" transform="rotate(-0 305.141172 224.076094)">token budget</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_8">
+      <path d="M 45.082344 189.323228  L 565.2 189.323228  " clip-path="url(#pf866be67d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <defs>
+       <path id="mdb9d0c42f0" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mdb9d0c42f0" x="45.082344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="38.082344" y="193.122056" transform="rotate(-0 38.082344 193.122056)">0.0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_10">
+      <path d="M 45.082344 161.348554  L 565.2 161.348554  " clip-path="url(#pf866be67d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#mdb9d0c42f0" x="45.082344" y="161.348554" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="38.082344" y="165.147382" transform="rotate(-0 38.082344 165.147382)">2.5</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_12">
+      <path d="M 45.082344 133.37388  L 565.2 133.37388  " clip-path="url(#pf866be67d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#mdb9d0c42f0" x="45.082344" y="133.37388" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="38.082344" y="137.172708" transform="rotate(-0 38.082344 137.172708)">5.0</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_14">
+      <path d="M 45.082344 105.399206  L 565.2 105.399206  " clip-path="url(#pf866be67d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#mdb9d0c42f0" x="45.082344" y="105.399206" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="38.082344" y="109.198034" transform="rotate(-0 38.082344 109.198034)">7.5</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_16">
+      <path d="M 45.082344 77.424532  L 565.2 77.424532  " clip-path="url(#pf866be67d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#mdb9d0c42f0" x="45.082344" y="77.424532" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="38.082344" y="81.22336" transform="rotate(-0 38.082344 81.22336)">10.0</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="9.414375" y="127.778945" transform="rotate(-90 9.414375 127.778945)">declared decision value</text>
+    </g>
+   </g>
+   <g id="line2d_18">
+    <path d="M 68.724055 189.323228  L 147.529761 189.323228  L 226.335466 155.753619  L 305.141172 155.753619  L 383.946877 99.804271  L 462.752583 99.804271  L 541.558288 66.234663  " clip-path="url(#pf866be67d4)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m7300bdc459" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#pf866be67d4)">
+     <use xlink:href="#m7300bdc459" x="68.724055" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7300bdc459" x="147.529761" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7300bdc459" x="226.335466" y="155.753619" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7300bdc459" x="305.141172" y="155.753619" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7300bdc459" x="383.946877" y="99.804271" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7300bdc459" x="462.752583" y="99.804271" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7300bdc459" x="541.558288" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 45.082344 195.477656  L 45.082344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 45.082344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="45.082344" y="54.080234" transform="rotate(-0 45.082344 54.080234)">retrieval budget frontier</text>
+   </g>
+  </g>
+  <g id="text_16">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 15: memory budget</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pf866be67d4">
+   <rect x="45.082344" y="60.080234" width="520.117656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 15.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>Additive record values can overcount redundant memories. Two records that repeat the same fact may contribute less together than the sum of their isolated values. This implementation declares additivity rather than inventing a submodular or semantic model. If redundancy matters, provide a different valuation experiment.</p>
+<p>The authority boundary is equally important. A remembered instruction does not become authorized because it is recent, highly ranked, or compressed into a confident summary. Version checks preserve a limited current-state contract; broader permissions still need a live authority check.</p>
+<p>Compression can also preserve today's action while destroying tomorrow's distinction. The argmax diagnostic is task-relative. Test novel decisions and changed state before claiming sufficient memory. Keep excluded-record reasons in the report so token scarcity is not mistaken for intentional retention of unsafe evidence.</p>
+<pre><code>changed_inputs = {&#x27;budget&#x27;: 2,
+ &#x27;now&#x27;: 10,
+ &#x27;current_version&#x27;: &#x27;v2&#x27;,
+ &#x27;records&#x27;: [{&#x27;id&#x27;: &#x27;review-v2&#x27;,
+              &#x27;tokens&#x27;: 4,
+              &#x27;decision_value&#x27;: 8,
+              &#x27;timestamp&#x27;: 9,
+              &#x27;ttl&#x27;: 3,
+              &#x27;authority&#x27;: True,
+              &#x27;version&#x27;: &#x27;v2&#x27;},
+             {&#x27;id&#x27;: &#x27;summary&#x27;,
+              &#x27;tokens&#x27;: 2,
+              &#x27;decision_value&#x27;: 3,
+              &#x27;timestamp&#x27;: 8,
+              &#x27;ttl&#x27;: 5,
+              &#x27;authority&#x27;: False,
+              &#x27;version&#x27;: &#x27;v1&#x27;},
+             {&#x27;id&#x27;: &#x27;old-review&#x27;,
+              &#x27;tokens&#x27;: 1,
+              &#x27;decision_value&#x27;: 100,
+              &#x27;timestamp&#x27;: 9,
+              &#x27;ttl&#x27;: 3,
+              &#x27;authority&#x27;: True,
+              &#x27;version&#x27;: &#x27;v1&#x27;}],
+ &#x27;original_action_values&#x27;: [4, 6],
+ &#x27;compressed_action_values&#x27;: [6, 5]}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 15: memory-budget
+Which memories deserve a limited retrieval budget, and does compression preserve the decision?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;retrieved_ids&quot;: [
+    &quot;summary&quot;
+  ],
+  &quot;retrieval_value&quot;: 3.0,
+  &quot;tokens_used&quot;: 2,
+  &quot;excluded_ids&quot;: [
+    &quot;old-review&quot;
+  ],
+  &quot;compression_preserves_action&quot;: false,
+  &quot;original_action&quot;: 1,
+  &quot;compressed_action&quot;: 0
+}
+
+Interpretation:
+Retrieval optimizes declared decision value among records that satisfy freshness and version-bound authority checks. Compression is checked by the action it preserves.
+
+Assumptions:
+- Record values are additive and supplied, not inferred from text similarity.
+- Exact finite subset search; no semantic embedding model.
+
+Limitations:
+- Preserving one decision vector does not prove sufficiency for every future task.
+- Retrieval relevance is not authority.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 47.962344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m30dda56a1e" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m30dda56a1e" x="71.473146" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="210.075312" transform="rotate(-0 71.473146 210.075312)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m30dda56a1e" x="306.581172" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="210.075312" transform="rotate(-0 306.581172 210.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m30dda56a1e" x="541.689197" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="210.075312" transform="rotate(-0 541.689197 210.075312)">2</text>
+     </g>
+    </g>
+    <g id="text_4">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="224.076094" transform="rotate(-0 306.581172 224.076094)">token budget</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <path d="M 47.962344 189.323228  L 565.2 189.323228  " clip-path="url(#pce31f934c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5">
+      <defs>
+       <path id="m167620a78d" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m167620a78d" x="47.962344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="193.122056" transform="rotate(-0 40.962344 193.122056)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <path d="M 47.962344 148.293706  L 565.2 148.293706  " clip-path="url(#pce31f934c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m167620a78d" x="47.962344" y="148.293706" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="152.092534" transform="rotate(-0 40.962344 152.092534)">1</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <path d="M 47.962344 107.264184  L 565.2 107.264184  " clip-path="url(#pce31f934c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m167620a78d" x="47.962344" y="107.264184" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="111.063013" transform="rotate(-0 40.962344 111.063013)">2</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <path d="M 47.962344 66.234663  L 565.2 66.234663  " clip-path="url(#pce31f934c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m167620a78d" x="47.962344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="70.033491" transform="rotate(-0 40.962344 70.033491)">3</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="28.1975" y="127.778945" transform="rotate(-90 28.1975 127.778945)">declared decision value</text>
+    </g>
+   </g>
+   <g id="line2d_12">
+    <path d="M 71.473146 189.323228  L 306.581172 189.323228  L 541.689197 66.234663  " clip-path="url(#pce31f934c8)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m9e453efb8c" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#pce31f934c8)">
+     <use xlink:href="#m9e453efb8c" x="71.473146" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9e453efb8c" x="306.581172" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9e453efb8c" x="541.689197" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 195.477656  L 47.962344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="54.080234" transform="rotate(-0 47.962344 54.080234)">retrieval budget frontier</text>
+   </g>
+  </g>
+  <g id="text_11">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 15: memory budget</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pce31f934c8">
+   <rect x="47.962344" y="60.080234" width="517.237656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 15.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer case excludes expired even though it is cheap and valuable. Current is fresh, version-valid, and consumes the full budget 3, so it is selected with value 4. Both supplied decision vectors prefer action 0, preserving this action under compression.</p>
+<p>For local use, attach timestamps and document versions to records when those affect authority. Give decision values an explicit source, such as a constructed study or measured task benefit. A retrieval recommendation should name records to retain, records to exclude, and the evidence needed to justify their values. Use separate trace analysis when memory is trying to promote untrusted data into control.</p>
+<pre><code>transfer_inputs = {&#x27;budget&#x27;: 3,
+ &#x27;now&#x27;: 20,
+ &#x27;current_version&#x27;: &#x27;doc-C&#x27;,
+ &#x27;records&#x27;: [{&#x27;id&#x27;: &#x27;expired&#x27;,
+              &#x27;tokens&#x27;: 1,
+              &#x27;decision_value&#x27;: 10,
+              &#x27;timestamp&#x27;: 10,
+              &#x27;ttl&#x27;: 2,
+              &#x27;authority&#x27;: False,
+              &#x27;version&#x27;: &#x27;doc-C&#x27;},
+             {&#x27;id&#x27;: &#x27;current&#x27;,
+              &#x27;tokens&#x27;: 3,
+              &#x27;decision_value&#x27;: 4,
+              &#x27;timestamp&#x27;: 19,
+              &#x27;ttl&#x27;: 3,
+              &#x27;authority&#x27;: True,
+              &#x27;version&#x27;: &#x27;doc-C&#x27;}],
+ &#x27;original_action_values&#x27;: [1, 0],
+ &#x27;compressed_action_values&#x27;: [2, 1]}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 15: memory-budget
+Which memories deserve a limited retrieval budget, and does compression preserve the decision?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;retrieved_ids&quot;: [
+    &quot;current&quot;
+  ],
+  &quot;retrieval_value&quot;: 4.0,
+  &quot;tokens_used&quot;: 3,
+  &quot;excluded_ids&quot;: [
+    &quot;expired&quot;
+  ],
+  &quot;compression_preserves_action&quot;: true,
+  &quot;original_action&quot;: 0,
+  &quot;compressed_action&quot;: 0
+}
+
+Interpretation:
+Retrieval optimizes declared decision value among records that satisfy freshness and version-bound authority checks. Compression is checked by the action it preserves.
+
+Assumptions:
+- Record values are additive and supplied, not inferred from text similarity.
+- Exact finite subset search; no semantic embedding model.
+
+Limitations:
+- Preserving one decision vector does not prove sufficiency for every future task.
+- Retrieval relevance is not authority.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>budget:</strong> Nonnegative integer token budget up to 10000.</li>
+<li><strong>now:</strong> Nonnegative current time.</li>
+<li><strong>current_version:</strong> Current document or state version identifier.</li>
+<li><strong>records:</strong> At most 20 records. Each has id,tokens:positive integer,decision_value:nonnegative number,timestamp,ttl:nonnegative numbers,authority:boolean,version:string.</li>
+<li><strong>original_action_values:</strong> Finite values for each original decision alternative.</li>
+<li><strong>compressed_action_values:</strong> Aligned values after compression.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch15.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 15: memory-budget
+Which memories deserve a limited retrieval budget, and does compression preserve the decision?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;retrieved_ids&quot;: [
+    &quot;current&quot;
+  ],
+  &quot;retrieval_value&quot;: 4.0,
+  &quot;tokens_used&quot;: 3,
+  &quot;excluded_ids&quot;: [
+    &quot;expired&quot;
+  ],
+  &quot;compression_preserves_action&quot;: true,
+  &quot;original_action&quot;: 0,
+  &quot;compressed_action&quot;: 0
+}
+
+Interpretation:
+Retrieval optimizes declared decision value among records that satisfy freshness and version-bound authority checks. Compression is checked by the action it preserves.
+
+Assumptions:
+- Record values are additive and supplied, not inferred from text similarity.
+- Exact finite subset search; no semantic embedding model.
+
+Limitations:
+- Preserving one decision vector does not prove sufficiency for every future task.
+- Retrieval relevance is not authority.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Why exclude old-review?</p>
+</li>
+<li>
+<p>What is default retrieval value?</p>
+</li>
+<li>
+<p>Does action preservation prove all future information survives?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch15.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Memory selection is a decision under cost, freshness, and authority. Exact knapsack allocation chooses among eligible records; action comparison checks a limited compression property. The obsolete approval is excluded despite its high value, the changed budget reduces retrieval, and changed compression reverses the action. These calculations do not perform semantic retrieval or establish universal sufficiency. Preserve the valuation and version contract whenever memory influences an action.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-15-memory-budget/SKILL.md"><code>maa-15-memory-budget</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 15.1</h3>
+<p><img alt="Equation 15.1" src="../../assets/math/f7d464531063a86995f9.svg" /></p>
+<p>Equation (15.1) selects records by expected decision value under a stated context budget.</p>
+<p>Include records only when expected decision improvement exceeds the decision-value-priced token cost within budget.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">R^\star\in\arg\max_{R:\,\sum_{m\in R}c(m)\le B}
+\left\{\operatorname E[\text{decision value}\mid R]-\lambda\sum_{m\in R}c(m)\right\}.
+\tag{15.1}
+</code></pre></body></html>

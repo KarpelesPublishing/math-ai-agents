@@ -1,0 +1,26 @@
+{
+  "discount": 0.5,
+  "deadline": 2,
+  "start_time": 0,
+  "options": [
+    {
+      "name": "inspect",
+      "initiation": true,
+      "rewards": [
+        0,
+        4
+      ],
+      "terminated": true,
+      "continuation_value": 8
+    },
+    {
+      "name": "disabled",
+      "initiation": false,
+      "rewards": [
+        9
+      ],
+      "terminated": true,
+      "continuation_value": 0
+    }
+  ]
+}

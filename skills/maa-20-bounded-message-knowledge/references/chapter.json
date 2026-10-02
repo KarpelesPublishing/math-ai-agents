@@ -1,0 +1,47 @@
+{
+  "chapter": 20,
+  "title": "Messages, Beliefs, and Consensus",
+  "source_path": "Manuscript/part-v/20-messages-beliefs-and-consensus.md",
+  "source_sha256": "08b7fce8dfccffd2d7995fccdef0e70d897ad2e90cc3922f3cb7ee445296de04",
+  "notebook": "notebooks/20-bounded-message-knowledge.ipynb",
+  "skill": "maa-20-bounded-message-knowledge",
+  "skill_path": "skills/maa-20-bounded-message-knowledge/SKILL.md",
+  "method": "bounded-message-knowledge",
+  "outcome": "Enumerate bounded message worlds and distinguish agreement from local knowledge.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "bounded message receipt knowledge",
+    "dropped acknowledgement consensus trace",
+    "local-view handoff agreement"
+  ],
+  "input_fields": {
+    "rounds": "Integer request/acknowledgement rounds 1..6; enumeration has 2^(2 rounds) worlds.",
+    "drop_probability": "Independent per-message drop probability in [0,1]."
+  },
+  "example_input": "data/examples/ch20.json",
+  "equations": [
+    {
+      "label": "EQV20-01",
+      "number": "20.1",
+      "tex": "\\operatorname{MK}_{\\mathcal P}^{n+1}(F) = \\bigwedge_{i \\in \\mathcal P} \\operatorname{Know}_i\\!\\left(\\operatorname{MK}_{\\mathcal P}^{n}(F)\\right), \\qquad \\operatorname{MK}_{\\mathcal P}^{1}(F) = \\bigwedge_{i \\in \\mathcal P} \\operatorname{Know}_i(F).\\tag{20.1}",
+      "asset": "assets/math/f8ef23bd6086319132c4.svg",
+      "explanations": [
+        "Defines each next mutual-knowledge level by having every party know preceding level.",
+        "First level means every party knows F; each later level wraps that group condition once more."
+      ]
+    },
+    {
+      "label": "EQV20-02",
+      "number": "20.2",
+      "tex": "\\operatorname{CK}_{\\mathcal P}(F) \\quad\\Longleftrightarrow\\quad \\bigwedge_{n=1}^{\\infty} \\operatorname{MK}_{\\mathcal P}^{n}(F).\\tag{20.2}",
+      "asset": "assets/math/fdc2593e0526f40abc3c.svg",
+      "explanations": [
+        "Defines common knowledge as every finite mutual-knowledge level holding together.",
+        "Common knowledge requires no final depth: levels one, two, and every higher finite level hold."
+      ]
+    }
+  ]
+}

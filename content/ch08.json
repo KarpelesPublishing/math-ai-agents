@@ -1,0 +1,173 @@
+{
+  "slug": "belief-information",
+  "question": "Should a controller act now or buy an observation before choosing?",
+  "outcome": "Update a belief and calculate gross and net one-step information value.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "The document appears ready, but the controller cannot directly see whether the hidden review state is valid. Acting on the most likely state may work, yet an additional observation could change which action is best. The observation's value comes from its effect on a decision, not from how detailed its text looks.\n\nThis notebook maintains a probability distribution over hidden states. It first predicts through a transition kernel, then updates with the observed signal. A separate calculation averages over every possible signal to price gathering information before acting. The changed case uses an observation that looks different on the surface but has identical state-conditioned distributions, exposing the difference between receiving data and learning something useful.",
+  "math_explanation": "The predictive belief is b_minus(j)=sum_i b(i)P(j|i). For observation o, its probability is Z(o)=sum_j b_minus(j)O(o|j), and Bayes' rule gives b_plus(j)=b_minus(j)O(o|j)/Z(o). An observation with Z(o)=0 is impossible under the declared model and is rejected.\n\nFor reward vector r_a, acting now has value max_a sum_j b_minus(j)r_a(j). If the controller first observes, its gross expected decision value is sum_o Z(o) max_a sum_j b_plus_o(j)r_a(j). Gross value of information is the difference between that quantity and acting now. Net value subtracts the observation cost.\n\nThe maximum is taken after each possible observation because the action can adapt to the signal. Placing the maximum before averaging would price a fixed action and lose the decision benefit. An informative signal can still have zero value when it never changes the optimal action. Identical observation rows convey no state information at all. These are one-step values; the calculation does not solve a general partially observable planning problem.",
+  "method": "Provide a prior belief, transition matrix, observation matrix, reward vector for each action, observed index, and observation cost. Kernel dimensions must align, all probability rows must normalize, and the observed index must exist. The function predicts belief, evaluates the observation likelihood, forms its posterior, and selects the best posterior action.\n\nIt then repeats the posterior calculation for every possible observation to obtain information value. The first plot compares prior, predictive, and posterior probability of state zero. The second varies observation cost while holding gross benefit fixed. In the changed case, replace the observation rows with identical distributions. Predict both the posterior and information value before execution.",
+  "worked_interpretation": "The default prior is equally split and the transition preserves it. Observation zero produces posterior [0.9,0.1]. Acting now has value zero because either action has equally weighted gains and losses. After observing, the controller can choose the appropriate action, giving expected value 8 before cost and 7 after cost.\n\nThe gross information value is therefore 8. With identical observation rows in the changed case, the posterior remains [0.5,0.5] regardless of the signal. Gross information value falls to zero and net information value becomes -1. The signal still arrives, but it does not earn its cost.",
+  "failure_explanation": "A belief update can be mathematically correct under an incorrect observation model. If a tool's signal changes distribution, or if hidden states were defined too coarsely, the posterior can look confident without being calibrated. Inspect the likelihood source rather than treating normalization as validation of the world model.\n\nInformation also has opportunity cost. The implemented cost is a single utility deduction; a deadline or state transition during observation would require a larger model. Likewise, this function assumes the same action set remains available after the observation.\n\nAn impossible signal should not be assigned an arbitrary uniform posterior. It is evidence that the declared boundary is incomplete or the input is inconsistent. The rejection asks you to repair that model rather than fabricate a belief. Preserve unmodeled outcomes in the next measurement design.",
+  "transfer_explanation": "The transfer case predicts a new belief before receiving observation one. Its transition mixes the initial states, so the prior is not the correct distribution to insert directly into Bayes' rule. First calculate the predictive belief [0.6,0.4], then weight it by observation-one likelihoods [0.2,0.7] and normalize.\n\nUse local data only when the state, observation, and action definitions share one boundary. If likelihoods are fitted estimates, retain their sample sizes and calibration limits outside this exact calculation. Report gross information value separately from cost so a negative net result can be traced to unhelpful evidence, high price, or both.",
+  "summary": "Beliefs predict through transitions and update through observation likelihoods. Information is worth its decision improvement after cost, not its volume or apparent specificity. The default signal changes the optimal action; the changed signal is uninformative; the transfer case requires transition prediction before Bayes' rule. Keep normalization, model provenance, and action timing explicit. This notebook prices one observation and one decision within a declared hidden-state model.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "belief": [
+      0.5,
+      0.5
+    ],
+    "transition": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "observation": [
+      [
+        0.9,
+        0.1
+      ],
+      [
+        0.1,
+        0.9
+      ]
+    ],
+    "observed": 0,
+    "action_rewards": [
+      [
+        10,
+        -10
+      ],
+      [
+        -10,
+        10
+      ]
+    ],
+    "observation_cost": 1
+  },
+  "changed": {
+    "belief": [
+      0.5,
+      0.5
+    ],
+    "transition": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "observation": [
+      [
+        0.5,
+        0.5
+      ],
+      [
+        0.5,
+        0.5
+      ]
+    ],
+    "observed": 0,
+    "action_rewards": [
+      [
+        10,
+        -10
+      ],
+      [
+        -10,
+        10
+      ]
+    ],
+    "observation_cost": 1
+  },
+  "transfer": {
+    "belief": [
+      0.8,
+      0.2
+    ],
+    "transition": [
+      [
+        0.7,
+        0.3
+      ],
+      [
+        0.2,
+        0.8
+      ]
+    ],
+    "observation": [
+      [
+        0.8,
+        0.2
+      ],
+      [
+        0.3,
+        0.7
+      ]
+    ],
+    "observed": 1,
+    "action_rewards": [
+      [
+        5,
+        -4
+      ],
+      [
+        0,
+        2
+      ]
+    ],
+    "observation_cost": 0.2
+  },
+  "input_fields": {
+    "belief": "Normalized prior state probability list.",
+    "transition": "Square row-stochastic state transition matrix.",
+    "observation": "State by observation row-stochastic matrix.",
+    "observed": "Zero-based observation index.",
+    "action_rewards": "Action by state finite reward matrix.",
+    "observation_cost": "Nonnegative cost paid before the one later action."
+  },
+  "exercises": [
+    {
+      "question": "Compute default posterior.",
+      "answer": "[0.5*0.9,0.5*0.1]/0.5=[0.9,0.1]."
+    },
+    {
+      "question": "What observation cost makes default information break even?",
+      "answer": "Acting now has expected reward 0.5(10)+0.5(-10)=0. After either observation the posterior is [0.9,0.1] or its mirror image, so the best action has expected reward 0.9(10)+0.1(-10)=8. The gross value of information is 8, so information breaks even at an observation cost of 8 utility units."
+    },
+    {
+      "question": "Compute transfer posterior after observation 1.",
+      "answer": "[0.12,0.28]/0.4=[0.3,0.7]."
+    }
+  ],
+  "routes": [
+    "Bayesian hidden-state belief update",
+    "one-step value of observation",
+    "uninformative signal aliasing"
+  ],
+  "acceptance_checks": [
+    "Default posterior is [0.9,0.1].",
+    "Identical likelihood rows give zero gross information value.",
+    "Impossible observed signals are rejected."
+  ]
+}

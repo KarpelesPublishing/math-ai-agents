@@ -1,0 +1,142 @@
+{
+  "slug": "permission-reachability",
+  "question": "Is there a permitted path from the current state to the intended effect?",
+  "outcome": "Return reachable states, a permitted path, and sinks under frozen permissions.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A controller can describe a release without possessing a route that can carry it out. The gap can be a missing interface, a permission check, or a state that must be reached first. Graph reachability turns that gap into an inspectable question: is there a sequence of supported edges from the current state to the intended terminal state?\n\nThis notebook keeps the raw graph and the permission-filtered graph separate. A raw path describes what the assembled interface could permit in some authority configuration. An allowed path describes what this frozen configuration permits now. Neither path is an execution receipt. The example includes a loop back to drafting and an archive sink, so reachability does not become a disguised claim of inevitable progress.",
+  "math_explanation": "Let G=(V,E) be a directed graph of declared states and action interfaces. Permission filtering forms E_allowed={e in E: allowed(e)=true}. A goal is reachable when some finite directed path from the start ends at it. Breadth-first search discovers the minimum number of edges needed to reach each node in an unweighted graph.\n\nThe algorithm maintains a queue and a distance map. The start has distance zero. Each previously unseen neighbor receives its predecessor's distance plus one and enters the queue. Recording predecessors reconstructs one shortest path to the goal. A visited set prevents a cycle from making the search loop forever.\n\nA reachable sink is a discovered node with no outgoing permitted edge. It can represent successful termination, a dead end, or an intentional refusal state; the graph alone does not tell you which. The cumulative depth figure counts how many allowed nodes can be reached within each maximum path length. Removing a bridge can disconnect a goal even when the raw graph remains connected.",
+  "method": "Register every node, then supply directed edges with exact boolean permission flags. The start and goal must be registered, and every edge endpoint must be known. The function runs breadth-first search on the raw adjacency map and on the permission-filtered map, returning reachable counts and paths separately.\n\nThe chart places maximum path length on the horizontal axis and cumulative reachable-node count on the vertical axis. It describes possibilities under the current graph. For the changed case, remove permission from the review-to-release edge. Predict the goal result before running the function. Inspect the returned sink list and distance map to understand where the permitted workflow can end. This is more useful than reporting only a yes/no path flag.",
+  "worked_interpretation": "The default goal is reachable through draft, review, release. All four nodes are reachable because archive is also available directly from draft. The review-to-draft loop does not change the shortest path and does not prevent the search from terminating.\n\nIn the changed case, the raw path still exists but the authorized path is empty. Release is absent from the allowed distance map. Draft, review, and archive remain reachable, so the reachable count falls from four to three. The controller has lost an authority bridge, not a linguistic ability to mention release. A useful report names that missing edge and the authority required to restore it.",
+  "failure_explanation": "Reachability is necessary for many workflow goals but is not sufficient for completion. An edge might represent a probabilistic tool action, an expensive operation, or a choice the policy never selects. Those conditions need a transition model and policy analysis rather than a plain graph. Likewise, permission can change between observation and action, invalidating the frozen snapshot.\n\nAn unsafe inference is to interpret a path containing an unallowed edge as permission to execute it. The raw graph is a diagnostic comparison, not an alternate authority source. The transfer case makes this explicit: the final edge exists, but the controller cannot reach the state from which it becomes available.\n\nGraph design also matters. If the node label hides document version or review status, the graph can claim a path that the real state machine forbids. Include the relevant state boundary before treating reachability as an operational result.",
+  "transfer_explanation": "The transfer workflow starts queued and requires approval before sending. The queued-to-approved edge is denied, so neither approved nor sent is reachable from the start under current permissions. A permitted approved-to-sent edge cannot help until its initiation state is reached.\n\nFor local use, map concrete tool preconditions and current authority into nodes and edges. Distinguish a terminal refusal from an accidental dead end. After computing a path, export its ordered states and the frozen permission contract. Use a separate execution trace to establish whether the actions happened, and recheck authority at the action boundary when permissions can change.",
+  "summary": "A graph separates describing an action from possessing an executable route to it. Permission filtering can remove a crucial bridge while leaving the raw interface graph intact. Breadth-first search returns a path, distances, and reachable sinks without confusing cycles with progress. The default route exists; the changed route is denied; the transfer route is blocked before approval. Keep the graph's state detail and authority snapshot explicit. Reachability reports possible paths, while completed effects require execution and confirmation evidence.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "nodes": [
+      "draft",
+      "review",
+      "release",
+      "archive"
+    ],
+    "start": "draft",
+    "goal": "release",
+    "edges": [
+      {
+        "from": "draft",
+        "to": "review",
+        "allowed": true
+      },
+      {
+        "from": "review",
+        "to": "release",
+        "allowed": true
+      },
+      {
+        "from": "review",
+        "to": "draft",
+        "allowed": true
+      },
+      {
+        "from": "draft",
+        "to": "archive",
+        "allowed": true
+      }
+    ]
+  },
+  "changed": {
+    "nodes": [
+      "draft",
+      "review",
+      "release",
+      "archive"
+    ],
+    "start": "draft",
+    "goal": "release",
+    "edges": [
+      {
+        "from": "draft",
+        "to": "review",
+        "allowed": true
+      },
+      {
+        "from": "review",
+        "to": "release",
+        "allowed": false
+      },
+      {
+        "from": "review",
+        "to": "draft",
+        "allowed": true
+      },
+      {
+        "from": "draft",
+        "to": "archive",
+        "allowed": true
+      }
+    ]
+  },
+  "transfer": {
+    "nodes": [
+      "queued",
+      "approved",
+      "sent"
+    ],
+    "start": "queued",
+    "goal": "sent",
+    "edges": [
+      {
+        "from": "queued",
+        "to": "approved",
+        "allowed": false
+      },
+      {
+        "from": "approved",
+        "to": "sent",
+        "allowed": true
+      }
+    ]
+  },
+  "input_fields": {
+    "nodes": "Unique nonempty state identifiers.",
+    "start": "Registered initial node.",
+    "goal": "Registered desired node.",
+    "edges": "Directed edge list with from,to:registered identifiers and allowed:exact boolean."
+  },
+  "exercises": [
+    {
+      "question": "What is the default shortest authorized path?",
+      "answer": "draft -> review -> release, two edges."
+    },
+    {
+      "question": "Does the changed raw graph still reach release?",
+      "answer": "Yes; permission filtering removes the authorized bridge only."
+    },
+    {
+      "question": "Why is the transfer send action unusable?",
+      "answer": "Its initiation state approved is unreachable from queued."
+    }
+  ],
+  "routes": [
+    "allowed action graph reachability",
+    "permission bridge removal",
+    "reachable workflow sinks"
+  ],
+  "acceptance_checks": [
+    "Default authorized path has two edges.",
+    "Denied bridge removes only authorized goal reachability.",
+    "Cycles terminate through visited-state tracking."
+  ]
+}

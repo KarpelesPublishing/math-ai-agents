@@ -1,0 +1,127 @@
+{
+  "slug": "finite-policy-learning",
+  "question": "Does optimizing the verifier reward improve the external task?",
+  "outcome": "Train a seeded softmax policy with REINFORCE and evaluate a separate success predicate.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A controller learns to choose the action its verifier rewards most. Training reward rises, and the result looks successful. Yet the verifier might favor a shortcut that seldom completes the external task. Optimization can amplify that mismatch rather than correct it.\n\nThis notebook trains an actual finite softmax policy from sampled actions. It keeps verifier reward and external success probability in separate vectors and uses a separate random stream for evaluation. Repeated seeds expose stochastic learning variation. The changed case aligns the reward ranking with the task ranking. The transfer case changes terminal shaping, showing how a seemingly helpful addition can alter the objective itself.",
+  "math_explanation": "For logits theta_i, softmax gives pi_i=exp(theta_i)/sum_j exp(theta_j). REINFORCE uses the score gradient d log pi_A/d theta_i=1{i=A}-pi_i. The update here is theta_i <- theta_i+alpha(R_A-b)(1{i=A}-pi_i), where b is the current expected shaped reward. A baseline independent of the sampled action's randomness reduces variability without changing the expected score-gradient direction.\n\nThis one-step experiment uses deterministic verifier reward after action selection. Shaped reward adds gamma Phi(terminal) with initial potential zero. In a properly terminated episodic construction, zero terminal potential preserves the original objective. A nonzero action-dependent terminal potential can change rankings, so the report exposes that condition.\n\nExpected verifier reward is sum_i pi_i r_i; expected external success is sum_i pi_i p_i. They are different functions of the same policy. Independent evaluation draws actions and Bernoulli success from a fresh seeded stream. Its empirical rate has finite-sample noise and is not identical to the known constructed expectation.",
+  "method": "Supply aligned verifier rewards, external success probabilities, and terminal potentials. Declare episodes, learning rate, discount, seeds, and evaluation count. Each seed begins with equal logits. Stable softmax subtracts the maximum logit before exponentiation, avoiding avoidable overflow.\n\nAt every training episode, the code samples one action, computes its centered shaped reward, updates all logits, and records expected unshaped verifier reward. After training, it reports the policy, expected external success, and a separate empirical evaluation rate. Curves are labeled by seed. Compare their direction with the external metrics rather than calling any upward reward curve task improvement. The changed reward vector is the only altered mechanism.",
+  "worked_interpretation": "Initially the default policy is [0.5,0.5], with verifier reward 1.5 and external success 0.55. The verifier prefers action 1 with reward 2, while the task prefers action 0 with success probability 0.9. Learning toward the verifier can therefore raise reward while lowering expected task success.\n\nThe changed reward vector [2,1] aligns both rankings. Reward-directed learning can now increase external success. Exact final policies differ by seed, so the hand check focuses on rankings, normalization, and expected metrics rather than a selected flattering run. Separate evaluation remains finite evidence even when the constructed expectation is known.",
+  "failure_explanation": "Verifier agreement is not an independent correctness guarantee. If reward and external success share the same mistaken criterion, evaluation can repeat the training error. This experiment keeps them separate precisely to make that mismatch inspectable.\n\nReward shaping is another boundary. Potential differences can preserve optimal behavior under their assumptions, but arbitrary terminal bonuses do not inherit that guarantee. The transfer case assigns potential 2 to the zero-reward action, giving it shaped reward 2 against the other action's reward 1. Training can then favor external failure.\n\nThis runtime trains only a one-step finite policy. It does not train a language model or claim convergence of a general agent. Multi-step return estimation, function approximation, safety constraints, and deployment shifts need additional models and evidence. Record all seeds and evaluation counts rather than presenting one policy snapshot as a universal result.",
+  "transfer_explanation": "In the transfer case, action 0 has unshaped reward 0 and external success 0, but terminal potential 2 makes its shaped reward 2. Action 1 has reward 1 and success 1. The shaping condition is false, so the learner is trained on shaped rewards [2, 1] while the external task prefers action 1. Read the fields by name: verifier_optimal_action ranks the unshaped rewards and still says action 1, but shaped_optimal_action ranks the rewards the optimizer actually uses and says action 0, and training_objective_conflicts_with_task is true. expected_training_reward is the unshaped expectation, while expected_shaped_reward is the quantity the plotted curves track and the one that rises. Predict that conflict before inspecting the seeded curves.\n\nFor a compatible local experiment, use a finite declared action set and an independently defined success predicate. Keep evaluation evidence outside reward adaptation. If the real question concerns a trajectory policy, treat this laboratory as a mechanics check and specify the missing return, state, and evaluation contracts before claiming broader learning capability.",
+  "summary": "REINFORCE can optimize a declared finite reward while worsening the external task. This notebook performs real sampled logit updates, repeated seeds, and separate evaluation. The changed case aligns objectives; the transfer case breaks an episodic shaping condition. Track policy normalization, verifier reward, and external success separately. Improvement means improvement of a named objective under a stated experiment, not general agent competence.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "rewards": [
+      1,
+      2
+    ],
+    "success_probabilities": [
+      0.9,
+      0.2
+    ],
+    "terminal_potentials": [
+      0,
+      0
+    ],
+    "episodes": 120,
+    "seeds": [
+      3,
+      11
+    ],
+    "learning_rate": 0.08,
+    "discount": 1,
+    "evaluation_runs": 200
+  },
+  "changed": {
+    "rewards": [
+      2,
+      1
+    ],
+    "success_probabilities": [
+      0.9,
+      0.2
+    ],
+    "terminal_potentials": [
+      0,
+      0
+    ],
+    "episodes": 120,
+    "seeds": [
+      3,
+      11
+    ],
+    "learning_rate": 0.08,
+    "discount": 1,
+    "evaluation_runs": 200
+  },
+  "transfer": {
+    "rewards": [
+      0,
+      1
+    ],
+    "success_probabilities": [
+      0,
+      1
+    ],
+    "terminal_potentials": [
+      2,
+      0
+    ],
+    "episodes": 100,
+    "seeds": [
+      7,
+      17
+    ],
+    "learning_rate": 0.1,
+    "discount": 1,
+    "evaluation_runs": 100
+  },
+  "input_fields": {
+    "rewards": "Finite verifier reward per one-step action.",
+    "success_probabilities": "External success chance per action in [0,1].",
+    "terminal_potentials": "Potential value of each terminal action outcome; zero is the episodic invariant condition.",
+    "episodes": "Bounded training sample count 1..10000.",
+    "seeds": "Nonempty integer seed list.",
+    "learning_rate": "Logit step size in [0,1].",
+    "discount": "Gamma in [0,1].",
+    "evaluation_runs": "Positive separate evaluation count."
+  },
+  "exercises": [
+    {
+      "question": "Compute initial default external success.",
+      "answer": "The default policy starts uniform and the success probabilities are 0.9 and 0.2, so initial external success is 0.5*0.9+0.5*0.2=0.55."
+    },
+    {
+      "question": "Which action has the highest default verifier reward?",
+      "answer": "Action 1, whose verifier reward 2 exceeds action 0's reward 1, despite its lower external success 0.2 against 0.9."
+    },
+    {
+      "question": "What are transfer shaped rewards?",
+      "answer": "[0+2,1+0]=[2,1], reversing the external objective."
+    }
+  ],
+  "routes": [
+    "REINFORCE verifier mismatch",
+    "seeded softmax policy learning",
+    "terminal reward shaping audit"
+  ],
+  "acceptance_checks": [
+    "Every learned policy sums to 1.",
+    "Verifier and external optimal actions disagree by default.",
+    "Nonzero terminal potentials flag broken invariant condition."
+  ]
+}

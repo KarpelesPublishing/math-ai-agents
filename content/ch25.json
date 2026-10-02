@@ -1,0 +1,162 @@
+{
+  "slug": "development-guard-gate",
+  "question": "Should the development winner be accepted under a separate release guard?",
+  "outcome": "Select on development and check only the frozen winner against a declared guard contract.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "An improvement search produces several promising procedures. One wins development evaluation, but its apparent gain may come from adaptation to that development set. Release needs a different question: how does the frozen winner perform on evidence that did not help select it?\n\nThis notebook separates development selection from a guard comparison. The default development winner fails the release threshold, while another candidate looks better on guard. That temptation is deliberate. Switching winners after inspecting guard results would use the guard for selection and break the clean protocol. The transfer case makes contamination explicit rather than treating a favorable held-out number as certification.",
+  "math_explanation": "For candidate c, development rate is the mean of its binary development outcomes. The selected candidate maximizes that rate, with input order resolving ties. Guard outcomes are aligned by position with the baseline guard. The selected gain is mean_i[Y_c,i-Y_baseline,i].\n\nAcceptance requires gain at least the prespecified threshold and guard_reused=false. The threshold is a procedural rule, not a confidence bound. Finite sample noise can produce a pass even when the target-population gain is smaller. A statistical release rule would require additional assumptions, error control, and an appropriately reserved evaluation design.\n\nThe function reports every candidate's descriptive guard rate for teaching inspection, but the acceptance decision uses only the development-selected row. Those displayed guard results must not feed later candidate selection if the same evidence is to remain a clean guard. Repeated adaptive reuse changes its role. A boolean flag records that declared contamination boundary; it does not independently audit the history of a real experiment.",
+  "method": "Supply binary baseline guard outcomes, candidate development and guard vectors, minimum gain, and reuse status. Guard lengths must match the baseline; every observed outcome must be zero or one. Development samples need not share guard length because they serve a different purpose.\n\nThe function calculates development rates, freezes the winner, computes paired guard gains, and applies the acceptance contract. Separate figures show development selection and guard gains. In the default case, identify the winner before looking at the second plot. The changed case improves that winner's guard evidence without changing selection. The transfer case gives a favorable gain but declares prior reuse, so you can test whether contamination blocks a clean release claim.",
+  "worked_interpretation": "Flashy wins development at 1.0, above steady at 0.75. Flashy's default guard equals the baseline, so gain is 0 and release is rejected against threshold 0.2. Steady's guard gain is 0.25, but selecting it after seeing that result would turn guard into another development set.\n\nIn the changed case, flashy repairs one baseline failure, giving guard gain 0.25. It now meets the declared threshold and is accepted because the guard is not reused. That pass means the finite procedural gate passed. It does not establish a confidence guarantee or remove the need for reversible deployment and monitoring.",
+  "failure_explanation": "The most direct contamination failure is choosing the candidate with the best guard score instead of the development winner. Another is repeatedly tuning a procedure after every failed guard result while continuing to call the same data untouched. Both make the guard participate in improvement.\n\nThe transfer case has a large favorable gain but guard_reused=true. The method rejects a clean release claim because the evidence no longer has its reserved role. The gain remains a descriptive quantity; contamination does not make arithmetic disappear.\n\nA gate can also fail through undefined pairing or a post hoc threshold. Here positions define matched guard tasks, so the caller must preserve that meaning. Choose the threshold before inspecting outcomes and keep candidate, data, and procedure identifiers in the record. Passing this small deterministic rule is not certification of a generally improved agent.",
+  "transfer_explanation": "The transfer proposal has guard success 1 compared with baseline 0.5, for gain 0.5. It exceeds threshold 0.1, but release remains rejected because the guard was reused. This separates favorable observed evidence from a valid acceptance protocol.\n\nFor local improvement work, freeze the candidate and its runtime before opening guard outcomes. Record the source of every prior evaluation and preserve a genuinely new guard after contamination. If uncertainty control is required, design that statistical rule explicitly rather than assigning a scientific meaning to a convenient numeric threshold. Keep rollback and monitoring outside the claim that the finite gate itself makes deployment safe.",
+  "summary": "Development chooses the procedure; reserved guard evidence checks the frozen choice. The default winner fails, the changed winner passes a finite threshold, and the transfer gain cannot support clean acceptance after reuse. These distinctions prevent adaptation from masquerading as independent validation. The gate is an inspectable protocol under declared pairing and history, not certification. Preserve data roles, thresholds, and candidate identity before making a release claim.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "baseline_guard": [
+      true,
+      false,
+      true,
+      false
+    ],
+    "minimum_guard_gain": 0.2,
+    "guard_reused": false,
+    "candidates": [
+      {
+        "name": "flashy",
+        "development": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "guard": [
+          true,
+          false,
+          true,
+          false
+        ]
+      },
+      {
+        "name": "steady",
+        "development": [
+          true,
+          true,
+          true,
+          false
+        ],
+        "guard": [
+          true,
+          true,
+          true,
+          false
+        ]
+      }
+    ]
+  },
+  "changed": {
+    "baseline_guard": [
+      true,
+      false,
+      true,
+      false
+    ],
+    "minimum_guard_gain": 0.2,
+    "guard_reused": false,
+    "candidates": [
+      {
+        "name": "flashy",
+        "development": [
+          true,
+          true,
+          true,
+          true
+        ],
+        "guard": [
+          true,
+          true,
+          true,
+          false
+        ]
+      },
+      {
+        "name": "steady",
+        "development": [
+          true,
+          true,
+          true,
+          false
+        ],
+        "guard": [
+          true,
+          true,
+          true,
+          false
+        ]
+      }
+    ]
+  },
+  "transfer": {
+    "baseline_guard": [
+      false,
+      true
+    ],
+    "minimum_guard_gain": 0.1,
+    "guard_reused": true,
+    "candidates": [
+      {
+        "name": "proposal",
+        "development": [
+          true,
+          true
+        ],
+        "guard": [
+          true,
+          true
+        ]
+      }
+    ]
+  },
+  "input_fields": {
+    "baseline_guard": "Nonempty binary baseline outcomes aligned with each candidate guard.",
+    "minimum_guard_gain": "Finite prespecified candidate-minus-baseline mean threshold.",
+    "guard_reused": "Exact boolean stating whether guard evidence influenced improvement or prior selection.",
+    "candidates": "Nonempty rows with name,development:binary list,guard:binary list matched to baseline_guard."
+  },
+  "exercises": [
+    {
+      "question": "Why not release steady by default?",
+      "answer": "It was not the development-selected candidate; choosing it after guard inspection contaminates the guard role."
+    },
+    {
+      "question": "What changed gain allows flashy to pass?",
+      "answer": "One repaired outcome over 4 pairs gives 0.25>=0.2."
+    },
+    {
+      "question": "Does contamination erase observed gain?",
+      "answer": "No; it invalidates the clean acceptance claim, while descriptive gain remains."
+    }
+  ],
+  "routes": [
+    "development winner guard release",
+    "adaptive guard contamination",
+    "freeze improvement acceptance procedure"
+  ],
+  "acceptance_checks": [
+    "Selection depends only on development.",
+    "Default rejects zero guard gain.",
+    "Reused guard blocks acceptance despite favorable gain."
+  ]
+}

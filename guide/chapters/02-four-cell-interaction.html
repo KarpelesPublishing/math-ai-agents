@@ -1,0 +1,830 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>02-four-cell-interaction</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 2: How to Measure Emergence</h1>
+<p>A memory component and a retrieval component improve a document controller together. The intact score alone cannot tell you whether their joint contribution was additive, whether one carried most of the gain, or whether the pair mattered specifically through their interaction. That question needs four configurations, including the often neglected configuration with neither component.</p>
+<p>The notebook uses the chapter's task-relative decomposition. You will subtract the two isolated gains from the whole-system gain, then decide whether a share can honestly be called a fraction. The matched budget fields make one comparability condition visible. They do not stand in for matching task distribution, measurement, or information access.</p>
+<p><strong>Outcome:</strong> Compute the signed four-cell contrast, positive amount, and valid share.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>Write the four scores as U00,U10,U01,U11. The interaction contrast is Gamma=U11-U10-U01+U00. Let a=U10-U00 and b=U01-U00 be the isolated gains. The joint gain is J=U11-U00, and the identity J=a+b+Gamma is exact on the declared score scale.</p>
+<p>The chapter-defined positive interaction amount is E=max(0,Gamma). It suppresses negative interaction for that specific amount convention but does not erase the signed contrast. Report both. The signed ratio Gamma/J exists when J is nonzero. Its interpretation as a cooperation fraction requires J&gt;0, a&gt;=0, b&gt;=0, and Gamma&gt;=0. Under those conditions the exact decomposition guarantees a ratio between zero and one.</p>
+<p>An additive contrast depends on the score scale. A nonlinear transformation can change it, even when intact rankings remain unchanged. Equal budgets support one condition of a matched ablation; unequal budgets confound component status with resource exposure. Neither condition alone proves an internal mechanism or warrants a universal ranking of emergence.</p>
+<h2>A calculation you can run</h2>
+<p>Supply the four scores and four budgets in the documented order. The code checks vector lengths and finite numeric domains, calculates isolated contributions, signed contrast, positive amount, joint gain, and both ratio variants. The fraction field is unavailable when its domain conditions fail.</p>
+<p>Two figures show the observed cells and the additive decomposition. The decomposition includes the baseline and contributions, so read its table order carefully. In the changed case the intact configuration receives twice the budget while all scores remain the same. The arithmetic is unchanged; the matched-comparison conclusion changes. This is deliberate: a diagnostic should expose an invalid inference even when the calculator can still evaluate a formula.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 2
+inputs = {&#x27;scores&#x27;: [0.2, 0.3, 0.25, 0.8], &#x27;budgets&#x27;: [10, 10, 10, 10]}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 2: four-cell-interaction
+What did these two components contribute together beyond their isolated gains?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;interaction&quot;: 0.45,
+  &quot;positive_amount&quot;: 0.45,
+  &quot;joint_gain&quot;: 0.6,
+  &quot;signed_share&quot;: 0.75,
+  &quot;fraction_share&quot;: 0.75,
+  &quot;budget_matched&quot;: true
+}
+
+Interpretation:
+Matched budgets support the specified four-cell comparison; they do not alone identify a mechanism.
+
+Assumptions:
+- Cell order is neither, first only, second only, both.
+- Task, measurement, and all uncontrolled conditions must also match.
+
+Limitations:
+- A ratio outside the fraction domain is signed arithmetic, not a cooperation fraction.
+- No uncertainty is available from four means alone.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>The isolated gains are 0.10 and 0.05. The intact joint gain is 0.60. Subtracting gives Gamma=0.45, with positive amount 0.45 and fraction share 0.45/0.60=0.75. The additive prediction for the intact score would have been 0.35; the observed intact score is 0.80.</p>
+<p>The changed budget table leaves those numbers untouched but sets budget_matched to false. It therefore does not support attributing the contrast to the component pair under equal resources. More intact compute is a competing explanation. The appropriate response is to rerun matched configurations, not to rename the same arithmetic a controlled result.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 194.361406  L 565.2 194.361406  L 565.2 69.080234  L 47.962344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m08274bb064" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m08274bb064" x="71.473146" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="208.959062" transform="rotate(-0 71.473146 208.959062)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m08274bb064" x="228.21183" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="228.21183" y="208.959062" transform="rotate(-0 228.21183 208.959062)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m08274bb064" x="384.950514" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="384.950514" y="208.959062" transform="rotate(-0 384.950514 208.959062)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m08274bb064" x="541.689197" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="208.959062" transform="rotate(-0 541.689197 208.959062)">3</text>
+     </g>
+    </g>
+    <g id="text_5">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="222.959062" transform="rotate(-0 306.581172 222.959062)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <path d="M 47.962344 188.666808  L 565.2 188.666808  " clip-path="url(#p3b27abc0f6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <defs>
+       <path id="mde5130002d" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="188.666808" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="192.465636" transform="rotate(-0 40.962344 192.465636)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <path d="M 47.962344 150.702816  L 565.2 150.702816  " clip-path="url(#p3b27abc0f6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="150.702816" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="154.501644" transform="rotate(-0 40.962344 154.501644)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <path d="M 47.962344 112.738825  L 565.2 112.738825  " clip-path="url(#p3b27abc0f6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="112.738825" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="116.537653" transform="rotate(-0 40.962344 116.537653)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_11">
+      <path d="M 47.962344 74.774833  L 565.2 74.774833  " clip-path="url(#p3b27abc0f6)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="74.774833" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="78.573661" transform="rotate(-0 40.962344 78.573661)">0.8</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="131.72082" transform="rotate(-90 18.656875 131.72082)">declared score</text>
+    </g>
+   </g>
+   <g id="line2d_13">
+    <path d="M 71.473146 188.666808  L 228.21183 169.684812  L 384.950514 179.17581  L 541.689197 74.774833  " clip-path="url(#p3b27abc0f6)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mde5ae6855f" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p3b27abc0f6)">
+     <use xlink:href="#mde5ae6855f" x="71.473146" y="188.666808" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mde5ae6855f" x="228.21183" y="169.684812" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mde5ae6855f" x="384.950514" y="179.17581" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mde5ae6855f" x="541.689197" y="74.774833" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 194.361406  L 47.962344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 194.361406  L 565.2 194.361406  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="63.080234" transform="rotate(-0 47.962344 63.080234)">four observed cells</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 47.962344 375.8  L 565.2 375.8  L 565.2 250.518828  L 47.962344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_5">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m08274bb064" x="71.473146" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="390.397656" transform="rotate(-0 71.473146 390.397656)">0</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m08274bb064" x="228.21183" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="228.21183" y="390.397656" transform="rotate(-0 228.21183 390.397656)">1</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m08274bb064" x="384.950514" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="384.950514" y="390.397656" transform="rotate(-0 384.950514 390.397656)">2</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m08274bb064" x="541.689197" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="390.397656" transform="rotate(-0 541.689197 390.397656)">3</text>
+     </g>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="404.397656" transform="rotate(-0 306.581172 404.397656)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_5">
+     <g id="line2d_18">
+      <path d="M 47.962344 355.868904  L 565.2 355.868904  " clip-path="url(#p6d80fe4382)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="355.868904" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="359.667733" transform="rotate(-0 40.962344 359.667733)">0.1</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_20">
+      <path d="M 47.962344 327.395911  L 565.2 327.395911  " clip-path="url(#p6d80fe4382)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="327.395911" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="331.194739" transform="rotate(-0 40.962344 331.194739)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_22">
+      <path d="M 47.962344 298.922917  L 565.2 298.922917  " clip-path="url(#p6d80fe4382)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="298.922917" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="302.721745" transform="rotate(-0 40.962344 302.721745)">0.3</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_24">
+      <path d="M 47.962344 270.449924  L 565.2 270.449924  " clip-path="url(#p6d80fe4382)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#mde5130002d" x="47.962344" y="270.449924" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="274.248752" transform="rotate(-0 40.962344 274.248752)">0.4</text>
+     </g>
+    </g>
+    <g id="text_21">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="313.159414" transform="rotate(-90 18.656875 313.159414)">score contribution</text>
+    </g>
+   </g>
+   <g id="line2d_26">
+    <path d="M 71.473146 327.395911  L 228.21183 355.868904  L 384.950514 370.105401  L 541.689197 256.213427  " clip-path="url(#p6d80fe4382)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p6d80fe4382)">
+     <use xlink:href="#mde5ae6855f" x="71.473146" y="327.395911" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mde5ae6855f" x="228.21183" y="355.868904" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mde5ae6855f" x="384.950514" y="370.105401" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mde5ae6855f" x="541.689197" y="256.213427" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.962344 375.8  L 47.962344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.962344 375.8  L 565.2 375.8  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="244.518828" transform="rotate(-0 47.962344 244.518828)">additive decomposition</text>
+   </g>
+  </g>
+  <g id="text_23">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 2: four cell interaction</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p3b27abc0f6">
+   <rect x="47.962344" y="69.080234" width="517.237656" height="125.281172"/>
+  </clipPath>
+  <clipPath id="p6d80fe4382">
+   <rect x="47.962344" y="250.518828" width="517.237656" height="125.281172"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 2.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>A large intact score can coexist with a small interaction because the baseline was already strong. A negative interaction can coexist with useful components because their separate gains overlap. Neither case is a mathematical error. Problems arise when every signed ratio is presented as a percentage of cooperation.</p>
+<p>The transfer table has negative Gamma. Its joint gain remains positive, so a signed ratio exists, but the fraction field is unavailable. Treating a negative number as a cooperation fraction would confuse an algebraic decomposition with a bounded share.</p>
+<p>Means alone also do not supply uncertainty. Replicate-level matched outcomes or a declared sampling model are needed to quantify it. A budget check cannot recover that missing evidence. Preserve the four-cell experimental contract before using the result to choose which mechanism to retain or investigate.</p>
+<pre><code>changed_inputs = {&#x27;scores&#x27;: [0.2, 0.3, 0.25, 0.8], &#x27;budgets&#x27;: [10, 10, 10, 20]}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 2: four-cell-interaction
+What did these two components contribute together beyond their isolated gains?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;interaction&quot;: 0.45,
+  &quot;positive_amount&quot;: 0.45,
+  &quot;joint_gain&quot;: 0.6,
+  &quot;signed_share&quot;: 0.75,
+  &quot;fraction_share&quot;: 0.75,
+  &quot;budget_matched&quot;: false
+}
+
+Interpretation:
+The contrast is a decomposition on the chosen score scale. Unequal budgets prevent interpreting it as a matched component comparison.
+
+Assumptions:
+- Cell order is neither, first only, second only, both.
+- Task, measurement, and all uncontrolled conditions must also match.
+
+Limitations:
+- A ratio outside the fraction domain is signed arithmetic, not a cooperation fraction.
+- No uncertainty is available from four means alone.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 194.361406  L 565.2 194.361406  L 565.2 69.080234  L 47.962344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m23beb62b9e" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m23beb62b9e" x="71.473146" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="208.959062" transform="rotate(-0 71.473146 208.959062)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="228.21183" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="228.21183" y="208.959062" transform="rotate(-0 228.21183 208.959062)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="384.950514" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="384.950514" y="208.959062" transform="rotate(-0 384.950514 208.959062)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="541.689197" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="208.959062" transform="rotate(-0 541.689197 208.959062)">3</text>
+     </g>
+    </g>
+    <g id="text_5">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="222.959062" transform="rotate(-0 306.581172 222.959062)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <path d="M 47.962344 188.666808  L 565.2 188.666808  " clip-path="url(#pb0ea920755)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <defs>
+       <path id="m051768acfe" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="188.666808" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="192.465636" transform="rotate(-0 40.962344 192.465636)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <path d="M 47.962344 150.702816  L 565.2 150.702816  " clip-path="url(#pb0ea920755)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="150.702816" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="154.501644" transform="rotate(-0 40.962344 154.501644)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <path d="M 47.962344 112.738825  L 565.2 112.738825  " clip-path="url(#pb0ea920755)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="112.738825" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="116.537653" transform="rotate(-0 40.962344 116.537653)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_11">
+      <path d="M 47.962344 74.774833  L 565.2 74.774833  " clip-path="url(#pb0ea920755)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="74.774833" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="78.573661" transform="rotate(-0 40.962344 78.573661)">0.8</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="131.72082" transform="rotate(-90 18.656875 131.72082)">declared score</text>
+    </g>
+   </g>
+   <g id="line2d_13">
+    <path d="M 71.473146 188.666808  L 228.21183 169.684812  L 384.950514 179.17581  L 541.689197 74.774833  " clip-path="url(#pb0ea920755)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="md2b2ba3f76" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#pb0ea920755)">
+     <use xlink:href="#md2b2ba3f76" x="71.473146" y="188.666808" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#md2b2ba3f76" x="228.21183" y="169.684812" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#md2b2ba3f76" x="384.950514" y="179.17581" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#md2b2ba3f76" x="541.689197" y="74.774833" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 194.361406  L 47.962344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 194.361406  L 565.2 194.361406  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="63.080234" transform="rotate(-0 47.962344 63.080234)">four observed cells</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 47.962344 375.8  L 565.2 375.8  L 565.2 250.518828  L 47.962344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_5">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="71.473146" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="390.397656" transform="rotate(-0 71.473146 390.397656)">0</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="228.21183" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="228.21183" y="390.397656" transform="rotate(-0 228.21183 390.397656)">1</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="384.950514" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="384.950514" y="390.397656" transform="rotate(-0 384.950514 390.397656)">2</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m23beb62b9e" x="541.689197" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="390.397656" transform="rotate(-0 541.689197 390.397656)">3</text>
+     </g>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="404.397656" transform="rotate(-0 306.581172 404.397656)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_5">
+     <g id="line2d_18">
+      <path d="M 47.962344 355.868904  L 565.2 355.868904  " clip-path="url(#p75045bbac9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="355.868904" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="359.667733" transform="rotate(-0 40.962344 359.667733)">0.1</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_20">
+      <path d="M 47.962344 327.395911  L 565.2 327.395911  " clip-path="url(#p75045bbac9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="327.395911" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="331.194739" transform="rotate(-0 40.962344 331.194739)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_22">
+      <path d="M 47.962344 298.922917  L 565.2 298.922917  " clip-path="url(#p75045bbac9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="298.922917" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="302.721745" transform="rotate(-0 40.962344 302.721745)">0.3</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_24">
+      <path d="M 47.962344 270.449924  L 565.2 270.449924  " clip-path="url(#p75045bbac9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m051768acfe" x="47.962344" y="270.449924" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="274.248752" transform="rotate(-0 40.962344 274.248752)">0.4</text>
+     </g>
+    </g>
+    <g id="text_21">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="313.159414" transform="rotate(-90 18.656875 313.159414)">score contribution</text>
+    </g>
+   </g>
+   <g id="line2d_26">
+    <path d="M 71.473146 327.395911  L 228.21183 355.868904  L 384.950514 370.105401  L 541.689197 256.213427  " clip-path="url(#p75045bbac9)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p75045bbac9)">
+     <use xlink:href="#md2b2ba3f76" x="71.473146" y="327.395911" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#md2b2ba3f76" x="228.21183" y="355.868904" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#md2b2ba3f76" x="384.950514" y="370.105401" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#md2b2ba3f76" x="541.689197" y="256.213427" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.962344 375.8  L 47.962344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.962344 375.8  L 565.2 375.8  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="244.518828" transform="rotate(-0 47.962344 244.518828)">additive decomposition</text>
+   </g>
+  </g>
+  <g id="text_23">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 2: four cell interaction</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pb0ea920755">
+   <rect x="47.962344" y="69.080234" width="517.237656" height="125.281172"/>
+  </clipPath>
+  <clipPath id="p75045bbac9">
+   <rect x="47.962344" y="250.518828" width="517.237656" height="125.281172"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 2.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>For the transfer scores, the isolated gains are 0.30 and 0.35, while the joint gain is 0.50. Gamma is -0.15, and the signed ratio is -0.30. The positive amount is zero. The intact configuration still outperforms the baseline, so negative interaction does not mean the assembled system is useless.</p>
+<p>Use a local ablation table only after declaring which two operations are varied and what stays fixed. Include the neither configuration, even when it seems uninteresting. Its score determines the decomposition. If budgets or task populations differ, export that comparability failure alongside the arithmetic and specify the matched measurements needed next.</p>
+<pre><code>transfer_inputs = {&#x27;scores&#x27;: [0.2, 0.5, 0.55, 0.7], &#x27;budgets&#x27;: [8, 8, 8, 8]}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 2: four-cell-interaction
+What did these two components contribute together beyond their isolated gains?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;interaction&quot;: -0.15,
+  &quot;positive_amount&quot;: 0,
+  &quot;joint_gain&quot;: 0.5,
+  &quot;signed_share&quot;: -0.3,
+  &quot;fraction_share&quot;: null,
+  &quot;budget_matched&quot;: true
+}
+
+Interpretation:
+Matched budgets support the specified four-cell comparison; they do not alone identify a mechanism.
+
+Assumptions:
+- Cell order is neither, first only, second only, both.
+- Task, measurement, and all uncontrolled conditions must also match.
+
+Limitations:
+- A ratio outside the fraction domain is signed arithmetic, not a cooperation fraction.
+- No uncertainty is available from four means alone.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>scores:</strong> Four finite scores ordered neither,first only,second only,both.</li>
+<li><strong>budgets:</strong> Four nonnegative matched resource budgets in the same order.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch02.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 2: four-cell-interaction
+What did these two components contribute together beyond their isolated gains?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;interaction&quot;: -0.15,
+  &quot;positive_amount&quot;: 0,
+  &quot;joint_gain&quot;: 0.5,
+  &quot;signed_share&quot;: -0.3,
+  &quot;fraction_share&quot;: null,
+  &quot;budget_matched&quot;: true
+}
+
+Interpretation:
+Matched budgets support the specified four-cell comparison; they do not alone identify a mechanism.
+
+Assumptions:
+- Cell order is neither, first only, second only, both.
+- Task, measurement, and all uncontrolled conditions must also match.
+
+Limitations:
+- A ratio outside the fraction domain is signed arithmetic, not a cooperation fraction.
+- No uncertainty is available from four means alone.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Verify the decomposition.</p>
+</li>
+<li>
+<p>What changes when only the intact budget doubles?</p>
+</li>
+<li>
+<p>Is -0.30 a cooperation fraction in the transfer case?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch02.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Four matched cells identify a task-relative additive interaction on a declared score scale. The signed contrast, positive amount, and valid fraction answer different questions. The default example has a positive contrast and a valid share; changed budgets invalidate matched attribution; the transfer case has negative interaction despite positive joint gain. Keep the baseline, isolated gains, resource contract, and score scale in the report. Arithmetic alone cannot identify a mechanism or supply missing experimental uncertainty.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-02-four-cell-interaction/SKILL.md"><code>maa-02-four-cell-interaction</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 2.1</h3>
+<p><img alt="Equation 2.1" src="../../assets/math/0455ae92c832192c606a.svg" /></p>
+<p>Equation (2.1) asks whether anything is left over after each operation is credited for what it accomplishes alone.</p>
+<p>Take the score with both operations, subtract each single-operation score, then add the neither score back once because the subtractions removed it twice.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\Gamma(p;i)=U(\{\theta,p,i\})-U(\{\theta,p\})-U(\{\theta,i\})+U(\{\theta\}).
+\tag{2.1}
+</code></pre>
+<h3>Equation un-numbered display 2</h3>
+<p><img alt="Equation un-numbered display 2" src="../../assets/math/f8f3b7fef61f02d4b8b9.svg" /></p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\Gamma(p;i)=0.80-0.30-0.25+0.20=0.45.
+</code></pre>
+<h3>Equation 2.2</h3>
+<p><img alt="Equation 2.2" src="../../assets/math/ede400791d188b0b3e27.svg" /></p>
+<p>Equation (2.2) splits the whole improvement from neither operation to both into three named pieces: what each buys alone, plus what the pair adds.</p>
+<p>The left side is the total gain; the first two right-hand terms are the isolated gains; the last term is whatever the pair achieves beyond them.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\begin{aligned}
+U(\{\theta,p,i\})-U(\{\theta\})
+&amp;=\bigl[U(\{\theta,p\})-U(\{\theta\})\bigr]\\
+&amp;\quad+\bigl[U(\{\theta,i\})-U(\{\theta\})\bigr]
++\Gamma(p;i).
+\end{aligned}
+\tag{2.2}
+</code></pre>
+<h3>Equation 2.3</h3>
+<p><img alt="Equation 2.3" src="../../assets/math/9dd75e9343450161ef1c.svg" /></p>
+<p>Equation (2.3) reports the interaction as a share of the total joint gain, so the size of a contrast can be compared against what was available to win.</p>
+<p>Divide the interaction contrast by the whole improvement from neither operation to both.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\rho_\Gamma=\frac{\Gamma(p;i)}{U(\{\theta,p,i\})-U(\{\theta\})}.
+\tag{2.3}
+</code></pre></body></html>

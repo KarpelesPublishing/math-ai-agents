@@ -1,0 +1,64 @@
+{
+  "chapter": 2,
+  "title": "How to Measure Emergence",
+  "source_path": "Manuscript/revisions/part-i-v2/02-where-the-ability-lives.md",
+  "source_sha256": "83faa2bc9bc00a459eee2cc078995f6c90a3b590fb5a8a2e2fd1037f2728fae3",
+  "notebook": "notebooks/02-four-cell-interaction.ipynb",
+  "skill": "maa-02-four-cell-interaction",
+  "skill_path": "skills/maa-02-four-cell-interaction/SKILL.md",
+  "method": "four-cell-interaction",
+  "outcome": "Compute the signed four-cell contrast, positive amount, and valid share.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "matched four-cell component ablation",
+    "positive joint interaction share",
+    "ablation budget confounding"
+  ],
+  "input_fields": {
+    "scores": "Four finite scores ordered neither,first only,second only,both.",
+    "budgets": "Four nonnegative matched resource budgets in the same order."
+  },
+  "example_input": "data/examples/ch02.json",
+  "equations": [
+    {
+      "label": "EQ02-01",
+      "number": "2.1",
+      "tex": "\\Gamma(p;i)=U(\\{\\theta,p,i\\})-U(\\{\\theta,p\\})-U(\\{\\theta,i\\})+U(\\{\\theta\\}).\n\\tag{2.1}",
+      "asset": "assets/math/0455ae92c832192c606a.svg",
+      "explanations": [
+        "Equation (2.1) asks whether anything is left over after each operation is credited for what it accomplishes alone.",
+        "Take the score with both operations, subtract each single-operation score, then add the neither score back once because the subtractions removed it twice."
+      ]
+    },
+    {
+      "label": "chapter-02-display-2",
+      "number": "un-numbered display 2",
+      "tex": "\\Gamma(p;i)=0.80-0.30-0.25+0.20=0.45.",
+      "asset": "assets/math/f8f3b7fef61f02d4b8b9.svg",
+      "explanations": []
+    },
+    {
+      "label": "EQ02-02",
+      "number": "2.2",
+      "tex": "\\begin{aligned}\nU(\\{\\theta,p,i\\})-U(\\{\\theta\\})\n&=\\bigl[U(\\{\\theta,p\\})-U(\\{\\theta\\})\\bigr]\\\\\n&\\quad+\\bigl[U(\\{\\theta,i\\})-U(\\{\\theta\\})\\bigr]\n+\\Gamma(p;i).\n\\end{aligned}\n\\tag{2.2}",
+      "asset": "assets/math/ede400791d188b0b3e27.svg",
+      "explanations": [
+        "Equation (2.2) splits the whole improvement from neither operation to both into three named pieces: what each buys alone, plus what the pair adds.",
+        "The left side is the total gain; the first two right-hand terms are the isolated gains; the last term is whatever the pair achieves beyond them."
+      ]
+    },
+    {
+      "label": "EQ02-03",
+      "number": "2.3",
+      "tex": "\\rho_\\Gamma=\\frac{\\Gamma(p;i)}{U(\\{\\theta,p,i\\})-U(\\{\\theta\\})}.\n\\tag{2.3}",
+      "asset": "assets/math/9dd75e9343450161ef1c.svg",
+      "explanations": [
+        "Equation (2.3) reports the interaction as a share of the total joint gain, so the size of a contrast can be compared against what was available to win.",
+        "Divide the interaction contrast by the whole improvement from neither operation to both."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "true_transition": [
+    [
+      1,
+      0
+    ],
+    [
+      0,
+      1
+    ]
+  ],
+  "model_transition": [
+    [
+      1,
+      0
+    ],
+    [
+      0,
+      1
+    ]
+  ],
+  "rewards": [
+    1,
+    2
+  ],
+  "discount": 0.5,
+  "horizon": 4
+}

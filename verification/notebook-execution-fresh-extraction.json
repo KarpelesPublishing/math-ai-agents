@@ -1,0 +1,471 @@
+{
+  "method": "fresh subprocess and fresh in-process Jupyter kernel per notebook",
+  "interpreter": "/Users/jasonkarpeles/Documents/Books/Math of AI Agents/Companion/.venv/bin/python",
+  "records": [
+    {
+      "notebook": "notebooks/00-start-here.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "6a3ac32bdb7ca0dfa28f5b25ed96a54ba21953ee340bef9fb01141a9a774f70a",
+      "execution": {
+        "code_cells": 4,
+        "created_utc": "2026-10-02T01:37:03.290377+00:00",
+        "elapsed_seconds": 9.630202375003137,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "6a3ac32bdb7ca0dfa28f5b25ed96a54ba21953ee340bef9fb01141a9a774f70a"
+      },
+      "executed_sha256": "c7c672372b64dcdbf03d462c3ca3891fc10621e986a7f48a25af2df563091ab9"
+    },
+    {
+      "notebook": "notebooks/01-score-threshold.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "1d0aef0d594f30a30aecd005a716d3b35e79c29bf013c11575dbf49f2de3984b",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:37:13.492197+00:00",
+        "elapsed_seconds": 9.411078292061575,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "1d0aef0d594f30a30aecd005a716d3b35e79c29bf013c11575dbf49f2de3984b"
+      },
+      "executed_sha256": "7c882b5657c98843eb3eb6d9353a1684ff19664260190fa228d58e2eb7f6bac1"
+    },
+    {
+      "notebook": "notebooks/02-four-cell-interaction.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "c01d113f115682871b1c0dff65c597eb11f72266b172f56b09b2272a6c6befbd",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:37:23.541565+00:00",
+        "elapsed_seconds": 9.504076750017703,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "c01d113f115682871b1c0dff65c597eb11f72266b172f56b09b2272a6c6befbd"
+      },
+      "executed_sha256": "edcbdfb6432c50b2da56622deacd4901e34527209ea1bdaa61c190d943c5439d"
+    },
+    {
+      "notebook": "notebooks/03-prospective-forecast.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "cd64a6c57ea4e10dfbc00e6169b539fa2963760a366ea78d800158abe7f3d274",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:37:33.585966+00:00",
+        "elapsed_seconds": 9.423618374974467,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "cd64a6c57ea4e10dfbc00e6169b539fa2963760a366ea78d800158abe7f3d274"
+      },
+      "executed_sha256": "3e5de85aed7bec1f2ac168a797deaa473f580824c1fe645afcb5484fedb2c647"
+    },
+    {
+      "notebook": "notebooks/04-permission-reachability.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "8d3022ded66510767660eb3ce9b4d4b1b57cb9432644c6b17d850663bd8916aa",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:37:43.590609+00:00",
+        "elapsed_seconds": 9.453179791918956,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "8d3022ded66510767660eb3ce9b4d4b1b57cb9432644c6b17d850663bd8916aa"
+      },
+      "executed_sha256": "51f86232ec6975a1c3beb03d4b319509aaa51c9bbbdfc08879f459641e490192"
+    },
+    {
+      "notebook": "notebooks/05-composite-kernel.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "615edca42e43210bf8603f2af128649a6cd1492e0c32acad4baa3433ecfddbf1",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:37:53.611548+00:00",
+        "elapsed_seconds": 9.45350841700565,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "615edca42e43210bf8603f2af128649a6cd1492e0c32acad4baa3433ecfddbf1"
+      },
+      "executed_sha256": "fb7c4b6291fd0c8012a5ef5a36c3429e629daaccd124ddc7c754c8f7e2866855"
+    },
+    {
+      "notebook": "notebooks/06-expected-utility.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "5da82c8ca591cb1a754ae6dfb46da8a084745ae396095392dc401a9428ef9fd1",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:38:03.690885+00:00",
+        "elapsed_seconds": 9.504361625062302,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "5da82c8ca591cb1a754ae6dfb46da8a084745ae396095392dc401a9428ef9fd1"
+      },
+      "executed_sha256": "f0ba19eed7a2848b47afaaf1df4d1b7873da3e3b1e5e48dfd540227a0c0c9ef3"
+    },
+    {
+      "notebook": "notebooks/07-finite-horizon-planning.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "4d992ca842c83fbca67e0ad5f2f1c79bf436613c5b17aec0a417dc7333ea0576",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:38:13.600753+00:00",
+        "elapsed_seconds": 9.347073332988657,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "4d992ca842c83fbca67e0ad5f2f1c79bf436613c5b17aec0a417dc7333ea0576"
+      },
+      "executed_sha256": "ebf39b911444ea11abbfc3383ca435bef40ead38c987fe60467495ce966912f8"
+    },
+    {
+      "notebook": "notebooks/08-belief-information.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "490d3621c1d4e44909839bb97e102e8aed24a5562f31b20a2ade9ef85b09dabf",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:38:23.497351+00:00",
+        "elapsed_seconds": 9.33043487498071,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "490d3621c1d4e44909839bb97e102e8aed24a5562f31b20a2ade9ef85b09dabf"
+      },
+      "executed_sha256": "1f4732f7db1863f1a6148f38d291d18a1a31d0a293d42124fb48ffdd14559c69"
+    },
+    {
+      "notebook": "notebooks/09-astar-audit.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "4667956d71ea37600e33d8071accaa6471d5220559dc14b2932e673a2b310de8",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:38:33.350596+00:00",
+        "elapsed_seconds": 9.28180470794905,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "4667956d71ea37600e33d8071accaa6471d5220559dc14b2932e673a2b310de8"
+      },
+      "executed_sha256": "b9d7e765e9da0da0f34d52d5a477617d4f6ded49c2182b0c5159cb73830af31e"
+    },
+    {
+      "notebook": "notebooks/10-option-duration.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "cb533334d1cd03b1451672f26788613b852f005cdcc5e01d4f709f5eb51c42cb",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:38:43.297618+00:00",
+        "elapsed_seconds": 9.373366500018165,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "cb533334d1cd03b1451672f26788613b852f005cdcc5e01d4f709f5eb51c42cb"
+      },
+      "executed_sha256": "69096bc20b81a13947c55181a5582529487b5a7d36c1d8f7b5f0137ba9f5e784"
+    },
+    {
+      "notebook": "notebooks/11-bounded-exploration.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "43059a919f447749faa682cddc2306a81ef2a0dc519b4bd06f9182ce148fbcd4",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:38:53.341342+00:00",
+        "elapsed_seconds": 9.468411374953575,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "43059a919f447749faa682cddc2306a81ef2a0dc519b4bd06f9182ce148fbcd4"
+      },
+      "executed_sha256": "73a2559128ad5c09fc67b7765ae3383d4f8ed9f827186a3a6b599c0e73a78e8f"
+    },
+    {
+      "notebook": "notebooks/12-trajectory-credit.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "82404f3db26ae133449d74978bf06568a7e3e1141863e584ff55d1da57769a1c",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:39:03.378296+00:00",
+        "elapsed_seconds": 9.451423124992289,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "82404f3db26ae133449d74978bf06568a7e3e1141863e584ff55d1da57769a1c"
+      },
+      "executed_sha256": "287d7940c4c71a7d3140df96d227ad52889574c5ad7eef203a862224eb4d0fa6"
+    },
+    {
+      "notebook": "notebooks/13-finite-policy-learning.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "87fc9bd10e2ec7659357bf0642dfc97997f655e36bf1ce1332c478bd0f46367d",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:39:13.457296+00:00",
+        "elapsed_seconds": 9.497080750064924,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "87fc9bd10e2ec7659357bf0642dfc97997f655e36bf1ce1332c478bd0f46367d"
+      },
+      "executed_sha256": "9c5540b9dcaf5c0305da120898989880f47f586cc7c995be0bbc796f3b4b6f74"
+    },
+    {
+      "notebook": "notebooks/14-transition-model-bound.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "28323d6a3848c1d7f1a7a5634d4629829851bca37828baec2ad0dea5516407d0",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:39:23.524415+00:00",
+        "elapsed_seconds": 9.445037083001807,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "28323d6a3848c1d7f1a7a5634d4629829851bca37828baec2ad0dea5516407d0"
+      },
+      "executed_sha256": "bc89e3065cdbed4283db1c08078828ec1e784f317f7b4c940ece4ee5f7737f03"
+    },
+    {
+      "notebook": "notebooks/15-memory-budget.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "c277dad0f403ec151499da33ebc70448ab4175ea5b758f4dacef4e386b14e914",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:39:33.491725+00:00",
+        "elapsed_seconds": 9.396712874993682,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "c277dad0f403ec151499da33ebc70448ab4175ea5b758f4dacef4e386b14e914"
+      },
+      "executed_sha256": "845ea636f5c9474026ef0fbd254ed88b7de7fef480f3ef44c1e0dd34ac44c51b"
+    },
+    {
+      "notebook": "notebooks/16-sample-allocation.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "60b8ec8409c1c4cf14db519c7cb54c84cfaf66893a90496bc3b6b90f04be87d2",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:39:43.979795+00:00",
+        "elapsed_seconds": 9.760907124960795,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "60b8ec8409c1c4cf14db519c7cb54c84cfaf66893a90496bc3b6b90f04be87d2"
+      },
+      "executed_sha256": "d72ebc0851752d7793587a8d24ab522482bfed81497039ee3ddcd4f0f2268241"
+    },
+    {
+      "notebook": "notebooks/17-effect-and-retry.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "8ac549f60c2ea373a53a79026c690fe59152361e3081bfb576835fe5e2668630",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:39:53.930741+00:00",
+        "elapsed_seconds": 9.379018167033792,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "8ac549f60c2ea373a53a79026c690fe59152361e3081bfb576835fe5e2668630"
+      },
+      "executed_sha256": "48287b23577c41a9c487eb198cfe5f88dd845c42a2d44e819949595707425552"
+    },
+    {
+      "notebook": "notebooks/18-interface-freshness.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "8f3065516871b4ea1bf0684b39e0eb43db7eb54b767e01838cfdb73c8d3e089e",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:40:03.935826+00:00",
+        "elapsed_seconds": 9.43213712493889,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "8f3065516871b4ea1bf0684b39e0eb43db7eb54b767e01838cfdb73c8d3e089e"
+      },
+      "executed_sha256": "cd50c191a36f42bbe2e07d9f161c790345b1a2916184c5a593fa4e553e65444b"
+    },
+    {
+      "notebook": "notebooks/19-cross-play-transfer.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "99fdbe836658725acd8ae5bebeebb782fbd186684f5284022febdf67c4e01194",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:40:13.946349+00:00",
+        "elapsed_seconds": 9.439404708100483,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "99fdbe836658725acd8ae5bebeebb782fbd186684f5284022febdf67c4e01194"
+      },
+      "executed_sha256": "7c7ae9b00e84b389468b0aaa034b451e8930181d764263a221d21228dc1251a9"
+    },
+    {
+      "notebook": "notebooks/20-bounded-message-knowledge.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "c1ea57e02bb04d5c9c960ac9c9baa76e64990352a08e13262c1e4e243c17cc1a",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:40:23.873893+00:00",
+        "elapsed_seconds": 9.355400125030428,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "c1ea57e02bb04d5c9c960ac9c9baa76e64990352a08e13262c1e4e243c17cc1a"
+      },
+      "executed_sha256": "d54adb7666419c9d67911a201d87419f953992a105ba17bacce99bdec30e7cce"
+    },
+    {
+      "notebook": "notebooks/21-congestion-incentives.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "3fd6881482aa1105252f83ce1c7e10eeec61c2c542031305c23e147c9e7e3b32",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:40:33.729785+00:00",
+        "elapsed_seconds": 9.291830917005427,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "3fd6881482aa1105252f83ce1c7e10eeec61c2c542031305c23e147c9e7e3b32"
+      },
+      "executed_sha256": "e35e6162b4043e3899194a66d45861a78bbcdab5f82bb68a0a4d41d2d31b28d9"
+    },
+    {
+      "notebook": "notebooks/22-risk-authority-contract.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "42d5e38224681c7cda7d420a68e8b930597964dafc3e0973cc679050fc1290d3",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:40:43.751682+00:00",
+        "elapsed_seconds": 9.450019208015874,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "42d5e38224681c7cda7d420a68e8b930597964dafc3e0973cc679050fc1290d3"
+      },
+      "executed_sha256": "8e34d0835c2de5d8870868a42e94f4a89dcd4deb9e658340d0d92f8eedd52c23"
+    },
+    {
+      "notebook": "notebooks/23-local-security-monitor.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "3f208ed7a49f7cbab0bf7c1290fc8b975562a5e86ebec3812738dee6cd65de08",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:40:53.624307+00:00",
+        "elapsed_seconds": 9.298321082955226,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "3f208ed7a49f7cbab0bf7c1290fc8b975562a5e86ebec3812738dee6cd65de08"
+      },
+      "executed_sha256": "ce3a711fb7629ae4f4bc43ec869c18ae998ab125a54399b5edb048c9605f8949"
+    },
+    {
+      "notebook": "notebooks/24-matched-capability.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "b38788f36fd5b4b448d7553c78b95c20c2050f91cb52463e27d9b35db2763220",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:41:03.559884+00:00",
+        "elapsed_seconds": 9.361447917064652,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "b38788f36fd5b4b448d7553c78b95c20c2050f91cb52463e27d9b35db2763220"
+      },
+      "executed_sha256": "504574e7b579de293eb20c0fd4eb3f2917d7d8062a742fc3beeadbad030adf5e"
+    },
+    {
+      "notebook": "notebooks/25-development-guard-gate.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "8c2230e001124b061105d6fbf4b517460b92796443f06e00e8f07590cea39f67",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:41:13.591929+00:00",
+        "elapsed_seconds": 9.437732083024457,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "8c2230e001124b061105d6fbf4b517460b92796443f06e00e8f07590cea39f67"
+      },
+      "executed_sha256": "4ef4ee002a92ebb046b539f461dcedae35d4d9b6f2ce8053908c4097dbcc2091"
+    },
+    {
+      "notebook": "notebooks/26-conditional-bank-ceiling.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "068e300672274349acf7031818c39921e2b050c9dc922083cef95833dfc05fe3",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:41:23.581065+00:00",
+        "elapsed_seconds": 9.416793041978963,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "068e300672274349acf7031818c39921e2b050c9dc922083cef95833dfc05fe3"
+      },
+      "executed_sha256": "4534e6baa7c5071b631d23c4f2876e6bc48e154f9856739c63a99ecb4817c104"
+    },
+    {
+      "notebook": "notebooks/27-delegation-queue.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "8c24fea0630038fc85867c7cb5979a3e4db9ab883b2739af64f57831576a35cc",
+      "execution": {
+        "code_cells": 6,
+        "created_utc": "2026-10-02T01:41:33.507636+00:00",
+        "elapsed_seconds": 9.358660500030965,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "8c24fea0630038fc85867c7cb5979a3e4db9ab883b2739af64f57831576a35cc"
+      },
+      "executed_sha256": "4fec14339407e4ea591d5b3136eab7b3ebde07e779d2c1ced05110b0fae70620"
+    },
+    {
+      "notebook": "notebooks/28-document-release-capstone.ipynb",
+      "exit_code": 0,
+      "stderr": "",
+      "source_sha256": "08a9f7c665e1b9321ca089cffe91bfc103fe3436b48f5b476aa9d5d9da90e6e1",
+      "execution": {
+        "code_cells": 7,
+        "created_utc": "2026-10-02T01:41:43.460721+00:00",
+        "elapsed_seconds": 9.376815666910261,
+        "method": "fresh process; new ipykernel InProcessKernelManager; cells submitted as Jupyter execute requests",
+        "network_transport_tested": false,
+        "python": "3.11.15",
+        "source_sha256": "08a9f7c665e1b9321ca089cffe91bfc103fe3436b48f5b476aa9d5d9da90e6e1"
+      },
+      "executed_sha256": "58876729249dc68c1754571304bd0a8e59c817338ef455ab554ff9524fd15aa4"
+    }
+  ],
+  "status": "PASS"
+}

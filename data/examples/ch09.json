@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    "source",
+    "middle",
+    "target"
+  ],
+  "start": "source",
+  "goal": "target",
+  "edges": [
+    {
+      "from": "source",
+      "to": "middle",
+      "cost": 2
+    },
+    {
+      "from": "middle",
+      "to": "target",
+      "cost": 2
+    },
+    {
+      "from": "source",
+      "to": "target",
+      "cost": 7
+    }
+  ],
+  "heuristic": {
+    "source": 0,
+    "middle": 0,
+    "target": 0
+  },
+  "heuristic_cost": 0
+}

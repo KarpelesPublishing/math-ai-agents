@@ -1,0 +1,152 @@
+{
+  "slug": "expected-utility",
+  "question": "Should this controller release, request review, or abstain?",
+  "outcome": "Return an expected-utility choice and a break-even value under declared stakes.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "Weighted averages"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A document is ready for release, but the controller still has to choose what happens next. Releasing can produce a useful result or an expensive mistake. Review avoids some uncertainty but consumes resources. Abstention preserves the current state and can also carry an opportunity cost. The relevant question is not which action sounds most confident. It is which action has the greatest value under the probabilities and consequences you are prepared to defend.\n\nThis laboratory makes that boundary inspectable. The release action has two outcomes. Review and abstention have their own rows rather than hiding inside a verbal recommendation. The numbers are constructed teaching inputs. They are not measurements of a publisher, an assistant, or a review team. You can replace them with your own stated probabilities and valuations, then see exactly which part of the recommendation changes.\n\nBefore executing anything, multiply each outcome probability by its utility. Add the products and subtract the action cost. Notice that a small probability can matter greatly when the corresponding loss is large. Keep that observation beside the chart: the height of each action's point on the utility plot depends on both belief and stakes.",
+  "math_explanation": "For an action a with mutually exclusive outcomes o, the expected utility is EU(a)=sum_o P(o|a)u(o,a)-c(a). The outcome probabilities in each row must sum to one. Utilities need not be positive, and they need not use money, but all alternatives must share the same utility scale. A unit of benefit cannot be added to an hour of delay until you state how those quantities enter one valuation.\n\nThe selected action is an argmax of this expected utility over the supplied action set. This is a decision rule under declared values, not a claim that those values are correct. Expected loss is the negative of expected utility in this implementation. It is not a second independent objective or an estimate of physical harm.\n\nA break-even calculation exposes sensitivity. Let p be the probability of the first outcome of the first action, v its unknown utility, B the weighted utility of its other outcomes, c its cost, and A the best alternative's expected utility. The equality pv+B-c=A gives v=(A+c-B)/p when p is positive. At p=0 that utility cannot affect the choice, so the threshold is unavailable.\n\nFor a two-outcome first action, the probability curve holds both outcome utilities fixed and varies p. Its slope is the difference between those utilities. A steep line indicates strong sensitivity to probability calibration. The curve does not estimate p; it shows what would follow if p took each plotted value.",
+  "method": "The input is an action table, encoded as JSON. Each row supplies a unique action name, its probability vector, a utility vector of the same length, and an optional nonnegative cost. Validation rejects nonfinite numbers, negative probabilities, totals that differ from one, and vectors that do not align. These checks prevent a plausible-looking average from concealing an invalid outcome space.\n\nThe computation creates one row per alternative with expected utility, expected loss, and cost. It selects the greatest expected utility and reports the first-outcome break-even utility against the best remaining alternative. Ties follow the input order; if a tie needs a different operational policy, define that policy before acting. The action plot marks each action by name on the horizontal axis, in input order, and shows utility units on the vertical axis; the markers are joined by a line only to show order, not a trend. Consult the returned table for action names.\n\nA second figure appears when the first action has exactly two outcomes. It varies the first-outcome probability while assigning the remaining probability to the second outcome. Compare this sensitivity line with the constant value of the preferred alternative. For the changed case, alter the severe loss while preserving the probabilities. That isolates a stakes change from a belief change.",
+  "worked_interpretation": "The release row has expected utility 0.9(10)+0.1(-50)=4. Review has utility 2 and abstention has utility 0, so release wins under these inputs. Its expected loss is -4 because loss is defined here as negative utility. A negative reported loss is therefore a favorable valuation, not a negative count of adverse events.\n\nThe first-outcome utility needed to tie review is (2+5)/0.9, approximately 7.78. The supplied value 10 exceeds that threshold. When the failure utility changes to -100, release falls to -1 while review stays at 2. The recommendation reverses without changing the model's probability of success. Read this as a statement about the action contract, not as evidence that the controller became less capable.",
+  "failure_explanation": "An expected-utility winner can be the wrong action for an incompletely specified decision. A prohibited release must first be removed from the feasible action set. Assigning it a large negative utility is not equivalent to enforcing a hard permission boundary. Likewise, an outcome labeled success can hide costs imposed on someone outside the table. If those costs matter to the decision, they need a declared valuation or a separate constraint.\n\nThe failure experiment in this notebook is a changed loss, not an adversarially chosen probability. It demonstrates that a high success probability does not settle the choice. A second useful test is to set the first-outcome probability to zero. The break-even first utility becomes unavailable because no value assigned to an impossible outcome can change expected utility. Returning zero as a threshold would manufacture information.\n\nProbability estimates also deserve their own evidence. A row containing 0.9 is a statement of belief until a calibration or measurement protocol supports it. The arithmetic can be exact while the decision remains sensitive to a poorly supported input. Keep the probability source and utility owner in the exported report.",
+  "transfer_explanation": "The transfer case compares retry with escalation. Retry's expected utility is 0.7(8)+0.3(-12)-1=1, which ties escalation at 1. Because retry appears first, the implementation selects it. That tie is useful: the calculation identifies an operational choice that the valuation does not uniquely resolve.\n\nReplace the table with a local action contract whose outcomes are mutually exclusive and collectively exhaustive. Include the cost of waiting, asking for help, or preserving the current state when those are real alternatives. After execution, report the winning value and the runner-up, then identify the input whose plausible change would reverse them. Do not export the selected label alone. A decision record should preserve why it won and which assumptions made the comparison possible.",
+  "summary": "Expected utility combines probabilities, consequences, and costs on a shared scale. This notebook returns an inspectable choice, its alternatives, and a break-even utility. The changed case shows a stakes-driven reversal; the transfer case shows a tie that needs an operational rule. None of those results calibrates the probabilities or authorizes an action. Use the calculation to expose the decision boundary, then apply the actual permissions and constraints before execution. When a value or probability is disputed, preserve that disagreement as an input range and inspect sensitivity rather than pretending the selected row is an objective fact.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "actions": [
+      {
+        "name": "release",
+        "probabilities": [
+          0.9,
+          0.1
+        ],
+        "utilities": [
+          10,
+          -50
+        ],
+        "cost": 0
+      },
+      {
+        "name": "review",
+        "probabilities": [
+          1
+        ],
+        "utilities": [
+          2
+        ],
+        "cost": 0
+      },
+      {
+        "name": "abstain",
+        "probabilities": [
+          1
+        ],
+        "utilities": [
+          0
+        ],
+        "cost": 0
+      }
+    ]
+  },
+  "changed": {
+    "actions": [
+      {
+        "name": "release",
+        "probabilities": [
+          0.9,
+          0.1
+        ],
+        "utilities": [
+          10,
+          -100
+        ],
+        "cost": 0
+      },
+      {
+        "name": "review",
+        "probabilities": [
+          1
+        ],
+        "utilities": [
+          2
+        ],
+        "cost": 0
+      },
+      {
+        "name": "abstain",
+        "probabilities": [
+          1
+        ],
+        "utilities": [
+          0
+        ],
+        "cost": 0
+      }
+    ]
+  },
+  "transfer": {
+    "actions": [
+      {
+        "name": "retry",
+        "probabilities": [
+          0.7,
+          0.3
+        ],
+        "utilities": [
+          8,
+          -12
+        ],
+        "cost": 1
+      },
+      {
+        "name": "escalate",
+        "probabilities": [
+          1
+        ],
+        "utilities": [
+          1
+        ],
+        "cost": 0
+      }
+    ]
+  },
+  "input_fields": {
+    "actions": "Nonempty list of uniquely named alternatives. Each has name:string, probabilities:normalized numeric list, utilities:aligned finite numeric list, cost:nonnegative number. Include abstention explicitly."
+  },
+  "exercises": [
+    {
+      "question": "Calculate release utility in the default case.",
+      "answer": "0.9*10+0.1*(-50)=4 utility units."
+    },
+    {
+      "question": "What first-outcome probability ties review under the default utilities?",
+      "answer": "60p-50=2, so p=52/60, approximately 0.8667."
+    },
+    {
+      "question": "Why does the transfer case not have a unique utility winner?",
+      "answer": "Retry and escalation both have expected utility 1; input order resolves the computational tie, not the valuation."
+    }
+  ],
+  "routes": [
+    "compare declared action utility",
+    "break-even stakes decision",
+    "price abstention alternative"
+  ],
+  "acceptance_checks": [
+    "Default expected utilities are 4,2,0.",
+    "Changed loss reverses release to review.",
+    "Probability normalization and aligned vector lengths are enforced."
+  ]
+}

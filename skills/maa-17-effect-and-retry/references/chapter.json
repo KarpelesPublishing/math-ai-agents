@@ -1,0 +1,71 @@
+{
+  "chapter": 17,
+  "title": "State and Consequence",
+  "source_path": "Manuscript/part-iv/17-state-and-consequence.md",
+  "source_sha256": "fddb6c4378d51814f6bfded2c832e6671c478ce86a1ccec9ffe6776619184b29",
+  "notebook": "notebooks/17-effect-and-retry.ipynb",
+  "skill": "maa-17-effect-and-retry",
+  "skill_path": "skills/maa-17-effect-and-retry/SKILL.md",
+  "method": "effect-and-retry",
+  "outcome": "Separate effects from acknowledgements and price a next recovery step.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "Event traces and conditional probability"
+  ],
+  "routes": [
+    "lost acknowledgement tool effect",
+    "price verification versus retry",
+    "idempotency key duplicate trace"
+  ],
+  "input_fields": {
+    "idempotent": "Exact boolean. True declares server-side key/payload deduplication.",
+    "events": "Ordered event list: request has kind,key,payload,effect:boolean,ack:boolean; verify has observed_effect:boolean. All requests must concern one logical payload; distinct operations require separate traces.",
+    "verify_cost": "Nonnegative one-step cost of perfect verification.",
+    "retry_cost": "Nonnegative one-step request cost.",
+    "effect_probability": "Probability [0,1] that the unresolved original request already took effect.",
+    "duplicate_cost": "Nonnegative extra harm from a duplicate effect."
+  },
+  "example_input": "data/examples/ch17.json",
+  "equations": [
+    {
+      "label": "EQV17-01",
+      "number": "17.1",
+      "tex": "\\operatorname{eff}_{I}\\!\\big(\\operatorname{eff}(T,\\operatorname{eff}(T,x))\\big) \\;=\\; \\operatorname{eff}_{I}\\!\\big(\\operatorname{eff}(T,x)\\big)\n\\qquad\\text{for every reachable } x .\n\\tag{17.1}",
+      "asset": "assets/math/521f3b91c8104d451a8b.svg",
+      "explanations": [
+        "Equation (17.1) requires repeated application to preserve the same intended effect as one application.",
+        "Compare the resulting requested-effect coordinates after one application and after two, keeping the request semantics fixed."
+      ]
+    },
+    {
+      "label": "EQV17-02",
+      "number": "17.2",
+      "tex": "\\mathbf{b}'(\\text{applied}) \\;=\\;\n\\frac{\\operatorname{Obs}(\\varnothing \\mid \\text{applied})\\;\\Pr(\\text{applied})}\n{\\begin{gathered}\n\\operatorname{Obs}(\\varnothing \\mid \\text{applied})\\,\\Pr(\\text{applied}) \\\\\n{}+\\; \\operatorname{Obs}(\\varnothing \\mid \\text{not applied})\\,\\Pr(\\text{not applied})\n\\end{gathered}}.\n\\tag{17.2}",
+      "asset": "assets/math/9fd25b8ba498db8f883f.svg",
+      "explanations": [
+        "Equation (17.2) converts a missing response into a probability that the action already happened.",
+        "Weigh how likely silence is when the effect landed against how likely silence is when it did not."
+      ]
+    },
+    {
+      "label": "EQV17-03",
+      "number": "17.3",
+      "tex": "\\operatorname{EU}(\\text{retry}) - \\operatorname{EU}(\\text{decline}) \\;=\\; (1-\\beta)\\,c_{\\text{miss}} \\;-\\; \\beta\\,c_{\\text{dup}} .\n\\tag{17.3}",
+      "asset": "assets/math/06754fe168697c58639b.svg",
+      "explanations": [
+        "Equation (17.3) says whether sending the request again is worth it.",
+        "Weigh the chance the action is still needed, times the cost of skipping it, against the chance it already happened, times the cost of doing it twice."
+      ]
+    },
+    {
+      "label": "EQV17-04",
+      "number": "17.4",
+      "tex": "\\operatorname{Rep}(x) \\;=\\; \\Big\\{\\, T \\;:\\; \\operatorname{Ready}(T,x)\\;\\land\\;\\big[\\text{(17.1) holds for this request}\\;\\lor\\;\\operatorname{Absent}(T,x)\\;\\lor\\;\\operatorname{Restored}(T,x)\\big] \\,\\Big\\}.\n\\tag{17.4}",
+      "asset": "assets/math/574a1266b01fa51afc80.svg",
+      "explanations": [
+        "Equation (17.4) identifies repeat attempts whose duplicate-effect risk is resolved and whose current execution conditions have been checked.",
+        "Check authority and preconditions, then require applicable idempotent semantics, proof of terminal non-application, or verified restoration after completed recovery."
+      ]
+    }
+  ]
+}

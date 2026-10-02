@@ -1,0 +1,17 @@
+{
+  "seed": 41,
+  "runs": 300,
+  "step_success": 0.98,
+  "steps": 10,
+  "shared_failure": 0.04,
+  "stale_layout_probability": 0.2,
+  "injection_probability": 0.1,
+  "dropped_ack_probability": 0.15,
+  "approved_probability": 0.85,
+  "review_available_probability": 0.7,
+  "review_delay": 2.0,
+  "deadline": 6.0,
+  "budget": 8.0,
+  "verification_cost": 1.0,
+  "review_cost": 1.0
+}

@@ -1,0 +1,1328 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>03-prospective-forecast</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 3: How to Predict Emergence</h1>
+<p>A curve can explain yesterday's observations beautifully and still fail at tomorrow's scale. The difference between explanation and forecasting lies partly in chronology: which observations were available when the family and coefficients were selected? If a test outcome helps choose the model, it is no longer independent evidence for the prediction it influenced.</p>
+<p>This notebook gives development and test observations separate fields. The coefficients are fitted from development data alone. The test data then scores that frozen forecast. The changed case leaves the fit untouched while changing unseen outcomes, making it impossible to confuse a stable fitted line with a successful prediction. This is a narrow implemented forecasting protocol, not a universal emergence predictor.</p>
+<p><strong>Outcome:</strong> Fit a declared curve on development data and score a separate test.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>The declared family is y=alpha+beta f(x), where f(x)=x for a linear fit or f(x)=log(x) for a log fit. Let z_i=f(x_i). Least squares gives beta=sum_i(z_i-z_bar)(y_i-y_bar)/sum_i(z_i-z_bar)^2 and alpha=y_bar-beta z_bar. Variation in the development scales is necessary because a zero denominator leaves the slope unidentified.</p>
+<p>At a test scale x_j, the frozen prediction is y_hat_j=alpha+beta f(x_j). Residuals are y_hat_j-y_j. Test RMSE is sqrt(mean residual squared), while bias is the signed mean residual. RMSE measures magnitude; bias distinguishes systematic overprediction from underprediction. Neither is a probability of being correct.</p>
+<p>The log family requires positive scales and interprets equal multiplicative scale changes as equal increments in its transformed coordinate. Family selection is part of the prospective protocol and must occur before seeing test outcomes. The software cannot verify the historical order of an external experiment, but it rejects overlapping development and test scales and never uses test y values in the fit.</p>
+<h2>A calculation you can run</h2>
+<p>Supply two aligned development vectors and two aligned test vectors. State the family explicitly. The function validates finite values, dimensional alignment, development variation, and separation of scale sets. It computes coefficients, frozen predictions, residuals, RMSE, and bias.</p>
+<p>The forecast and unseen-observation figures share test scale and score units. The residual figure makes errors visible rather than hiding them beneath a fitted line. Run the default case, save its coefficients, and predict what will happen when only test_y changes. The coefficients must remain identical. If they move, test evidence leaked into fitting. For real data, keep a timestamped forecast artifact or preregistered protocol beside the exported result to support the prospective claim.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 3
+inputs = {&#x27;development_x&#x27;: [1, 2, 3],
+ &#x27;development_y&#x27;: [0.2, 0.3, 0.4],
+ &#x27;test_x&#x27;: [4, 5],
+ &#x27;test_y&#x27;: [0.5, 0.6],
+ &#x27;family&#x27;: &#x27;linear&#x27;}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 3: prospective-forecast
+Can a frozen forecast predict unseen capability observations?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;family&quot;: &quot;linear&quot;,
+  &quot;slope&quot;: 0.1,
+  &quot;intercept&quot;: 0.1,
+  &quot;predictions&quot;: [
+    0.5,
+    0.6
+  ],
+  &quot;test_rmse&quot;: 0.0,
+  &quot;test_bias&quot;: 0.0
+}
+
+Interpretation:
+Only development observations fit the declared family. Test outcomes score the frozen forecast and never update its coefficients.
+
+Assumptions:
+- Family selection is declared before the test is inspected.
+- Least squares describes the supplied development observations.
+
+Limitations:
+- Extrapolation validity and mechanism are not established by a good fit.
+- Protocol metadata is needed to establish real prospective separation.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>The default development line has slope 0.1 and intercept 0.1. It predicts 0.5 and 0.6 at unseen scales 4 and 5, matching the supplied test outcomes. RMSE and bias are zero up to numerical rounding.</p>
+<p>The changed test outcomes are 0.8 and 0.95. The forecast remains 0.5 and 0.6 because the development data did not change. Residuals become -0.3 and -0.35, with negative bias and a positive RMSE. That failure is informative. Refitting after seeing it might improve the retrospective graph, but it would not repair the original prospective forecast.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="626.4pt" viewBox="0 0 576 626.4" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 626.4  L 576 626.4  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 63.082344 210.119531  L 565.2 210.119531  L 565.2 79.520234  L 63.082344 79.520234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m6459ed7703" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m6459ed7703" x="85.905874" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="224.717188" transform="rotate(-0 85.905874 224.717188)">4.0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m6459ed7703" x="177.199993" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="177.199993" y="224.717188" transform="rotate(-0 177.199993 224.717188)">4.2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m6459ed7703" x="268.494112" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="268.494112" y="224.717188" transform="rotate(-0 268.494112 224.717188)">4.4</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m6459ed7703" x="359.788232" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="359.788232" y="224.717188" transform="rotate(-0 359.788232 224.717188)">4.6</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m6459ed7703" x="451.082351" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="451.082351" y="224.717188" transform="rotate(-0 451.082351 224.717188)">4.8</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m6459ed7703" x="542.37647" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="224.717188" transform="rotate(-0 542.37647 224.717188)">5.0</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="238.717969" transform="rotate(-0 314.141172 238.717969)">test scale</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 63.082344 204.1832  L 565.2 204.1832  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="m798450ac54" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="204.1832" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="207.982028" transform="rotate(-0 56.082344 207.982028)">0.50</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 63.082344 180.437873  L 565.2 180.437873  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="180.437873" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="184.236701" transform="rotate(-0 56.082344 184.236701)">0.52</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 63.082344 156.692546  L 565.2 156.692546  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="156.692546" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="160.491374" transform="rotate(-0 56.082344 160.491374)">0.54</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 63.082344 132.947219  L 565.2 132.947219  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="132.947219" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="136.746048" transform="rotate(-0 56.082344 136.746048)">0.56</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 63.082344 109.201893  L 565.2 109.201893  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="109.201893" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="113.000721" transform="rotate(-0 56.082344 113.000721)">0.58</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_17">
+      <path d="M 63.082344 85.456566  L 565.2 85.456566  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="85.456566" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="89.255394" transform="rotate(-0 56.082344 89.255394)">0.60</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="27.414375" y="144.819883" transform="rotate(-90 27.414375 144.819883)">score</text>
+    </g>
+   </g>
+   <g id="line2d_19">
+    <path d="M 85.905874 204.1832  L 542.37647 85.456566  " clip-path="url(#p56bf93c7c8)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m399fb4ace9" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p56bf93c7c8)">
+     <use xlink:href="#m399fb4ace9" x="85.905874" y="204.1832" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m399fb4ace9" x="542.37647" y="85.456566" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 63.082344 210.119531  L 63.082344 79.520234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 63.082344 210.119531  L 565.2 210.119531  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="73.520234" transform="rotate(-0 63.082344 73.520234)">frozen forecast</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 63.082344 397.198594  L 565.2 397.198594  L 565.2 266.599297  L 63.082344 266.599297  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_7">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m6459ed7703" x="85.905874" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="411.79625" transform="rotate(-0 85.905874 411.79625)">4.0</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m6459ed7703" x="177.199993" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="177.199993" y="411.79625" transform="rotate(-0 177.199993 411.79625)">4.2</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#m6459ed7703" x="268.494112" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="268.494112" y="411.79625" transform="rotate(-0 268.494112 411.79625)">4.4</text>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m6459ed7703" x="359.788232" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="359.788232" y="411.79625" transform="rotate(-0 359.788232 411.79625)">4.6</text>
+     </g>
+    </g>
+    <g id="xtick_11">
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m6459ed7703" x="451.082351" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="451.082351" y="411.79625" transform="rotate(-0 451.082351 411.79625)">4.8</text>
+     </g>
+    </g>
+    <g id="xtick_12">
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m6459ed7703" x="542.37647" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="411.79625" transform="rotate(-0 542.37647 411.79625)">5.0</text>
+     </g>
+    </g>
+    <g id="text_22">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="425.797031" transform="rotate(-0 314.141172 425.797031)">test scale</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_7">
+     <g id="line2d_26">
+      <path d="M 63.082344 391.262262  L 565.2 391.262262  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="391.262262" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_23">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="395.06109" transform="rotate(-0 56.082344 395.06109)">0.50</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_28">
+      <path d="M 63.082344 367.516935  L 565.2 367.516935  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="367.516935" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="371.315763" transform="rotate(-0 56.082344 371.315763)">0.52</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_30">
+      <path d="M 63.082344 343.771609  L 565.2 343.771609  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_31">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="343.771609" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_25">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="347.570437" transform="rotate(-0 56.082344 347.570437)">0.54</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_32">
+      <path d="M 63.082344 320.026282  L 565.2 320.026282  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_33">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="320.026282" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="323.82511" transform="rotate(-0 56.082344 323.82511)">0.56</text>
+     </g>
+    </g>
+    <g id="ytick_11">
+     <g id="line2d_34">
+      <path d="M 63.082344 296.280955  L 565.2 296.280955  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_35">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="296.280955" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_27">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="300.079783" transform="rotate(-0 56.082344 300.079783)">0.58</text>
+     </g>
+    </g>
+    <g id="ytick_12">
+     <g id="line2d_36">
+      <path d="M 63.082344 272.535629  L 565.2 272.535629  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_37">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="272.535629" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_28">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="276.334457" transform="rotate(-0 56.082344 276.334457)">0.60</text>
+     </g>
+    </g>
+    <g id="text_29">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="27.414375" y="331.898945" transform="rotate(-90 27.414375 331.898945)">score</text>
+    </g>
+   </g>
+   <g id="line2d_38">
+    <path d="M 85.905874 391.262262  L 542.37647 272.535629  " clip-path="url(#p6f5aa2cb75)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p6f5aa2cb75)">
+     <use xlink:href="#m399fb4ace9" x="85.905874" y="391.262262" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m399fb4ace9" x="542.37647" y="272.535629" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 63.082344 397.198594  L 63.082344 266.599297  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 63.082344 397.198594  L 565.2 397.198594  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="260.599297" transform="rotate(-0 63.082344 260.599297)">unseen observation</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_8">
+    <path d="M 63.082344 584.277656  L 565.2 584.277656  L 565.2 453.678359  L 63.082344 453.678359  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_5">
+    <g id="xtick_13">
+     <g id="line2d_39">
+      <g>
+       <use xlink:href="#m6459ed7703" x="85.905874" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_31">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="598.875312" transform="rotate(-0 85.905874 598.875312)">4.0</text>
+     </g>
+    </g>
+    <g id="xtick_14">
+     <g id="line2d_40">
+      <g>
+       <use xlink:href="#m6459ed7703" x="177.199993" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_32">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="177.199993" y="598.875312" transform="rotate(-0 177.199993 598.875312)">4.2</text>
+     </g>
+    </g>
+    <g id="xtick_15">
+     <g id="line2d_41">
+      <g>
+       <use xlink:href="#m6459ed7703" x="268.494112" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_33">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="268.494112" y="598.875312" transform="rotate(-0 268.494112 598.875312)">4.4</text>
+     </g>
+    </g>
+    <g id="xtick_16">
+     <g id="line2d_42">
+      <g>
+       <use xlink:href="#m6459ed7703" x="359.788232" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_34">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="359.788232" y="598.875312" transform="rotate(-0 359.788232 598.875312)">4.6</text>
+     </g>
+    </g>
+    <g id="xtick_17">
+     <g id="line2d_43">
+      <g>
+       <use xlink:href="#m6459ed7703" x="451.082351" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_35">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="451.082351" y="598.875312" transform="rotate(-0 451.082351 598.875312)">4.8</text>
+     </g>
+    </g>
+    <g id="xtick_18">
+     <g id="line2d_44">
+      <g>
+       <use xlink:href="#m6459ed7703" x="542.37647" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_36">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="598.875312" transform="rotate(-0 542.37647 598.875312)">5.0</text>
+     </g>
+    </g>
+    <g id="text_37">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="612.876094" transform="rotate(-0 314.141172 612.876094)">test scale</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_6">
+    <g id="ytick_13">
+     <g id="line2d_45">
+      <path d="M 63.082344 566.468661  L 565.2 566.468661  " clip-path="url(#p7a221595d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_46">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="566.468661" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_38">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="570.267489" transform="rotate(-0 56.082344 570.267489)">−0.04</text>
+     </g>
+    </g>
+    <g id="ytick_14">
+     <g id="line2d_47">
+      <path d="M 63.082344 542.723335  L 565.2 542.723335  " clip-path="url(#p7a221595d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_48">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="542.723335" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_39">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="546.522163" transform="rotate(-0 56.082344 546.522163)">−0.02</text>
+     </g>
+    </g>
+    <g id="ytick_15">
+     <g id="line2d_49">
+      <path d="M 63.082344 518.978008  L 565.2 518.978008  " clip-path="url(#p7a221595d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_50">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="518.978008" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_40">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="522.776836" transform="rotate(-0 56.082344 522.776836)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_16">
+     <g id="line2d_51">
+      <path d="M 63.082344 495.232681  L 565.2 495.232681  " clip-path="url(#p7a221595d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_52">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="495.232681" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_41">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="499.031509" transform="rotate(-0 56.082344 499.031509)">0.02</text>
+     </g>
+    </g>
+    <g id="ytick_17">
+     <g id="line2d_53">
+      <path d="M 63.082344 471.487354  L 565.2 471.487354  " clip-path="url(#p7a221595d4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_54">
+      <g>
+       <use xlink:href="#m798450ac54" x="63.082344" y="471.487354" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_42">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="475.286183" transform="rotate(-0 56.082344 475.286183)">0.04</text>
+     </g>
+    </g>
+    <g id="text_43">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="19.034688" y="518.978008" transform="rotate(-90 19.034688 518.978008)">prediction minus observation</text>
+    </g>
+   </g>
+   <g id="line2d_55">
+    <path d="M 85.905874 518.978008  L 542.37647 518.978008  " clip-path="url(#p7a221595d4)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#p7a221595d4)">
+     <use xlink:href="#m399fb4ace9" x="85.905874" y="518.978008" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m399fb4ace9" x="542.37647" y="518.978008" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_9">
+    <path d="M 63.082344 584.277656  L 63.082344 453.678359  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 63.082344 584.277656  L 565.2 584.277656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_44">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="447.678359" transform="rotate(-0 63.082344 447.678359)">forecast residual</text>
+   </g>
+  </g>
+  <g id="text_45">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="21.646125" transform="rotate(-0 46.08 21.646125)">Chapter 3: prospective forecast</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p56bf93c7c8">
+   <rect x="63.082344" y="79.520234" width="502.117656" height="130.599297"/>
+  </clipPath>
+  <clipPath id="p6f5aa2cb75">
+   <rect x="63.082344" y="266.599297" width="502.117656" height="130.599297"/>
+  </clipPath>
+  <clipPath id="p7a221595d4">
+   <rect x="63.082344" y="453.678359" width="502.117656" height="130.599297"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 3.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>The simplest leakage pattern is to move a disappointing test observation into the development set and continue calling the remaining assessment unseen. Another is to inspect several families against the same test outcomes and report only the best one. Both use the test to shape the prediction, so the reported errors cease to measure the original prospective protocol.</p>
+<p>The implementation checks explicit scale overlap, but it cannot detect hidden reuse, shared tasks, or a family chosen after reading test results. Those are evidence-management problems. Record the family, data boundary, fit command, and forecast before opening the withheld outcome file.</p>
+<p>A successful linear or log extrapolation also does not reveal an emergence mechanism. It is conditional performance of one declared family over one supplied range. New environments or measurement rules can break that relationship even if the development residuals were tiny.</p>
+<pre><code>changed_inputs = {&#x27;development_x&#x27;: [1, 2, 3],
+ &#x27;development_y&#x27;: [0.2, 0.3, 0.4],
+ &#x27;test_x&#x27;: [4, 5],
+ &#x27;test_y&#x27;: [0.8, 0.95],
+ &#x27;family&#x27;: &#x27;linear&#x27;}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 3: prospective-forecast
+Can a frozen forecast predict unseen capability observations?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;family&quot;: &quot;linear&quot;,
+  &quot;slope&quot;: 0.1,
+  &quot;intercept&quot;: 0.1,
+  &quot;predictions&quot;: [
+    0.5,
+    0.6
+  ],
+  &quot;test_rmse&quot;: 0.3259601203,
+  &quot;test_bias&quot;: -0.325
+}
+
+Interpretation:
+Only development observations fit the declared family. Test outcomes score the frozen forecast and never update its coefficients.
+
+Assumptions:
+- Family selection is declared before the test is inspected.
+- Least squares describes the supplied development observations.
+
+Limitations:
+- Extrapolation validity and mechanism are not established by a good fit.
+- Protocol metadata is needed to establish real prospective separation.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="626.4pt" viewBox="0 0 576 626.4" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 626.4  L 576 626.4  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 63.082344 210.119531  L 565.2 210.119531  L 565.2 79.520234  L 63.082344 79.520234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m336d8b07c1" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m336d8b07c1" x="85.905874" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="224.717188" transform="rotate(-0 85.905874 224.717188)">4.0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="177.199993" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="177.199993" y="224.717188" transform="rotate(-0 177.199993 224.717188)">4.2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="268.494112" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="268.494112" y="224.717188" transform="rotate(-0 268.494112 224.717188)">4.4</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="359.788232" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="359.788232" y="224.717188" transform="rotate(-0 359.788232 224.717188)">4.6</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="451.082351" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="451.082351" y="224.717188" transform="rotate(-0 451.082351 224.717188)">4.8</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="542.37647" y="210.119531" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="224.717188" transform="rotate(-0 542.37647 224.717188)">5.0</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="238.717969" transform="rotate(-0 314.141172 238.717969)">test scale</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 63.082344 204.1832  L 565.2 204.1832  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="mcc795a0370" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="204.1832" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="207.982028" transform="rotate(-0 56.082344 207.982028)">0.50</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 63.082344 180.437873  L 565.2 180.437873  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="180.437873" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="184.236701" transform="rotate(-0 56.082344 184.236701)">0.52</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 63.082344 156.692546  L 565.2 156.692546  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="156.692546" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="160.491374" transform="rotate(-0 56.082344 160.491374)">0.54</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 63.082344 132.947219  L 565.2 132.947219  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="132.947219" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="136.746048" transform="rotate(-0 56.082344 136.746048)">0.56</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 63.082344 109.201893  L 565.2 109.201893  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="109.201893" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="113.000721" transform="rotate(-0 56.082344 113.000721)">0.58</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_17">
+      <path d="M 63.082344 85.456566  L 565.2 85.456566  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="85.456566" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="89.255394" transform="rotate(-0 56.082344 89.255394)">0.60</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="27.414375" y="144.819883" transform="rotate(-90 27.414375 144.819883)">score</text>
+    </g>
+   </g>
+   <g id="line2d_19">
+    <path d="M 85.905874 204.1832  L 542.37647 85.456566  " clip-path="url(#pb29a979689)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mac2388f0f7" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#pb29a979689)">
+     <use xlink:href="#mac2388f0f7" x="85.905874" y="204.1832" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mac2388f0f7" x="542.37647" y="85.456566" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 63.082344 210.119531  L 63.082344 79.520234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 63.082344 210.119531  L 565.2 210.119531  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="73.520234" transform="rotate(-0 63.082344 73.520234)">frozen forecast</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 63.082344 397.198594  L 565.2 397.198594  L 565.2 266.599297  L 63.082344 266.599297  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_7">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="85.905874" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="411.79625" transform="rotate(-0 85.905874 411.79625)">4.0</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="177.199993" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="177.199993" y="411.79625" transform="rotate(-0 177.199993 411.79625)">4.2</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="268.494112" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="268.494112" y="411.79625" transform="rotate(-0 268.494112 411.79625)">4.4</text>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="359.788232" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="359.788232" y="411.79625" transform="rotate(-0 359.788232 411.79625)">4.6</text>
+     </g>
+    </g>
+    <g id="xtick_11">
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="451.082351" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="451.082351" y="411.79625" transform="rotate(-0 451.082351 411.79625)">4.8</text>
+     </g>
+    </g>
+    <g id="xtick_12">
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="542.37647" y="397.198594" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="411.79625" transform="rotate(-0 542.37647 411.79625)">5.0</text>
+     </g>
+    </g>
+    <g id="text_22">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="425.797031" transform="rotate(-0 314.141172 425.797031)">test scale</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_7">
+     <g id="line2d_26">
+      <path d="M 63.082344 391.262262  L 565.2 391.262262  " clip-path="url(#pcab324ce25)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="391.262262" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_23">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="395.06109" transform="rotate(-0 56.082344 395.06109)">0.80</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_28">
+      <path d="M 63.082344 351.686718  L 565.2 351.686718  " clip-path="url(#pcab324ce25)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="351.686718" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="355.485546" transform="rotate(-0 56.082344 355.485546)">0.85</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_30">
+      <path d="M 63.082344 312.111173  L 565.2 312.111173  " clip-path="url(#pcab324ce25)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_31">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="312.111173" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_25">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="315.910001" transform="rotate(-0 56.082344 315.910001)">0.90</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_32">
+      <path d="M 63.082344 272.535629  L 565.2 272.535629  " clip-path="url(#pcab324ce25)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_33">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="272.535629" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="276.334457" transform="rotate(-0 56.082344 276.334457)">0.95</text>
+     </g>
+    </g>
+    <g id="text_27">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="27.414375" y="331.898945" transform="rotate(-90 27.414375 331.898945)">score</text>
+    </g>
+   </g>
+   <g id="line2d_34">
+    <path d="M 85.905874 391.262262  L 542.37647 272.535629  " clip-path="url(#pcab324ce25)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#pcab324ce25)">
+     <use xlink:href="#mac2388f0f7" x="85.905874" y="391.262262" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mac2388f0f7" x="542.37647" y="272.535629" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 63.082344 397.198594  L 63.082344 266.599297  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 63.082344 397.198594  L 565.2 397.198594  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_28">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="260.599297" transform="rotate(-0 63.082344 260.599297)">unseen observation</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_8">
+    <path d="M 63.082344 584.277656  L 565.2 584.277656  L 565.2 453.678359  L 63.082344 453.678359  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_5">
+    <g id="xtick_13">
+     <g id="line2d_35">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="85.905874" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_29">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="598.875312" transform="rotate(-0 85.905874 598.875312)">4.0</text>
+     </g>
+    </g>
+    <g id="xtick_14">
+     <g id="line2d_36">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="177.199993" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_30">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="177.199993" y="598.875312" transform="rotate(-0 177.199993 598.875312)">4.2</text>
+     </g>
+    </g>
+    <g id="xtick_15">
+     <g id="line2d_37">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="268.494112" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_31">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="268.494112" y="598.875312" transform="rotate(-0 268.494112 598.875312)">4.4</text>
+     </g>
+    </g>
+    <g id="xtick_16">
+     <g id="line2d_38">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="359.788232" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_32">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="359.788232" y="598.875312" transform="rotate(-0 359.788232 598.875312)">4.6</text>
+     </g>
+    </g>
+    <g id="xtick_17">
+     <g id="line2d_39">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="451.082351" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_33">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="451.082351" y="598.875312" transform="rotate(-0 451.082351 598.875312)">4.8</text>
+     </g>
+    </g>
+    <g id="xtick_18">
+     <g id="line2d_40">
+      <g>
+       <use xlink:href="#m336d8b07c1" x="542.37647" y="584.277656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_34">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="598.875312" transform="rotate(-0 542.37647 598.875312)">5.0</text>
+     </g>
+    </g>
+    <g id="text_35">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="612.876094" transform="rotate(-0 314.141172 612.876094)">test scale</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_6">
+    <g id="ytick_11">
+     <g id="line2d_41">
+      <path d="M 63.082344 578.341325  L 565.2 578.341325  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_42">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="578.341325" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_36">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="582.140153" transform="rotate(-0 56.082344 582.140153)">−0.35</text>
+     </g>
+    </g>
+    <g id="ytick_12">
+     <g id="line2d_43">
+      <path d="M 63.082344 554.595998  L 565.2 554.595998  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_44">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="554.595998" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_37">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="558.394826" transform="rotate(-0 56.082344 558.394826)">−0.34</text>
+     </g>
+    </g>
+    <g id="ytick_13">
+     <g id="line2d_45">
+      <path d="M 63.082344 530.850671  L 565.2 530.850671  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_46">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="530.850671" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_38">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="534.649499" transform="rotate(-0 56.082344 534.649499)">−0.33</text>
+     </g>
+    </g>
+    <g id="ytick_14">
+     <g id="line2d_47">
+      <path d="M 63.082344 507.105344  L 565.2 507.105344  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_48">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="507.105344" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_39">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="510.904173" transform="rotate(-0 56.082344 510.904173)">−0.32</text>
+     </g>
+    </g>
+    <g id="ytick_15">
+     <g id="line2d_49">
+      <path d="M 63.082344 483.360018  L 565.2 483.360018  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_50">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="483.360018" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_40">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="487.158846" transform="rotate(-0 56.082344 487.158846)">−0.31</text>
+     </g>
+    </g>
+    <g id="ytick_16">
+     <g id="line2d_51">
+      <path d="M 63.082344 459.614691  L 565.2 459.614691  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_52">
+      <g>
+       <use xlink:href="#mcc795a0370" x="63.082344" y="459.614691" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_41">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="463.413519" transform="rotate(-0 56.082344 463.413519)">−0.30</text>
+     </g>
+    </g>
+    <g id="text_42">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="19.034688" y="518.978008" transform="rotate(-90 19.034688 518.978008)">prediction minus observation</text>
+    </g>
+   </g>
+   <g id="line2d_53">
+    <path d="M 85.905874 459.614691  L 542.37647 578.341325  " clip-path="url(#pba3ba27539)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#pba3ba27539)">
+     <use xlink:href="#mac2388f0f7" x="85.905874" y="459.614691" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mac2388f0f7" x="542.37647" y="578.341325" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_9">
+    <path d="M 63.082344 584.277656  L 63.082344 453.678359  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 63.082344 584.277656  L 565.2 584.277656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_43">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="447.678359" transform="rotate(-0 63.082344 447.678359)">forecast residual</text>
+   </g>
+  </g>
+  <g id="text_44">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="21.646125" transform="rotate(-0 46.08 21.646125)">Chapter 3: prospective forecast</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pb29a979689">
+   <rect x="63.082344" y="79.520234" width="502.117656" height="130.599297"/>
+  </clipPath>
+  <clipPath id="pcab324ce25">
+   <rect x="63.082344" y="266.599297" width="502.117656" height="130.599297"/>
+  </clipPath>
+  <clipPath id="pba3ba27539">
+   <rect x="63.082344" y="453.678359" width="502.117656" height="130.599297"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 3.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer data follows a logarithmic family. Doubling scale adds approximately log(2) to its outcome. Fit in log coordinates, then predict at scales 8 and 16. The slope is approximately 1 and the intercept approximately zero, so the predictions are approximately 2.0794 and 2.7726.</p>
+<p>When applying the method locally, define the forecast target before choosing the family. It might be a continuous score, a completion probability, or another declared quantity. The runtime allows finite targets without pretending all are probabilities. Explain the target units and score transformation in the accompanying report. If a bounded probability is required, this unconstrained regression may be the wrong family.</p>
+<pre><code>transfer_inputs = {&#x27;development_x&#x27;: [1, 2, 4],
+ &#x27;development_y&#x27;: [0, 0.69314718056, 1.38629436112],
+ &#x27;test_x&#x27;: [8, 16],
+ &#x27;test_y&#x27;: [2.07944154168, 2.77258872224],
+ &#x27;family&#x27;: &#x27;log&#x27;}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 3: prospective-forecast
+Can a frozen forecast predict unseen capability observations?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;family&quot;: &quot;log&quot;,
+  &quot;slope&quot;: 1.0,
+  &quot;intercept&quot;: 0.0,
+  &quot;predictions&quot;: [
+    2.079441542,
+    2.772588722
+  ],
+  &quot;test_rmse&quot;: 0.0,
+  &quot;test_bias&quot;: 0.0
+}
+
+Interpretation:
+Only development observations fit the declared family. Test outcomes score the frozen forecast and never update its coefficients.
+
+Assumptions:
+- Family selection is declared before the test is inspected.
+- Least squares describes the supplied development observations.
+
+Limitations:
+- Extrapolation validity and mechanism are not established by a good fit.
+- Protocol metadata is needed to establish real prospective separation.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>development_x:</strong> At least two development scales with variation.</li>
+<li><strong>development_y:</strong> Aligned finite development observations.</li>
+<li><strong>test_x:</strong> Separate unseen scales, with no development overlap.</li>
+<li><strong>test_y:</strong> Aligned withheld observations used only for scoring.</li>
+<li><strong>family:</strong> linear or log, declared before inspecting test outcomes.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch03.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 3: prospective-forecast
+Can a frozen forecast predict unseen capability observations?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;family&quot;: &quot;log&quot;,
+  &quot;slope&quot;: 1.0,
+  &quot;intercept&quot;: 0.0,
+  &quot;predictions&quot;: [
+    2.079441542,
+    2.772588722
+  ],
+  &quot;test_rmse&quot;: 0.0,
+  &quot;test_bias&quot;: 0.0
+}
+
+Interpretation:
+Only development observations fit the declared family. Test outcomes score the frozen forecast and never update its coefficients.
+
+Assumptions:
+- Family selection is declared before the test is inspected.
+- Least squares describes the supplied development observations.
+
+Limitations:
+- Extrapolation validity and mechanism are not established by a good fit.
+- Protocol metadata is needed to establish real prospective separation.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>What are default fit coefficients?</p>
+</li>
+<li>
+<p>Does the changed test update the fit?</p>
+</li>
+<li>
+<p>Why must log-family scales be positive?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch03.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>A forecast is prospective only when its choices are frozen before the outcomes used to evaluate it. This computation separates development fitting from test scoring and reports both magnitude and direction of error. The changed case preserves coefficients while exposing forecast failure; the transfer case changes the declared family. Good fit does not establish mechanism, universality, or calibration. Preserve the chronology and input boundary so the numerical result can be interpreted as evidence for the protocol that actually ran.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-03-prospective-forecast/SKILL.md"><code>maa-03-prospective-forecast</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 3.1</h3>
+<p><img alt="Equation 3.1" src="../../assets/math/90f0aa7fdfb7e63b6cf0.svg" /></p>
+<p>Equation (3.1) is a fitted curve that lets a handful of completed training runs predict the loss of a much larger run that has not finished.</p>
+<p><code>C</code> is training compute and <code>a</code>, <code>b</code>, <code>c</code> are constants chosen to fit the smaller runs, so a larger <code>C</code> reads off a prediction.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">L(C)=aC^b+c.
+\tag{3.1}
+</code></pre>
+<h3>Equation 3.2</h3>
+<p><img alt="Equation 3.2" src="../../assets/math/71ad5d194fa8ee0de514.svg" /></p>
+<p>Equation (3.2) proposes that a member's measured interaction is explained by declared features plus leftover error, which is a modeling choice rather than an existing result.</p>
+<p>The measured interaction for member <code>m</code> equals a fitted function of the declared features <code>z_m</code>, plus the part that fit misses.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\Gamma_m=f_\psi(z_m)+\epsilon_m.
+\tag{3.2}
+</code></pre>
+<h3>Equation 3.3</h3>
+<p><img alt="Equation 3.3" src="../../assets/math/a432c7b620a94ad9171b.svg" /></p>
+<p>Equation (3.3) turns a continuous success probability into a single pass-or-fail bit using a cutoff chosen in advance.</p>
+<p>Compare the member's success probability against the threshold and report one when it reaches the threshold, zero otherwise.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{pass}_\tau(q_m)=\mathbf{1}\{q_m\geq\tau\}.
+\tag{3.3}
+</code></pre></body></html>

@@ -1,0 +1,58 @@
+{
+  "status": "pass_at_sampled_visual_scope",
+  "reviewer": "implementation agent visual inspection, not independent human review",
+  "pdf_hashes": {
+    "workbook/workbook.pdf": "7b0c93b84c9b613f2a5e9cf9f086dcbf9a8929f19d79b1540e34164237028cda",
+    "workbook/solutions.pdf": "0161463dc55bd11372ceb430ac4a3c197f49038d24a01d95b38a55d68c1c3986",
+    "workbook/notation-guide.pdf": "c016f99b4a6216eea7c353e94b90a6bf7b16484656c2a188bbba8bcfc37b1220",
+    "guide/field-guide.pdf": "5e64bb9acb5d6877a2be91d8f8ea2be4e8d6c90f110e25fd93f0f85f2ad53882"
+  },
+  "sampled_pages": {
+    "workbook.pdf": [
+      1,
+      3,
+      9,
+      17
+    ],
+    "solutions.pdf": [
+      1,
+      3,
+      11,
+      21
+    ],
+    "notation-guide.pdf": [
+      1,
+      3,
+      6,
+      10
+    ],
+    "field-guide.pdf": [
+      1,
+      3,
+      5,
+      9
+    ]
+  },
+  "findings_resolved": [
+    "Arithmetic multiplication stars escaped before Markdown emphasis parsing, preserving all81 new answers.",
+    "Original component-set braces made visible in equation rendering instead of invisible TeX grouping.",
+    "Notation table Introduced header widened to avoid a broken word.",
+    "Long shell commands receive explicit continuation characters when wrapped.",
+    "Duplicate field-guide author line removed."
+  ],
+  "observations": [
+    "Muted blue headings and restrained table rules are consistent across all four artifacts.",
+    "Math-heavy source pages show legible inline Greek, fractions, roots, and subscripts.",
+    "Sample pages show no clipping or text/image collisions; all-page geometric audit separately passed.",
+    "Complete inventory checks found23original question headings,23original solution headings,81new questions,and81new answer strings."
+  ],
+  "limitations": [
+    "Only sampled pages were visually inspected; every page received automated bounds and glyph checks.",
+    "TeX images preserve visible mathematical notation but do not provide searchable mathematical text or tagged-PDF accessibility.",
+    "No human usability study or independent PDF review is claimed."
+  ],
+  "commands": [
+    "Companion/.venv/bin/python Companion/tools/export_pdfs.py",
+    "python3 /private/tmp/audit_companion_pdfs.py"
+  ]
+}

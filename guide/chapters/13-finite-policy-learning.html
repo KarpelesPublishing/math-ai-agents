@@ -1,0 +1,1127 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>13-finite-policy-learning</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 13: Learning to Choose: Training an Agent from Trajectories</h1>
+<p>A controller learns to choose the action its verifier rewards most. Training reward rises, and the result looks successful. Yet the verifier might favor a shortcut that seldom completes the external task. Optimization can amplify that mismatch rather than correct it.</p>
+<p>This notebook trains an actual finite softmax policy from sampled actions. It keeps verifier reward and external success probability in separate vectors and uses a separate random stream for evaluation. Repeated seeds expose stochastic learning variation. The changed case aligns the reward ranking with the task ranking. The transfer case changes terminal shaping, showing how a seemingly helpful addition can alter the objective itself.</p>
+<p><strong>Outcome:</strong> Train a seeded softmax policy with REINFORCE and evaluate a separate success predicate.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>For logits theta_i, softmax gives pi_i=exp(theta_i)/sum_j exp(theta_j). REINFORCE uses the score gradient d log pi_A/d theta_i=1{i=A}-pi_i. The update here is theta_i &lt;- theta_i+alpha(R_A-b)(1{i=A}-pi_i), where b is the current expected shaped reward. A baseline independent of the sampled action's randomness reduces variability without changing the expected score-gradient direction.</p>
+<p>This one-step experiment uses deterministic verifier reward after action selection. Shaped reward adds gamma Phi(terminal) with initial potential zero. In a properly terminated episodic construction, zero terminal potential preserves the original objective. A nonzero action-dependent terminal potential can change rankings, so the report exposes that condition.</p>
+<p>Expected verifier reward is sum_i pi_i r_i; expected external success is sum_i pi_i p_i. They are different functions of the same policy. Independent evaluation draws actions and Bernoulli success from a fresh seeded stream. Its empirical rate has finite-sample noise and is not identical to the known constructed expectation.</p>
+<h2>A calculation you can run</h2>
+<p>Supply aligned verifier rewards, external success probabilities, and terminal potentials. Declare episodes, learning rate, discount, seeds, and evaluation count. Each seed begins with equal logits. Stable softmax subtracts the maximum logit before exponentiation, avoiding avoidable overflow.</p>
+<p>At every training episode, the code samples one action, computes its centered shaped reward, updates all logits, and records expected unshaped verifier reward. After training, it reports the policy, expected external success, and a separate empirical evaluation rate. Curves are labeled by seed. Compare their direction with the external metrics rather than calling any upward reward curve task improvement. The changed reward vector is the only altered mechanism.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 13
+inputs = {&#x27;rewards&#x27;: [1, 2],
+ &#x27;success_probabilities&#x27;: [0.9, 0.2],
+ &#x27;terminal_potentials&#x27;: [0, 0],
+ &#x27;episodes&#x27;: 120,
+ &#x27;seeds&#x27;: [3, 11],
+ &#x27;learning_rate&#x27;: 0.08,
+ &#x27;discount&#x27;: 1,
+ &#x27;evaluation_runs&#x27;: 200}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 13: finite-policy-learning
+Does optimizing the verifier reward improve the external task?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;runs&quot;: [
+    {
+      &quot;seed&quot;: 3,
+      &quot;policy&quot;: [
+        0.05660390942,
+        0.9433960906
+      ],
+      &quot;expected_training_reward&quot;: 1.943396091,
+      &quot;expected_shaped_reward&quot;: 1.943396091,
+      &quot;expected_external_success&quot;: 0.2396227366,
+      &quot;independent_evaluation_rate&quot;: 0.245,
+      &quot;evaluation_n&quot;: 200
+    },
+    {
+      &quot;seed&quot;: 11,
+      &quot;policy&quot;: [
+        0.08134967477,
+        0.9186503252
+      ],
+      &quot;expected_training_reward&quot;: 1.918650325,
+      &quot;expected_shaped_reward&quot;: 1.918650325,
+      &quot;expected_external_success&quot;: 0.2569447723,
+      &quot;independent_evaluation_rate&quot;: 0.3,
+      &quot;evaluation_n&quot;: 200
+    }
+  ],
+  &quot;policy_invariant_shaping_condition&quot;: true,
+  &quot;verifier_optimal_action&quot;: 1,
+  &quot;shaped_rewards&quot;: [
+    1.0,
+    2.0
+  ],
+  &quot;shaped_optimal_action&quot;: 1,
+  &quot;training_objective_conflicts_with_task&quot;: true,
+  &quot;task_optimal_action&quot;: 0
+}
+
+Interpretation:
+REINFORCE updates softmax logits from sampled actions and a baseline, using the shaped reward (verifier reward plus discount times terminal potential). verifier_optimal_action ranks the unshaped rewards, shaped_optimal_action ranks the rewards actually trained on, and expected_training_reward is the unshaped expectation while expected_shaped_reward is the trained one. Independent evaluation uses a separate seeded stream and external success probabilities.
+
+Assumptions:
+- One-step finite policy; rewards are deterministic after each chosen action.
+- Potential shaping is gamma times the supplied terminal potential with zero initial potential.
+- Zero terminal potential preserves the episodic objective.
+
+Limitations:
+- Nonzero terminal potentials can change the objective.
+- Verifier reward improvement need not improve external task success.
+- Constructed success probabilities are not learned from actual deployments.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>Initially the default policy is [0.5,0.5], with verifier reward 1.5 and external success 0.55. The verifier prefers action 1 with reward 2, while the task prefers action 0 with success probability 0.9. Learning toward the verifier can therefore raise reward while lowering expected task success.</p>
+<p>The changed reward vector [2,1] aligns both rankings. Reward-directed learning can now increase external success. Exact final policies differ by seed, so the hand check focuses on rankings, normalization, and expected metrics rather than a selected flattering run. Separate evaluation remains finite evidence even when the constructed expectation is known.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  L 565.2 69.080234  L 47.962344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="md8bdbb9e17" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="71.473146" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="208.636719" transform="rotate(-0 71.473146 208.636719)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="150.501054" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="150.501054" y="208.636719" transform="rotate(-0 150.501054 208.636719)">20</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="229.528962" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="229.528962" y="208.636719" transform="rotate(-0 229.528962 208.636719)">40</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="308.55687" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.55687" y="208.636719" transform="rotate(-0 308.55687 208.636719)">60</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="387.584777" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.584777" y="208.636719" transform="rotate(-0 387.584777 208.636719)">80</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="466.612685" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="466.612685" y="208.636719" transform="rotate(-0 466.612685 208.636719)">100</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="545.640593" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="545.640593" y="208.636719" transform="rotate(-0 545.640593 208.636719)">120</text>
+     </g>
+    </g>
+    <g id="text_8">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="222.6375" transform="rotate(-0 306.581172 222.6375)">episode</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_8">
+      <path d="M 47.962344 190.979893  L 565.2 190.979893  " clip-path="url(#pcb484f2b37)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <defs>
+       <path id="m02c2fa5afc" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="190.979893" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="194.778721" transform="rotate(-0 40.962344 194.778721)">1.5</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_10">
+      <path d="M 47.962344 164.76863  L 565.2 164.76863  " clip-path="url(#pcb484f2b37)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="164.76863" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="168.567459" transform="rotate(-0 40.962344 168.567459)">1.6</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_12">
+      <path d="M 47.962344 138.557368  L 565.2 138.557368  " clip-path="url(#pcb484f2b37)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="138.557368" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="142.356196" transform="rotate(-0 40.962344 142.356196)">1.7</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_14">
+      <path d="M 47.962344 112.346106  L 565.2 112.346106  " clip-path="url(#pcb484f2b37)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="112.346106" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="116.144934" transform="rotate(-0 40.962344 116.144934)">1.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_16">
+      <path d="M 47.962344 86.134844  L 565.2 86.134844  " clip-path="url(#pcb484f2b37)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="86.134844" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="89.933672" transform="rotate(-0 40.962344 89.933672)">1.9</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="131.559648" transform="rotate(-90 18.656875 131.559648)">expected shaped reward (trained on)</text>
+    </g>
+   </g>
+   <g id="line2d_18">
+    <path d="M 71.473146 188.359116  L 75.424542 185.844054  L 79.375937 183.020645  L 83.327332 180.719455  L 87.278728 178.509482  L 91.230123 175.401959  L 95.181519 172.177313  L 99.132914 170.29801  L 103.084309 166.887085  L 107.035705 163.356924  L 110.9871 161.80097  L 114.938496 160.299698  L 118.889891 158.850444  L 122.841286 157.450693  L 126.792682 156.098068  L 130.744077 152.228018  L 134.695473 151.044987  L 138.646868 149.898946  L 142.598263 148.788218  L 146.549659 147.711219  L 150.501054 146.666452  L 154.452449 142.561166  L 158.403845 141.663923  L 162.35524 140.791239  L 166.306636 136.577142  L 170.258031 132.306006  L 174.209426 131.668474  L 178.160822 131.045542  L 182.112217 130.436697  L 186.063613 129.841453  L 190.015008 129.259342  L 193.966403 128.689919  L 197.917799 128.132758  L 201.869194 127.587454  L 205.820589 127.053616  L 209.771985 126.530873  L 213.72338 126.018868  L 217.674776 121.694718  L 221.626171 117.390979  L 225.577566 113.134843  L 229.528962 112.855745  L 233.480357 112.580645  L 237.431753 112.309452  L 241.383148 112.042078  L 245.334543 111.778439  L 249.285939 111.51845  L 253.237334 111.262033  L 257.18873 111.009108  L 261.140125 110.759602  L 265.09152 110.513439  L 269.042916 110.27055  L 272.994311 110.030865  L 276.945706 109.794316  L 280.897102 109.560838  L 284.848497 109.330369  L 288.799893 105.243727  L 292.751288 105.064709  L 296.702683 104.887658  L 300.654079 104.712537  L 304.605474 104.539313  L 308.55687 104.367953  L 312.508265 104.198425  L 316.45966 104.030698  L 320.411056 103.86474  L 324.362451 103.700523  L 328.313847 99.800377  L 332.265242 99.675331  L 336.216637 99.551386  L 340.168033 95.827691  L 344.119428 95.734768  L 348.070823 95.642526  L 352.022219 95.550957  L 355.973614 95.460054  L 359.92501 95.369808  L 363.876405 95.280212  L 367.8278 91.774935  L 371.779196 91.708885  L 375.730591 88.416343  L 379.681987 88.368364  L 383.633382 88.320617  L 387.584777 88.273101  L 391.536173 88.225813  L 395.487568 88.178752  L 399.438963 88.131915  L 403.390359 88.085302  L 407.341754 85.037932  L 411.29315 85.004597  L 415.244545 82.189819  L 419.19594 82.166305  L 423.147336 82.142863  L 427.098731 82.119493  L 431.050127 82.096195  L 435.001522 79.522088  L 438.952917 79.505874  L 442.904313 79.489699  L 446.855708 79.473563  L 450.807104 79.457465  L 454.758499 79.441407  L 458.709894 79.425387  L 462.66129 79.409405  L 466.612685 79.393461  L 470.56408 79.377555  L 474.515476 79.361688  L 478.466871 79.345858  L 482.418267 79.330065  L 486.369662 79.314311  L 490.321057 79.298593  L 494.272453 79.282913  L 498.223848 79.267269  L 502.175244 79.251663  L 506.126639 79.236093  L 510.078034 79.22056  L 514.02943 79.205063  L 517.980825 76.891136  L 521.932221 76.880499  L 525.883616 76.869882  L 529.835011 74.781764  L 533.786407 74.774559  L 537.737802 74.767365  L 541.689197 74.760181  " clip-path="url(#pcb484f2b37)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 194.039062  L 47.962344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="63.080234" transform="rotate(-0 47.962344 63.080234)">shaped training reward seed 3</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  L 565.2 250.518828  L 47.962344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_8">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="71.473146" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="390.075312" transform="rotate(-0 71.473146 390.075312)">0</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="150.501054" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="150.501054" y="390.075312" transform="rotate(-0 150.501054 390.075312)">20</text>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="229.528962" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="229.528962" y="390.075312" transform="rotate(-0 229.528962 390.075312)">40</text>
+     </g>
+    </g>
+    <g id="xtick_11">
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="308.55687" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.55687" y="390.075312" transform="rotate(-0 308.55687 390.075312)">60</text>
+     </g>
+    </g>
+    <g id="xtick_12">
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="387.584777" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.584777" y="390.075312" transform="rotate(-0 387.584777 390.075312)">80</text>
+     </g>
+    </g>
+    <g id="xtick_13">
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="466.612685" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="466.612685" y="390.075312" transform="rotate(-0 466.612685 390.075312)">100</text>
+     </g>
+    </g>
+    <g id="xtick_14">
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#md8bdbb9e17" x="545.640593" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="545.640593" y="390.075312" transform="rotate(-0 545.640593 390.075312)">120</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="404.076094" transform="rotate(-0 306.581172 404.076094)">episode</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_26">
+      <path d="M 47.962344 372.577187  L 565.2 372.577187  " clip-path="url(#p771de170c4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="372.577187" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="376.376015" transform="rotate(-0 40.962344 376.376015)">1.5</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_28">
+      <path d="M 47.962344 344.77871  L 565.2 344.77871  " clip-path="url(#p771de170c4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="344.77871" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_25">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="348.577538" transform="rotate(-0 40.962344 348.577538)">1.6</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_30">
+      <path d="M 47.962344 316.980234  L 565.2 316.980234  " clip-path="url(#p771de170c4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_31">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="316.980234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="320.779062" transform="rotate(-0 40.962344 320.779062)">1.7</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_32">
+      <path d="M 47.962344 289.181757  L 565.2 289.181757  " clip-path="url(#p771de170c4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_33">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="289.181757" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_27">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="292.980586" transform="rotate(-0 40.962344 292.980586)">1.8</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_34">
+      <path d="M 47.962344 261.383281  L 565.2 261.383281  " clip-path="url(#p771de170c4)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_35">
+      <g>
+       <use xlink:href="#m02c2fa5afc" x="47.962344" y="261.383281" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_28">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="265.182109" transform="rotate(-0 40.962344 265.182109)">1.9</text>
+     </g>
+    </g>
+    <g id="text_29">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="312.998242" transform="rotate(-90 18.656875 312.998242)">expected shaped reward (trained on)</text>
+    </g>
+   </g>
+   <g id="line2d_36">
+    <path d="M 71.473146 369.79771  L 75.424542 367.13035  L 79.375937 364.570191  L 83.327332 361.475661  L 87.278728 359.140536  L 91.230123 356.897113  L 95.181519 353.508655  L 99.132914 351.482466  L 103.084309 349.532839  L 107.035705 347.655979  L 110.9871 343.933727  L 114.938496 340.085967  L 118.889891 336.115275  L 122.841286 334.710765  L 126.792682 333.352437  L 130.744077 329.186348  L 134.695473 328.002917  L 138.646868 326.855501  L 142.598263 325.742499  L 146.549659 324.662396  L 150.501054 320.289407  L 154.452449 315.835312  L 158.403845 315.026417  L 162.35524 310.498306  L 166.306636 305.929349  L 170.258031 301.342728  L 174.209426 296.764268  L 178.160822 296.361691  L 182.112217 295.966013  L 186.063613 295.57705  L 190.015008 295.194622  L 193.966403 294.818557  L 197.917799 294.44869  L 201.869194 294.084858  L 205.820589 293.726908  L 209.771985 293.374689  L 213.72338 293.028058  L 217.674776 292.686874  L 221.626171 292.351003  L 225.577566 292.020314  L 229.528962 291.694681  L 233.480357 291.373981  L 237.431753 291.058098  L 241.383148 286.603341  L 245.334543 286.354068  L 249.285939 286.108019  L 253.237334 285.865129  L 257.18873 285.625331  L 261.140125 285.388564  L 265.09152 285.154767  L 269.042916 280.844404  L 272.994311 280.663287  L 276.945706 280.484103  L 280.897102 280.306817  L 284.848497 280.131399  L 288.799893 279.957815  L 292.751288 275.823608  L 296.702683 275.691455  L 300.654079 275.560464  L 304.605474 275.430619  L 308.55687 271.489949  L 312.508265 271.392666  L 316.45966 271.296091  L 320.411056 271.200215  L 324.362451 267.476135  L 328.313847 267.405424  L 332.265242 263.906492  L 336.216637 260.642153  L 340.168033 260.605153  L 344.119428 260.5683  L 348.070823 260.531591  L 352.022219 260.495027  L 355.973614 260.458607  L 359.92501 260.422328  L 363.876405 260.386191  L 367.8278 260.350195  L 371.779196 260.314338  L 375.730591 260.27862  L 379.681987 260.24304  L 383.633382 260.207597  L 387.584777 260.17229  L 391.536173 260.137118  L 395.487568 260.102081  L 399.438963 260.067178  L 403.390359 260.032407  L 407.341754 259.997768  L 411.29315 259.96326  L 415.244545 259.928883  L 419.19594 259.894635  L 423.147336 259.860516  L 427.098731 259.826525  L 431.050127 259.79266  L 435.001522 259.758923  L 438.952917 259.72531  L 442.904313 259.691823  L 446.855708 256.745898  L 450.807104 256.722327  L 454.758499 256.698826  L 458.709894 256.675394  L 462.66129 256.652032  L 466.612685 256.628738  L 470.56408 256.605512  L 474.515476 256.582354  L 478.466871 256.559265  L 482.418267 256.536242  L 486.369662 256.513287  L 490.321057 256.490398  L 494.272453 256.467576  L 498.223848 256.444819  L 502.175244 256.422129  L 506.126639 256.399504  L 510.078034 256.376944  L 514.02943 256.354449  L 517.980825 256.332019  L 521.932221 256.309653  L 525.883616 256.28735  L 529.835011 256.265112  L 533.786407 256.242937  L 537.737802 256.220824  L 541.689197 256.198775  " clip-path="url(#p771de170c4)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.962344 375.477656  L 47.962344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="244.518828" transform="rotate(-0 47.962344 244.518828)">shaped training reward seed 11</text>
+   </g>
+  </g>
+  <g id="text_31">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 13: finite policy learning</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pcb484f2b37">
+   <rect x="47.962344" y="69.080234" width="517.237656" height="124.958828"/>
+  </clipPath>
+  <clipPath id="p771de170c4">
+   <rect x="47.962344" y="250.518828" width="517.237656" height="124.958828"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 13.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>Verifier agreement is not an independent correctness guarantee. If reward and external success share the same mistaken criterion, evaluation can repeat the training error. This experiment keeps them separate precisely to make that mismatch inspectable.</p>
+<p>Reward shaping is another boundary. Potential differences can preserve optimal behavior under their assumptions, but arbitrary terminal bonuses do not inherit that guarantee. The transfer case assigns potential 2 to the zero-reward action, giving it shaped reward 2 against the other action's reward 1. Training can then favor external failure.</p>
+<p>This runtime trains only a one-step finite policy. It does not train a language model or claim convergence of a general agent. Multi-step return estimation, function approximation, safety constraints, and deployment shifts need additional models and evidence. Record all seeds and evaluation counts rather than presenting one policy snapshot as a universal result.</p>
+<pre><code>changed_inputs = {&#x27;rewards&#x27;: [2, 1],
+ &#x27;success_probabilities&#x27;: [0.9, 0.2],
+ &#x27;terminal_potentials&#x27;: [0, 0],
+ &#x27;episodes&#x27;: 120,
+ &#x27;seeds&#x27;: [3, 11],
+ &#x27;learning_rate&#x27;: 0.08,
+ &#x27;discount&#x27;: 1,
+ &#x27;evaluation_runs&#x27;: 200}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 13: finite-policy-learning
+Does optimizing the verifier reward improve the external task?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;runs&quot;: [
+    {
+      &quot;seed&quot;: 3,
+      &quot;policy&quot;: [
+        0.956006131,
+        0.04399386903
+      ],
+      &quot;expected_training_reward&quot;: 1.956006131,
+      &quot;expected_shaped_reward&quot;: 1.956006131,
+      &quot;expected_external_success&quot;: 0.8692042917,
+      &quot;independent_evaluation_rate&quot;: 0.885,
+      &quot;evaluation_n&quot;: 200
+    },
+    {
+      &quot;seed&quot;: 11,
+      &quot;policy&quot;: [
+        0.9454970276,
+        0.0545029724
+      ],
+      &quot;expected_training_reward&quot;: 1.945497028,
+      &quot;expected_shaped_reward&quot;: 1.945497028,
+      &quot;expected_external_success&quot;: 0.8618479193,
+      &quot;independent_evaluation_rate&quot;: 0.88,
+      &quot;evaluation_n&quot;: 200
+    }
+  ],
+  &quot;policy_invariant_shaping_condition&quot;: true,
+  &quot;verifier_optimal_action&quot;: 0,
+  &quot;shaped_rewards&quot;: [
+    2.0,
+    1.0
+  ],
+  &quot;shaped_optimal_action&quot;: 0,
+  &quot;training_objective_conflicts_with_task&quot;: false,
+  &quot;task_optimal_action&quot;: 0
+}
+
+Interpretation:
+REINFORCE updates softmax logits from sampled actions and a baseline, using the shaped reward (verifier reward plus discount times terminal potential). verifier_optimal_action ranks the unshaped rewards, shaped_optimal_action ranks the rewards actually trained on, and expected_training_reward is the unshaped expectation while expected_shaped_reward is the trained one. Independent evaluation uses a separate seeded stream and external success probabilities.
+
+Assumptions:
+- One-step finite policy; rewards are deterministic after each chosen action.
+- Potential shaping is gamma times the supplied terminal potential with zero initial potential.
+- Zero terminal potential preserves the episodic objective.
+
+Limitations:
+- Nonzero terminal potentials can change the objective.
+- Verifier reward improvement need not improve external task success.
+- Constructed success probabilities are not learned from actual deployments.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  L 565.2 69.080234  L 47.962344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mb819e85cef" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mb819e85cef" x="71.473146" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="208.636719" transform="rotate(-0 71.473146 208.636719)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mb819e85cef" x="150.501054" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="150.501054" y="208.636719" transform="rotate(-0 150.501054 208.636719)">20</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#mb819e85cef" x="229.528962" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="229.528962" y="208.636719" transform="rotate(-0 229.528962 208.636719)">40</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mb819e85cef" x="308.55687" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.55687" y="208.636719" transform="rotate(-0 308.55687 208.636719)">60</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#mb819e85cef" x="387.584777" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.584777" y="208.636719" transform="rotate(-0 387.584777 208.636719)">80</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#mb819e85cef" x="466.612685" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="466.612685" y="208.636719" transform="rotate(-0 466.612685 208.636719)">100</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#mb819e85cef" x="545.640593" y="194.039062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="545.640593" y="208.636719" transform="rotate(-0 545.640593 208.636719)">120</text>
+     </g>
+    </g>
+    <g id="text_8">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="222.6375" transform="rotate(-0 306.581172 222.6375)">episode</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_8">
+      <path d="M 47.962344 190.905795  L 565.2 190.905795  " clip-path="url(#p06731e54b3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <defs>
+       <path id="mf4bf654d01" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="190.905795" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="194.704623" transform="rotate(-0 40.962344 194.704623)">1.5</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_10">
+      <path d="M 47.962344 165.435608  L 565.2 165.435608  " clip-path="url(#p06731e54b3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="165.435608" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="169.234436" transform="rotate(-0 40.962344 169.234436)">1.6</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_12">
+      <path d="M 47.962344 139.965421  L 565.2 139.965421  " clip-path="url(#p06731e54b3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="139.965421" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="143.764249" transform="rotate(-0 40.962344 143.764249)">1.7</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_14">
+      <path d="M 47.962344 114.495234  L 565.2 114.495234  " clip-path="url(#p06731e54b3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="114.495234" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="118.294062" transform="rotate(-0 40.962344 118.294062)">1.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_16">
+      <path d="M 47.962344 89.025047  L 565.2 89.025047  " clip-path="url(#p06731e54b3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="89.025047" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="92.823875" transform="rotate(-0 40.962344 92.823875)">1.9</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="131.559648" transform="rotate(-90 18.656875 131.559648)">expected shaped reward (trained on)</text>
+    </g>
+   </g>
+   <g id="line2d_18">
+    <path d="M 71.473146 188.359116  L 75.424542 185.711755  L 79.375937 183.374177  L 83.327332 180.531228  L 87.278728 177.578258  L 91.230123 175.562363  L 95.181519 173.624476  L 99.132914 170.411756  L 103.084309 168.669042  L 107.035705 166.990839  L 110.9871 163.543305  L 114.938496 162.04972  L 118.889891 158.440132  L 122.841286 157.121886  L 126.792682 153.364426  L 130.744077 152.211223  L 134.695473 151.094129  L 138.646868 147.178329  L 142.598263 146.212482  L 146.549659 142.189865  L 150.501054 141.363303  L 154.452449 140.558762  L 158.403845 136.440321  L 162.35524 135.760557  L 166.306636 135.097153  L 170.258031 134.449509  L 174.209426 130.266103  L 178.160822 129.727066  L 182.112217 129.19947  L 186.063613 124.996562  L 190.015008 124.563543  L 193.966403 120.374518  L 197.917799 120.023793  L 201.869194 115.879302  L 205.820589 115.599123  L 209.771985 111.529923  L 213.72338 107.559798  L 217.674776 107.386215  L 221.626171 107.214535  L 225.577566 107.044725  L 229.528962 103.219205  L 233.480357 103.08944  L 237.431753 102.960866  L 241.383148 102.833465  L 245.334543 102.707221  L 249.285939 102.582115  L 253.237334 102.458133  L 257.18873 102.335257  L 261.140125 102.213471  L 265.09152 98.58802  L 269.042916 98.496661  L 272.994311 95.058315  L 276.945706 94.990802  L 280.897102 91.756802  L 284.848497 91.707644  L 288.799893 91.658731  L 292.751288 91.610063  L 296.702683 88.59987  L 300.654079 85.811934  L 304.605474 85.787129  L 308.55687 85.762405  L 312.508265 85.73776  L 316.45966 85.713195  L 320.411056 85.688709  L 324.362451 85.664301  L 328.313847 85.639972  L 332.265242 85.61572  L 336.216637 83.070252  L 340.168033 83.053332  L 344.119428 83.036455  L 348.070823 83.01962  L 352.022219 83.002828  L 355.973614 82.986078  L 359.92501 82.96937  L 363.876405 82.952705  L 367.8278 82.93608  L 371.779196 82.919497  L 375.730591 82.902956  L 379.681987 82.886456  L 383.633382 82.869997  L 387.584777 82.853578  L 391.536173 80.55281  L 395.487568 80.541509  L 399.438963 78.460977  L 403.390359 78.453289  L 407.341754 78.445612  L 411.29315 78.437946  L 415.244545 78.430292  L 419.19594 78.42265  L 423.147336 78.415019  L 427.098731 78.4074  L 431.050127 78.399792  L 435.001522 78.392196  L 438.952917 78.384611  L 442.904313 78.377037  L 446.855708 76.515722  L 450.807104 76.510627  L 454.758499 76.505537  L 458.709894 76.500453  L 462.66129 76.495375  L 466.612685 76.490303  L 470.56408 76.485237  L 474.515476 76.480177  L 478.466871 76.475122  L 482.418267 76.470074  L 486.369662 76.465031  L 490.321057 76.459994  L 494.272453 76.454962  L 498.223848 76.449937  L 502.175244 76.444917  L 506.126639 74.790164  L 510.078034 74.786821  L 514.02943 74.783481  L 517.980825 74.780143  L 521.932221 74.776809  L 525.883616 74.773478  L 529.835011 74.770149  L 533.786407 74.766824  L 537.737802 74.763501  L 541.689197 74.760181  " clip-path="url(#p06731e54b3)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 194.039062  L 47.962344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 194.039062  L 565.2 194.039062  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="63.080234" transform="rotate(-0 47.962344 63.080234)">shaped training reward seed 3</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  L 565.2 250.518828  L 47.962344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_8">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#mb819e85cef" x="71.473146" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="390.075312" transform="rotate(-0 71.473146 390.075312)">0</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#mb819e85cef" x="150.501054" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="150.501054" y="390.075312" transform="rotate(-0 150.501054 390.075312)">20</text>
+     </g>
+    </g>
+    <g id="xtick_10">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#mb819e85cef" x="229.528962" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="229.528962" y="390.075312" transform="rotate(-0 229.528962 390.075312)">40</text>
+     </g>
+    </g>
+    <g id="xtick_11">
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#mb819e85cef" x="308.55687" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="308.55687" y="390.075312" transform="rotate(-0 308.55687 390.075312)">60</text>
+     </g>
+    </g>
+    <g id="xtick_12">
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#mb819e85cef" x="387.584777" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.584777" y="390.075312" transform="rotate(-0 387.584777 390.075312)">80</text>
+     </g>
+    </g>
+    <g id="xtick_13">
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#mb819e85cef" x="466.612685" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="466.612685" y="390.075312" transform="rotate(-0 466.612685 390.075312)">100</text>
+     </g>
+    </g>
+    <g id="xtick_14">
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#mb819e85cef" x="545.640593" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="545.640593" y="390.075312" transform="rotate(-0 545.640593 390.075312)">120</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="404.076094" transform="rotate(-0 306.581172 404.076094)">episode</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_26">
+      <path d="M 47.962344 372.405843  L 565.2 372.405843  " clip-path="url(#p12d903cdf2)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="372.405843" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_24">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="376.204671" transform="rotate(-0 40.962344 376.204671)">1.5</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_28">
+      <path d="M 47.962344 346.32103  L 565.2 346.32103  " clip-path="url(#p12d903cdf2)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="346.32103" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_25">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="350.119858" transform="rotate(-0 40.962344 350.119858)">1.6</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_30">
+      <path d="M 47.962344 320.236216  L 565.2 320.236216  " clip-path="url(#p12d903cdf2)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_31">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="320.236216" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_26">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="324.035044" transform="rotate(-0 40.962344 324.035044)">1.7</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_32">
+      <path d="M 47.962344 294.151403  L 565.2 294.151403  " clip-path="url(#p12d903cdf2)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_33">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="294.151403" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_27">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="297.950231" transform="rotate(-0 40.962344 297.950231)">1.8</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_34">
+      <path d="M 47.962344 268.06659  L 565.2 268.06659  " clip-path="url(#p12d903cdf2)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_35">
+      <g>
+       <use xlink:href="#mf4bf654d01" x="47.962344" y="268.06659" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_28">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="271.865418" transform="rotate(-0 40.962344 271.865418)">1.9</text>
+     </g>
+    </g>
+    <g id="text_29">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="312.998242" transform="rotate(-90 18.656875 312.998242)">expected shaped reward (trained on)</text>
+    </g>
+   </g>
+   <g id="line2d_36">
+    <path d="M 71.473146 369.79771  L 75.424542 367.086464  L 79.375937 364.2685  L 83.327332 361.987023  L 87.278728 359.795914  L 91.230123 356.695786  L 95.181519 354.710996  L 99.132914 352.802176  L 103.084309 349.442742  L 107.035705 345.964543  L 110.9871 344.378823  L 114.938496 342.849344  L 118.889891 341.373358  L 122.841286 337.630677  L 126.792682 333.77755  L 130.744077 332.602222  L 134.695473 328.615509  L 138.646868 324.536625  L 142.598263 323.634981  L 146.549659 322.758137  L 150.501054 321.905076  L 154.452449 321.074832  L 158.403845 320.266489  L 162.35524 319.479181  L 166.306636 318.712083  L 170.258031 317.964412  L 174.209426 317.235424  L 178.160822 316.524413  L 182.112217 315.830705  L 186.063613 311.556033  L 190.015008 310.976869  L 193.966403 310.410327  L 197.917799 309.855984  L 201.869194 309.313435  L 205.820589 308.782294  L 209.771985 308.262189  L 213.72338 303.958216  L 217.674776 299.671491  L 221.626171 295.428901  L 225.577566 295.14401  L 229.528962 294.863261  L 233.480357 294.586559  L 237.431753 294.313812  L 241.383148 294.044931  L 245.334543 293.779827  L 249.285939 293.518418  L 253.237334 289.390271  L 257.18873 289.185594  L 261.140125 285.177087  L 265.09152 281.310129  L 269.042916 281.188808  L 272.994311 281.06854  L 276.945706 277.379271  L 280.897102 277.289226  L 284.848497 273.794118  L 288.799893 273.727705  L 292.751288 273.661687  L 296.702683 273.596061  L 300.654079 273.530823  L 304.605474 273.46597  L 308.55687 273.401497  L 312.508265 273.337402  L 316.45966 270.078385  L 320.411056 270.031881  L 324.362451 269.985597  L 328.313847 269.939534  L 332.265242 269.893688  L 336.216637 269.848058  L 340.168033 269.802642  L 344.119428 269.757439  L 348.070823 269.712448  L 352.022219 269.667666  L 355.973614 269.623092  L 359.92501 269.578724  L 363.876405 269.534561  L 367.8278 269.490602  L 371.779196 269.446844  L 375.730591 269.403286  L 379.681987 269.359927  L 383.633382 269.316766  L 387.584777 266.334299  L 391.536173 266.303527  L 395.487568 266.272866  L 399.438963 266.242318  L 403.390359 266.211881  L 407.341754 266.181554  L 411.29315 266.151337  L 415.244545 266.121229  L 419.19594 266.09123  L 423.147336 263.358271  L 427.098731 263.337194  L 431.050127 263.316176  L 435.001522 263.295219  L 438.952917 263.274321  L 442.904313 263.253484  L 446.855708 263.232705  L 450.807104 263.211986  L 454.758499 263.191325  L 458.709894 263.170723  L 462.66129 263.150179  L 466.612685 263.129692  L 470.56408 263.109264  L 474.515476 260.62969  L 478.466871 260.615536  L 482.418267 260.601414  L 486.369662 260.587323  L 490.321057 260.573263  L 494.272453 260.559234  L 498.223848 260.545236  L 502.175244 260.531269  L 506.126639 260.517332  L 510.078034 260.503426  L 514.02943 260.489551  L 517.980825 258.251149  L 521.932221 258.241657  L 525.883616 256.22441  L 529.835011 256.217988  L 533.786407 256.211575  L 537.737802 256.205171  L 541.689197 256.198775  " clip-path="url(#p12d903cdf2)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.962344 375.477656  L 47.962344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.962344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_30">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="244.518828" transform="rotate(-0 47.962344 244.518828)">shaped training reward seed 11</text>
+   </g>
+  </g>
+  <g id="text_31">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 13: finite policy learning</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p06731e54b3">
+   <rect x="47.962344" y="69.080234" width="517.237656" height="124.958828"/>
+  </clipPath>
+  <clipPath id="p12d903cdf2">
+   <rect x="47.962344" y="250.518828" width="517.237656" height="124.958828"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 13.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>In the transfer case, action 0 has unshaped reward 0 and external success 0, but terminal potential 2 makes its shaped reward 2. Action 1 has reward 1 and success 1. The shaping condition is false, so the learner is trained on shaped rewards [2, 1] while the external task prefers action 1. Read the fields by name: verifier_optimal_action ranks the unshaped rewards and still says action 1, but shaped_optimal_action ranks the rewards the optimizer actually uses and says action 0, and training_objective_conflicts_with_task is true. expected_training_reward is the unshaped expectation, while expected_shaped_reward is the quantity the plotted curves track and the one that rises. Predict that conflict before inspecting the seeded curves.</p>
+<p>For a compatible local experiment, use a finite declared action set and an independently defined success predicate. Keep evaluation evidence outside reward adaptation. If the real question concerns a trajectory policy, treat this laboratory as a mechanics check and specify the missing return, state, and evaluation contracts before claiming broader learning capability.</p>
+<pre><code>transfer_inputs = {&#x27;rewards&#x27;: [0, 1],
+ &#x27;success_probabilities&#x27;: [0, 1],
+ &#x27;terminal_potentials&#x27;: [2, 0],
+ &#x27;episodes&#x27;: 100,
+ &#x27;seeds&#x27;: [7, 17],
+ &#x27;learning_rate&#x27;: 0.1,
+ &#x27;discount&#x27;: 1,
+ &#x27;evaluation_runs&#x27;: 100}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 13: finite-policy-learning
+Does optimizing the verifier reward improve the external task?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;runs&quot;: [
+    {
+      &quot;seed&quot;: 7,
+      &quot;policy&quot;: [
+        0.922620852,
+        0.077379148
+      ],
+      &quot;expected_training_reward&quot;: 0.077379148,
+      &quot;expected_shaped_reward&quot;: 1.922620852,
+      &quot;expected_external_success&quot;: 0.077379148,
+      &quot;independent_evaluation_rate&quot;: 0.09,
+      &quot;evaluation_n&quot;: 100
+    },
+    {
+      &quot;seed&quot;: 17,
+      &quot;policy&quot;: [
+        0.9433388176,
+        0.05666118237
+      ],
+      &quot;expected_training_reward&quot;: 0.05666118237,
+      &quot;expected_shaped_reward&quot;: 1.943338818,
+      &quot;expected_external_success&quot;: 0.05666118237,
+      &quot;independent_evaluation_rate&quot;: 0.09,
+      &quot;evaluation_n&quot;: 100
+    }
+  ],
+  &quot;policy_invariant_shaping_condition&quot;: false,
+  &quot;verifier_optimal_action&quot;: 1,
+  &quot;shaped_rewards&quot;: [
+    2.0,
+    1.0
+  ],
+  &quot;shaped_optimal_action&quot;: 0,
+  &quot;training_objective_conflicts_with_task&quot;: true,
+  &quot;task_optimal_action&quot;: 1
+}
+
+Interpretation:
+REINFORCE updates softmax logits from sampled actions and a baseline, using the shaped reward (verifier reward plus discount times terminal potential). verifier_optimal_action ranks the unshaped rewards, shaped_optimal_action ranks the rewards actually trained on, and expected_training_reward is the unshaped expectation while expected_shaped_reward is the trained one. Independent evaluation uses a separate seeded stream and external success probabilities.
+
+Assumptions:
+- One-step finite policy; rewards are deterministic after each chosen action.
+- Potential shaping is gamma times the supplied terminal potential with zero initial potential.
+- Zero terminal potential preserves the episodic objective.
+
+Limitations:
+- Nonzero terminal potentials can change the objective.
+- Verifier reward improvement need not improve external task success.
+- Constructed success probabilities are not learned from actual deployments.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>rewards:</strong> Finite verifier reward per one-step action.</li>
+<li><strong>success_probabilities:</strong> External success chance per action in [0,1].</li>
+<li><strong>terminal_potentials:</strong> Potential value of each terminal action outcome; zero is the episodic invariant condition.</li>
+<li><strong>episodes:</strong> Bounded training sample count 1..10000.</li>
+<li><strong>seeds:</strong> Nonempty integer seed list.</li>
+<li><strong>learning_rate:</strong> Logit step size in [0,1].</li>
+<li><strong>discount:</strong> Gamma in [0,1].</li>
+<li><strong>evaluation_runs:</strong> Positive separate evaluation count.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch13.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 13: finite-policy-learning
+Does optimizing the verifier reward improve the external task?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;runs&quot;: [
+    {
+      &quot;seed&quot;: 7,
+      &quot;policy&quot;: [
+        0.922620852,
+        0.077379148
+      ],
+      &quot;expected_training_reward&quot;: 0.077379148,
+      &quot;expected_shaped_reward&quot;: 1.922620852,
+      &quot;expected_external_success&quot;: 0.077379148,
+      &quot;independent_evaluation_rate&quot;: 0.09,
+      &quot;evaluation_n&quot;: 100
+    },
+    {
+      &quot;seed&quot;: 17,
+      &quot;policy&quot;: [
+        0.9433388176,
+        0.05666118237
+      ],
+      &quot;expected_training_reward&quot;: 0.05666118237,
+      &quot;expected_shaped_reward&quot;: 1.943338818,
+      &quot;expected_external_success&quot;: 0.05666118237,
+      &quot;independent_evaluation_rate&quot;: 0.09,
+      &quot;evaluation_n&quot;: 100
+    }
+  ],
+  &quot;policy_invariant_shaping_condition&quot;: false,
+  &quot;verifier_optimal_action&quot;: 1,
+  &quot;shaped_rewards&quot;: [
+    2.0,
+    1.0
+  ],
+  &quot;shaped_optimal_action&quot;: 0,
+  &quot;training_objective_conflicts_with_task&quot;: true,
+  &quot;task_optimal_action&quot;: 1
+}
+
+Interpretation:
+REINFORCE updates softmax logits from sampled actions and a baseline, using the shaped reward (verifier reward plus discount times terminal potential). verifier_optimal_action ranks the unshaped rewards, shaped_optimal_action ranks the rewards actually trained on, and expected_training_reward is the unshaped expectation while expected_shaped_reward is the trained one. Independent evaluation uses a separate seeded stream and external success probabilities.
+
+Assumptions:
+- One-step finite policy; rewards are deterministic after each chosen action.
+- Potential shaping is gamma times the supplied terminal potential with zero initial potential.
+- Zero terminal potential preserves the episodic objective.
+
+Limitations:
+- Nonzero terminal potentials can change the objective.
+- Verifier reward improvement need not improve external task success.
+- Constructed success probabilities are not learned from actual deployments.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Compute initial default external success.</p>
+</li>
+<li>
+<p>Which action has the highest default verifier reward?</p>
+</li>
+<li>
+<p>What are transfer shaped rewards?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch13.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>REINFORCE can optimize a declared finite reward while worsening the external task. This notebook performs real sampled logit updates, repeated seeds, and separate evaluation. The changed case aligns objectives; the transfer case breaks an episodic shaping condition. Track policy normalization, verifier reward, and external success separately. Improvement means improvement of a named objective under a stated experiment, not general agent competence.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-13-finite-policy-learning/SKILL.md"><code>maa-13-finite-policy-learning</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 13.1</h3>
+<p><img alt="Equation 13.1" src="../../assets/math/e8b63b917b0cd273f2b0.svg" /></p>
+<p>Equation (13.1) separates observations, sampled actions, rewards, terminal condition, and return-to-go.</p>
+<p>Observe, choose action, receive reward and next observation; stop at terminal <code>o_T</code>.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\tau=(o_0,a_0,r_0,o_1,a_1,r_1,\ldots,o_T),
+\qquad G_t=\sum_{k=t}^{T-1}\gamma^{k-t}r_k.
+\tag{13.1}
+</code></pre>
+<h3>Equation 13.2</h3>
+<p><img alt="Equation 13.2" src="../../assets/math/5057a181c49bf1e087f0.svg" /></p>
+<p>Equation (13.2) estimates how changing action probabilities changes expected trajectory return.</p>
+<p>Raise probability of sampled actions in proportion to discounted return-to-go, averaged over trajectories.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\nabla_\phi J(\phi)=\operatorname E_{\tau\sim\pi_\phi}\!\left[
+\sum_{t=0}^{T-1}\gamma^t\nabla_\phi\log \pi_\phi(a_t\mid o_t)\,G_t
+\right].
+\tag{13.2}
+</code></pre>
+<h3>Equation 13.3</h3>
+<p><img alt="Equation 13.3" src="../../assets/math/fa10db71513b077b1f44.svg" /></p>
+<p>Equation (13.3) moves some feedback between stages through a stated state potential.</p>
+<p>Add the discounted potential of the next state and subtract the potential of the state just left.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">r'_t=r_t+\gamma\operatorname{Pot}(x_{t+1})-\operatorname{Pot}(x_t).
+\tag{13.3}
+</code></pre>
+<h3>Equation 13.4</h3>
+<p><img alt="Equation 13.4" src="../../assets/math/c2a7371dff0313500054.svg" /></p>
+<p>Equation (13.4) shows exactly which terms remain after intermediate potential changes cancel.</p>
+<p>Interior potentials telescope away; the initial and discounted terminal potentials survive.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">G'_0
+=
+G_0-\operatorname{Pot}(x_0)
++\gamma^T\operatorname{Pot}(x_T).
+\tag{13.4}
+</code></pre></body></html>

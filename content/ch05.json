@@ -1,0 +1,1037 @@
+{
+  "slug": "composite-kernel",
+  "question": "What system does a frozen chooser become when its surrounding kernel changes?",
+  "outcome": "Compose a chooser and tool kernel, then separate marginal from trajectory reliability.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "The model chooses an action, but the tool determines what that action does. Changing the tool can therefore change the assembled agent while the chooser stays fixed. The same applies to memory, observations, and recurrence: the model is one factor in a stochastic system, not the whole system boundary.\n\nThis notebook composes a small chooser matrix with a tool matrix and follows the resulting state distribution over repeated transitions. Beside that kernel experiment, it compares two reliability constructions with identical marginal step success. One has independent step outcomes; the other has a single shared good-or-bad condition. Their disagreement makes a practical point: multiplying average step rates is not justified merely because the averages look reassuring.",
+  "math_explanation": "Let C(i,a) be the chooser probability of action a in state i, and T(a,j) the tool probability of next state j after that action. The composed kernel is K(i,j)=sum_a C(i,a)T(a,j). Its rows sum to one when both factors are normalized. A row-vector state distribution evolves as mu_(t+1)=mu_t K.\n\nThis finite factorization deliberately omits state-dependent tool effects beyond the declared action encoding. To model them, enlarge the state/action representation rather than silently crediting the chooser with tool behavior. The changed tool kernel leaves C fixed, so any distributional difference is attributable to that controlled factor change inside this construction.\n\nFor reliability, independent equal-probability steps give P(all n succeed)=p^n. A shared condition that makes every step succeed together with probability p gives P(all n succeed)=p. Both have marginal step success p. The general chain rule is the product of conditional probabilities P(S_t|S_1,...,S_(t-1)); supplied marginals are not those conditionals.\n\nThe conditional_success vector is therefore a separate input. Its product describes its own declared trajectory law and need not have the same length or dependence structure as the plotted equal-step cases. None of these constructed distributions predicts a real agent without corresponding evidence.\n\nThe assembly comparison makes the remaining system factors explicit. O maps state to observed context; M maps observed context through the declared memory transform; R applies the retrieval transform; C is the same frozen chooser; T supplies the tool effect. The assembly kernel is O M R C T. Every row-stochastic product remains row stochastic. These finite maps are a construction, not a representation learned from documents. The state and context encoding must contain whatever history matters for the intended Markov boundary.",
+  "method": "Supply normalized chooser rows, normalized tool rows, and an initial state distribution. The chooser's action dimension must match the tool's row count, and the tool's next-state dimension must match the chooser's state count. The function multiplies the factors, then propagates the initial distribution for the declared number of steps.\n\nThe state-zero occupancy chart shows recurrence under the composite kernel. The two reliability charts use transition count on the horizontal axis and all-step success probability on the vertical axis. They are separate constructions, not estimates from the occupancy curve. Change the tool matrix while keeping the chooser fixed, then compare terminal state distributions. Use the explicit conditional vector to check the chain rule independently by hand.\n\nCompare five assemblies: complete context, blurred memory, blurred retrieval, blurred observation, and a single-transition controller. Their declared resource allowances match in the default case. A blurred map sends either context to the same equal mixture, erasing its distinction before the fixed chooser acts. The recurrence comparison changes transition count while reserving the same allowance; it does not claim equal consumed work. Read assembly_budgets_matched and assembly_depths_matched before attributing an observed difference to one factor. The transfer case deliberately breaks budget equality.",
+  "worked_interpretation": "With p=0.99 and n=100, independent all-step success is about 0.366. Under the shared condition, all-step success is 0.99. The per-step marginals are identical. That contrast rules out treating a marginal success rate as enough information to determine long-run completion.\n\nThe default composed first row is [0.76,0.24]: action-zero contribution is 0.8 times [0.9,0.1], and action-one contribution is 0.2 times [0.2,0.8]. In the changed case this row becomes [0.50,0.50] because only the tool factor changes. The frozen chooser now participates in a different recurrent system, even though its own probabilities are unchanged.",
+  "failure_explanation": "A product of marginal rates can be exact in an independent construction and seriously wrong under shared failures. It can also be pessimistic when the workflow detects, retries, or recovers from errors. This notebook does not include recovery, so its all-step event should not be renamed authorized confirmed terminal completion.\n\nA composite kernel can also fail through a state boundary that omits information needed for the next transition. If memory version or tool state affects outcomes, but neither appears in the current state, the supplied kernel may not describe a Markov process. Adding more recurrence iterations will not repair that omission.\n\nThe changed case is a controlled mechanism experiment, not a fitted explanation of empirical behavior. Real ablations need matched budgets, observations, and task populations. Preserve those conditions before claiming that one surrounding component accounts for measured agent improvement.\n\nThe optional assembly table supplies observation, memory and retrieval ablations alongside recurrence. A changed terminal distribution identifies the consequence of the stipulated map within this construction. It does not show that a real memory or retrieval mechanism has the same effect. Different budgets or transition depths change the comparison contract and must be reported; the transfer table exposes a mismatched budget.",
+  "transfer_explanation": "The transfer case uses three conditional probabilities 0.9,0.8,0.7. Their chain-rule product is 0.504. The equal marginal independent construction gives 0.9^3=0.729, while the shared construction gives 0.9. They answer different distributional questions.\n\nFor a local controller, specify the complete state sufficient for one transition, then identify the chooser and effect boundary. If data provide only run-level completions, route them to the evaluation method instead of manufacturing a step kernel. If they provide uncertain tool acknowledgements, use an effect trace. The right reliability calculation follows the available evidence, not the presence of a convenient average.",
+  "summary": "An assembled agent has a composite transition kernel. A fixed chooser can behave differently when tool effects change, and recurrence exposes those differences over time. Trajectory reliability depends on joint or conditional structure: equal marginal rates support neither independence nor a universal ceiling. Keep kernel composition, independent construction, shared-condition construction, and chain-rule inputs distinct. The notebook calculates each honestly, while leaving recovery and empirical calibration outside its implemented boundary. The optional factor table holds the chooser fixed while inspecting context transformations and recurrence, and reports allowance and depth comparability explicitly.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "step_success": 0.99,
+    "steps": 100,
+    "conditional_success": [
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99
+    ],
+    "chooser": [
+      [
+        0.8,
+        0.2
+      ],
+      [
+        0.3,
+        0.7
+      ]
+    ],
+    "tool": [
+      [
+        0.9,
+        0.1
+      ],
+      [
+        0.2,
+        0.8
+      ]
+    ],
+    "initial": [
+      1,
+      0
+    ],
+    "assemblies": [
+      {
+        "name": "complete",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ]
+      },
+      {
+        "name": "memory blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ]
+      },
+      {
+        "name": "retrieval blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "tool": [
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ]
+      },
+      {
+        "name": "observation blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ]
+      },
+      {
+        "name": "single transition",
+        "budget": 100,
+        "steps": 1,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ]
+      }
+    ]
+  },
+  "changed": {
+    "step_success": 0.99,
+    "steps": 100,
+    "conditional_success": [
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99
+    ],
+    "chooser": [
+      [
+        0.8,
+        0.2
+      ],
+      [
+        0.3,
+        0.7
+      ]
+    ],
+    "tool": [
+      [
+        0.6,
+        0.4
+      ],
+      [
+        0.1,
+        0.9
+      ]
+    ],
+    "initial": [
+      1,
+      0
+    ],
+    "assemblies": [
+      {
+        "name": "complete",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.6,
+            0.4
+          ],
+          [
+            0.1,
+            0.9
+          ]
+        ]
+      },
+      {
+        "name": "memory blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.6,
+            0.4
+          ],
+          [
+            0.1,
+            0.9
+          ]
+        ]
+      },
+      {
+        "name": "retrieval blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "tool": [
+          [
+            0.6,
+            0.4
+          ],
+          [
+            0.1,
+            0.9
+          ]
+        ]
+      },
+      {
+        "name": "observation blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.6,
+            0.4
+          ],
+          [
+            0.1,
+            0.9
+          ]
+        ]
+      },
+      {
+        "name": "single transition",
+        "budget": 100,
+        "steps": 1,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.6,
+            0.4
+          ],
+          [
+            0.1,
+            0.9
+          ]
+        ]
+      }
+    ]
+  },
+  "transfer": {
+    "step_success": 0.9,
+    "steps": 3,
+    "conditional_success": [
+      0.9,
+      0.8,
+      0.7
+    ],
+    "chooser": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        1
+      ]
+    ],
+    "tool": [
+      [
+        0.7,
+        0.3
+      ],
+      [
+        0.4,
+        0.6
+      ]
+    ],
+    "initial": [
+      0.5,
+      0.5
+    ],
+    "assemblies": [
+      {
+        "name": "complete",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ]
+      },
+      {
+        "name": "memory blurred",
+        "budget": 120,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ]
+      },
+      {
+        "name": "retrieval blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "tool": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ]
+      },
+      {
+        "name": "observation blurred",
+        "budget": 100,
+        "steps": 10,
+        "observation": [
+          [
+            0.5,
+            0.5
+          ],
+          [
+            0.5,
+            0.5
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ]
+      },
+      {
+        "name": "single transition",
+        "budget": 100,
+        "steps": 1,
+        "observation": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "memory": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "retrieval": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tool": [
+          [
+            0.7,
+            0.3
+          ],
+          [
+            0.4,
+            0.6
+          ]
+        ]
+      }
+    ]
+  },
+  "input_fields": {
+    "step_success": "Marginal equal-step probability in [0,1] for separate constructed reliability cases.",
+    "steps": "Positive integer transition count up to 1000.",
+    "conditional_success": "List of probabilities conditioned on all previous steps succeeding, one per step; its length must equal steps.",
+    "chooser": "State by action row-stochastic matrix.",
+    "tool": "Action by next-state row-stochastic matrix.",
+    "initial": "Normalized state distribution matching the composed kernel.",
+    "assemblies": "Optional rows with name,budget,steps,observation,memory,retrieval,tool. Context maps are square stochastic matrices in the declared context encoding. Chooser stays fixed. Resource allowances must share units; actual consumed work is not measured."
+  },
+  "exercises": [
+    {
+      "question": "Compute the default first kernel row.",
+      "answer": "[0.8*0.9+0.2*0.2,0.8*0.1+0.2*0.8]=[0.76,0.24]."
+    },
+    {
+      "question": "Why can an independent-step model and a shared good-or-bad-condition model both have step marginals p?",
+      "answer": "They describe independent step failures and one shared good/bad condition, respectively."
+    },
+    {
+      "question": "Compute the transfer conditional product.",
+      "answer": "0.9*0.8*0.7=0.504."
+    }
+  ],
+  "routes": [
+    "compose frozen chooser tool kernel",
+    "conditional versus marginal trajectory reliability",
+    "shared failure long-run construction"
+  ],
+  "acceptance_checks": [
+    "Kernel rows remain normalized.",
+    "Independent 100-step case is approximately 0.366.",
+    "Changed tool alters occupancy with fixed chooser.",
+    "All composed kernels have normalized rows.",
+    "The transfer assembly comparison reports unequal resource allowances.",
+    "Different transition depths are reported instead of treated as identical recurrences."
+  ]
+}

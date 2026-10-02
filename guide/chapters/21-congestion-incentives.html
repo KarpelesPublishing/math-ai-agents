@@ -1,0 +1,677 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>21-congestion-incentives</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 21: Markets, Teams, and Institutions</h1>
+<p>A team adds a shortcut between two workflow stages. Every participant sees a privately attractive route, yet their collective routing can increase delay. The missing ingredient is congestion: each choice changes the cost other participants face.</p>
+<p>This notebook solves a symmetric continuous-flow Braess construction. Two outer routes share a new shortcut route, with linear congestion and fixed delays. It calculates private equilibrium and total social travel time, then compares a toll intervention and an exact social optimum. The example is a declared institution model. It does not estimate a real market or suggest that every new workflow interface causes a paradox.</p>
+<p><strong>Outcome:</strong> Compare Braess equilibrium, social optimum, tolls, and overhead.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>Let total demand be D. Symmetry assigns x to each outer route and z to the shortcut, so 2x+z=D. Each congestible edge carries x+z and takes time v=(x+z)/capacity. Outer path time is v+c; shortcut time is 2v+overhead. The shortcut also pays a private toll.</p>
+<p>At an interior equilibrium, used routes have equal private cost. Solving v+c=2v+overhead+toll gives z=2 capacity(c-overhead-toll)-D, clipped to [0,D]. Boundary clipping handles unused outer or shortcut routes. Without the shortcut, outer flow is D/2 and total travel time is D[D/(2 capacity)+c].</p>
+<p>Social travel time excludes toll transfers and equals 2x(v+c)+z(2v+overhead). After substitution it is (D+z)^2/(2 capacity)+c(D-z)+overhead*z. This convex quadratic is minimized at z=capacity(c-overhead)-D, clipped to [0,D]. The price of anarchy compares equilibrium social time with that minimum, not with toll-inclusive private expense.</p>
+<h2>A calculation you can run</h2>
+<p>Declare demand, congestion capacity, outer constant delay, shortcut overhead, and toll. Validation requires positive demand and capacity and nonnegative other quantities. The function computes symmetric equilibrium flow, path costs, total delay, optimal shortcut flow, and toll revenue.</p>
+<p>The figure varies shortcut flow from zero to total demand and plots exact social travel time. Its minimum should match the reported optimum. In the changed case add toll 0.5 without changing physical travel times. Predict how it shifts equilibrium, then compare social cost. The transfer case reduces demand, checking that a shortcut need not worsen performance under every loading condition.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 21
+inputs = {&#x27;demand&#x27;: 1,
+ &#x27;capacity&#x27;: 1,
+ &#x27;constant_time&#x27;: 1,
+ &#x27;shortcut_overhead&#x27;: 0,
+ &#x27;shortcut_toll&#x27;: 0}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 21: congestion-incentives
+Can a faster-looking route make the whole workflow slower?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;without_shortcut_total_time&quot;: 1.5,
+  &quot;equilibrium_shortcut_flow&quot;: 1.0,
+  &quot;equilibrium_outer_flow_each&quot;: 0.0,
+  &quot;equilibrium_social_time&quot;: 2.0,
+  &quot;equilibrium_private_outer_time&quot;: 2.0,
+  &quot;equilibrium_private_shortcut_time&quot;: 2.0,
+  &quot;optimal_shortcut_flow&quot;: 0,
+  &quot;optimal_social_time&quot;: 1.5,
+  &quot;price_of_anarchy&quot;: 1.333333333,
+  &quot;braess_worsens&quot;: true,
+  &quot;toll_revenue&quot;: 0.0
+}
+
+Interpretation:
+A new route can change private incentives and increase total delay. Tolls enter private cost; toll payments are excluded from travel-time social cost.
+
+Assumptions:
+- Symmetric continuous flow, linear congestible edges, constant outer edges.
+- All travelers choose minimum private path cost at nonatomic equilibrium.
+
+Limitations:
+- This construction does not estimate a real workflow equilibrium.
+- Discrete teams and heterogeneous incentives need additional modeling.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>Without the shortcut, default total time is 1(0.5+1)=1.5. With a zero-cost shortcut, equilibrium sends all demand through it, giving path time 2 and total time 2. The social optimum uses no shortcut and remains at 1.5. Price of anarchy is 2/1.5=4/3.</p>
+<p>A toll 0.5 changes the equilibrium shortcut flow to zero. Outer private time is 1.5, while an unused shortcut would also cost 1.5 including toll. Total travel time returns to 1.5. The toll affects incentives; it is not counted as destroyed travel time or an extra physical delay.</p>
+<p>The toll 0.5 sits exactly at the break-even value, so this teaching case is knife-edge. At toll 0.49 the lab returns shortcut flow 0.02 and equilibrium social time 1.5002, and at 0.51 it returns flow 0 and time 1.5. Try nearby tolls to see the threshold rather than reading 0.5 as a robust remedy.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 47.962344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mc8abe2382a" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mc8abe2382a" x="71.473146" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="210.075312" transform="rotate(-0 71.473146 210.075312)">0.0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mc8abe2382a" x="165.516357" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="165.516357" y="210.075312" transform="rotate(-0 165.516357 210.075312)">0.2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#mc8abe2382a" x="259.559567" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="259.559567" y="210.075312" transform="rotate(-0 259.559567 210.075312)">0.4</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mc8abe2382a" x="353.602777" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="353.602777" y="210.075312" transform="rotate(-0 353.602777 210.075312)">0.6</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#mc8abe2382a" x="447.645987" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="447.645987" y="210.075312" transform="rotate(-0 447.645987 210.075312)">0.8</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#mc8abe2382a" x="541.689197" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="210.075312" transform="rotate(-0 541.689197 210.075312)">1.0</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="224.076094" transform="rotate(-0 306.581172 224.076094)">shortcut flow</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 47.962344 189.323228  L 565.2 189.323228  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="mea77e18caf" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mea77e18caf" x="47.962344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="193.122056" transform="rotate(-0 40.962344 193.122056)">1.5</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 47.962344 164.705515  L 565.2 164.705515  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mea77e18caf" x="47.962344" y="164.705515" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="168.504343" transform="rotate(-0 40.962344 168.504343)">1.6</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 47.962344 140.087802  L 565.2 140.087802  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mea77e18caf" x="47.962344" y="140.087802" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="143.88663" transform="rotate(-0 40.962344 143.88663)">1.7</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 47.962344 115.470089  L 565.2 115.470089  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#mea77e18caf" x="47.962344" y="115.470089" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="119.268917" transform="rotate(-0 40.962344 119.268917)">1.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 47.962344 90.852376  L 565.2 90.852376  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#mea77e18caf" x="47.962344" y="90.852376" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="94.651204" transform="rotate(-0 40.962344 94.651204)">1.9</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_17">
+      <path d="M 47.962344 66.234663  L 565.2 66.234663  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#mea77e18caf" x="47.962344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="70.033491" transform="rotate(-0 40.962344 70.033491)">2.0</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="127.778945" transform="rotate(-90 18.656875 127.778945)">total traveler time</text>
+    </g>
+   </g>
+   <g id="line2d_19">
+    <path d="M 71.473146 189.323228  L 76.175307 189.310919  L 80.877467 189.273993  L 85.579628 189.212448  L 90.281788 189.126286  L 94.983949 189.015507  L 99.686109 188.880109  L 104.38827 188.720094  L 109.09043 188.535461  L 113.792591 188.326211  L 118.494751 188.092342  L 123.196912 187.833856  L 127.899072 187.550753  L 132.601233 187.243031  L 137.303393 186.910692  L 142.005554 186.553735  L 146.707714 186.172161  L 151.409875 185.765968  L 156.112036 185.335158  L 160.814196 184.879731  L 165.516357 184.399685  L 170.218517 183.895022  L 174.920678 183.365741  L 179.622838 182.811843  L 184.324999 182.233327  L 189.027159 181.630193  L 193.72932 181.002441  L 198.43148 180.350072  L 203.133641 179.673084  L 207.835801 178.97148  L 212.537962 178.245257  L 217.240122 177.494417  L 221.942283 176.718959  L 226.644443 175.918883  L 231.346604 175.09419  L 236.048764 174.244879  L 240.750925 173.37095  L 245.453085 172.472403  L 250.155246 171.549239  L 254.857406 170.601457  L 259.559567 169.629058  L 264.261727 168.63204  L 268.963888 167.610405  L 273.666048 166.564152  L 278.368209 165.493282  L 283.070369 164.397794  L 287.77253 163.277688  L 292.47469 162.132964  L 297.176851 160.963623  L 301.879011 159.769663  L 306.581172 158.551087  L 311.283332 157.307892  L 315.985493 156.04008  L 320.687653 154.74765  L 325.389814 153.430602  L 330.091974 152.088937  L 334.794135 150.722654  L 339.496295 149.331753  L 344.198456 147.916235  L 348.900616 146.476098  L 353.602777 145.011344  L 358.304937 143.521973  L 363.007098 142.007983  L 367.709259 140.469376  L 372.411419 138.906152  L 377.11358 137.318309  L 381.81574 135.705849  L 386.517901 134.068771  L 391.220061 132.407075  L 395.922222 130.720762  L 400.624382 129.009831  L 405.326543 127.274282  L 410.028703 125.514116  L 414.730864 123.729332  L 419.433024 121.91993  L 424.135185 120.08591  L 428.837345 118.227273  L 433.539506 116.344018  L 438.241666 114.436145  L 442.943827 112.503654  L 447.645987 110.546546  L 452.348148 108.56482  L 457.050308 106.558477  L 461.752469 104.527515  L 466.454629 102.471936  L 471.15679 100.39174  L 475.85895 98.286925  L 480.561111 96.157493  L 485.263271 94.003443  L 489.965432 91.824775  L 494.667592 89.62149  L 499.369753 87.393587  L 504.071913 85.141066  L 508.774074 82.863928  L 513.476234 80.562172  L 518.178395 78.235798  L 522.880555 75.884806  L 527.582716 73.509197  L 532.284876 71.10897  L 536.987037 68.684125  L 541.689197 66.234663  " clip-path="url(#pda2524b1d8)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 195.477656  L 47.962344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="54.080234" transform="rotate(-0 47.962344 54.080234)">social travel cost</text>
+   </g>
+  </g>
+  <g id="text_16">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 21: congestion incentives</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pda2524b1d8">
+   <rect x="47.962344" y="60.080234" width="517.237656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 21.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>The paradox relies on a particular network and demand regime. At low demand, the shortcut can be socially useful and privately efficient. Presenting the default construction as a law against connectivity would erase those conditions.</p>
+<p>Institutional metrics can also confuse transfers with resource costs. A toll payment changes who bears money but is excluded from this travel-time objective. A real institution may care about distributional effects or administrative overhead, which should be modeled separately. Shortcut overhead here is a real delay and therefore enters social cost.</p>
+<p>Continuous equilibrium assumes many small participants choosing minimum private cost. A small team with indivisible jobs, strategic coordination, or centralized routing may behave differently. The calculation is an exact finite model result under those assumptions, not a fitted causal claim about organizational performance.</p>
+<pre><code>changed_inputs = {&#x27;demand&#x27;: 1,
+ &#x27;capacity&#x27;: 1,
+ &#x27;constant_time&#x27;: 1,
+ &#x27;shortcut_overhead&#x27;: 0,
+ &#x27;shortcut_toll&#x27;: 0.5}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 21: congestion-incentives
+Can a faster-looking route make the whole workflow slower?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;without_shortcut_total_time&quot;: 1.5,
+  &quot;equilibrium_shortcut_flow&quot;: 0,
+  &quot;equilibrium_outer_flow_each&quot;: 0.5,
+  &quot;equilibrium_social_time&quot;: 1.5,
+  &quot;equilibrium_private_outer_time&quot;: 1.5,
+  &quot;equilibrium_private_shortcut_time&quot;: 1.5,
+  &quot;optimal_shortcut_flow&quot;: 0,
+  &quot;optimal_social_time&quot;: 1.5,
+  &quot;price_of_anarchy&quot;: 1.0,
+  &quot;braess_worsens&quot;: false,
+  &quot;toll_revenue&quot;: 0.0
+}
+
+Interpretation:
+A new route can change private incentives and increase total delay. Tolls enter private cost; toll payments are excluded from travel-time social cost.
+
+Assumptions:
+- Symmetric continuous flow, linear congestible edges, constant outer edges.
+- All travelers choose minimum private path cost at nonatomic equilibrium.
+
+Limitations:
+- This construction does not estimate a real workflow equilibrium.
+- Discrete teams and heterogeneous incentives need additional modeling.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 47.962344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m71b99d9008" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m71b99d9008" x="71.473146" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="210.075312" transform="rotate(-0 71.473146 210.075312)">0.0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m71b99d9008" x="165.516357" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="165.516357" y="210.075312" transform="rotate(-0 165.516357 210.075312)">0.2</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m71b99d9008" x="259.559567" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="259.559567" y="210.075312" transform="rotate(-0 259.559567 210.075312)">0.4</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m71b99d9008" x="353.602777" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="353.602777" y="210.075312" transform="rotate(-0 353.602777 210.075312)">0.6</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m71b99d9008" x="447.645987" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="447.645987" y="210.075312" transform="rotate(-0 447.645987 210.075312)">0.8</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m71b99d9008" x="541.689197" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="210.075312" transform="rotate(-0 541.689197 210.075312)">1.0</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="224.076094" transform="rotate(-0 306.581172 224.076094)">shortcut flow</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 47.962344 189.323228  L 565.2 189.323228  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="m7719ebde62" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m7719ebde62" x="47.962344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="193.122056" transform="rotate(-0 40.962344 193.122056)">1.5</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 47.962344 164.705515  L 565.2 164.705515  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m7719ebde62" x="47.962344" y="164.705515" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="168.504343" transform="rotate(-0 40.962344 168.504343)">1.6</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 47.962344 140.087802  L 565.2 140.087802  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m7719ebde62" x="47.962344" y="140.087802" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="143.88663" transform="rotate(-0 40.962344 143.88663)">1.7</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 47.962344 115.470089  L 565.2 115.470089  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m7719ebde62" x="47.962344" y="115.470089" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="119.268917" transform="rotate(-0 40.962344 119.268917)">1.8</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 47.962344 90.852376  L 565.2 90.852376  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m7719ebde62" x="47.962344" y="90.852376" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="94.651204" transform="rotate(-0 40.962344 94.651204)">1.9</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_17">
+      <path d="M 47.962344 66.234663  L 565.2 66.234663  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m7719ebde62" x="47.962344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="70.033491" transform="rotate(-0 40.962344 70.033491)">2.0</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="127.778945" transform="rotate(-90 18.656875 127.778945)">total traveler time</text>
+    </g>
+   </g>
+   <g id="line2d_19">
+    <path d="M 71.473146 189.323228  L 76.175307 189.310919  L 80.877467 189.273993  L 85.579628 189.212448  L 90.281788 189.126286  L 94.983949 189.015507  L 99.686109 188.880109  L 104.38827 188.720094  L 109.09043 188.535461  L 113.792591 188.326211  L 118.494751 188.092342  L 123.196912 187.833856  L 127.899072 187.550753  L 132.601233 187.243031  L 137.303393 186.910692  L 142.005554 186.553735  L 146.707714 186.172161  L 151.409875 185.765968  L 156.112036 185.335158  L 160.814196 184.879731  L 165.516357 184.399685  L 170.218517 183.895022  L 174.920678 183.365741  L 179.622838 182.811843  L 184.324999 182.233327  L 189.027159 181.630193  L 193.72932 181.002441  L 198.43148 180.350072  L 203.133641 179.673084  L 207.835801 178.97148  L 212.537962 178.245257  L 217.240122 177.494417  L 221.942283 176.718959  L 226.644443 175.918883  L 231.346604 175.09419  L 236.048764 174.244879  L 240.750925 173.37095  L 245.453085 172.472403  L 250.155246 171.549239  L 254.857406 170.601457  L 259.559567 169.629058  L 264.261727 168.63204  L 268.963888 167.610405  L 273.666048 166.564152  L 278.368209 165.493282  L 283.070369 164.397794  L 287.77253 163.277688  L 292.47469 162.132964  L 297.176851 160.963623  L 301.879011 159.769663  L 306.581172 158.551087  L 311.283332 157.307892  L 315.985493 156.04008  L 320.687653 154.74765  L 325.389814 153.430602  L 330.091974 152.088937  L 334.794135 150.722654  L 339.496295 149.331753  L 344.198456 147.916235  L 348.900616 146.476098  L 353.602777 145.011344  L 358.304937 143.521973  L 363.007098 142.007983  L 367.709259 140.469376  L 372.411419 138.906152  L 377.11358 137.318309  L 381.81574 135.705849  L 386.517901 134.068771  L 391.220061 132.407075  L 395.922222 130.720762  L 400.624382 129.009831  L 405.326543 127.274282  L 410.028703 125.514116  L 414.730864 123.729332  L 419.433024 121.91993  L 424.135185 120.08591  L 428.837345 118.227273  L 433.539506 116.344018  L 438.241666 114.436145  L 442.943827 112.503654  L 447.645987 110.546546  L 452.348148 108.56482  L 457.050308 106.558477  L 461.752469 104.527515  L 466.454629 102.471936  L 471.15679 100.39174  L 475.85895 98.286925  L 480.561111 96.157493  L 485.263271 94.003443  L 489.965432 91.824775  L 494.667592 89.62149  L 499.369753 87.393587  L 504.071913 85.141066  L 508.774074 82.863928  L 513.476234 80.562172  L 518.178395 78.235798  L 522.880555 75.884806  L 527.582716 73.509197  L 532.284876 71.10897  L 536.987037 68.684125  L 541.689197 66.234663  " clip-path="url(#p4d10a69386)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 195.477656  L 47.962344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="54.080234" transform="rotate(-0 47.962344 54.080234)">social travel cost</text>
+   </g>
+  </g>
+  <g id="text_16">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 21: congestion incentives</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p4d10a69386">
+   <rect x="47.962344" y="60.080234" width="517.237656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 21.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>At demand 0.5, capacity 1, and constant delay 1, equilibrium sends all flow through the shortcut. Its total time is 0.5, below the no-shortcut total 0.625. The social optimum also uses shortcut flow 0.5, so price of anarchy is 1.</p>
+<p>For local workflow analysis, identify who selects routes and which costs they internalize. Separate routing overhead from incentive charges and preserve demand units. Compare local choice with a collective objective before adding a new interface. If route delays are estimated, collect measurements under several loads rather than assuming a linear congestion law.</p>
+<pre><code>transfer_inputs = {&#x27;demand&#x27;: 0.5,
+ &#x27;capacity&#x27;: 1,
+ &#x27;constant_time&#x27;: 1,
+ &#x27;shortcut_overhead&#x27;: 0,
+ &#x27;shortcut_toll&#x27;: 0}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 21: congestion-incentives
+Can a faster-looking route make the whole workflow slower?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;without_shortcut_total_time&quot;: 0.625,
+  &quot;equilibrium_shortcut_flow&quot;: 0.5,
+  &quot;equilibrium_outer_flow_each&quot;: 0.0,
+  &quot;equilibrium_social_time&quot;: 0.5,
+  &quot;equilibrium_private_outer_time&quot;: 1.5,
+  &quot;equilibrium_private_shortcut_time&quot;: 1.0,
+  &quot;optimal_shortcut_flow&quot;: 0.5,
+  &quot;optimal_social_time&quot;: 0.5,
+  &quot;price_of_anarchy&quot;: 1.0,
+  &quot;braess_worsens&quot;: false,
+  &quot;toll_revenue&quot;: 0.0
+}
+
+Interpretation:
+A new route can change private incentives and increase total delay. Tolls enter private cost; toll payments are excluded from travel-time social cost.
+
+Assumptions:
+- Symmetric continuous flow, linear congestible edges, constant outer edges.
+- All travelers choose minimum private path cost at nonatomic equilibrium.
+
+Limitations:
+- This construction does not estimate a real workflow equilibrium.
+- Discrete teams and heterogeneous incentives need additional modeling.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>demand:</strong> Positive continuous traveler or job flow in normalized units.</li>
+<li><strong>capacity:</strong> Positive flow scale of each linear congestible edge.</li>
+<li><strong>constant_time:</strong> Nonnegative fixed delay of each outer constant edge.</li>
+<li><strong>shortcut_overhead:</strong> Nonnegative real delay on the shortcut.</li>
+<li><strong>shortcut_toll:</strong> Nonnegative private incentive charge, excluded from travel-time social cost.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch21.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 21: congestion-incentives
+Can a faster-looking route make the whole workflow slower?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;without_shortcut_total_time&quot;: 0.625,
+  &quot;equilibrium_shortcut_flow&quot;: 0.5,
+  &quot;equilibrium_outer_flow_each&quot;: 0.0,
+  &quot;equilibrium_social_time&quot;: 0.5,
+  &quot;equilibrium_private_outer_time&quot;: 1.5,
+  &quot;equilibrium_private_shortcut_time&quot;: 1.0,
+  &quot;optimal_shortcut_flow&quot;: 0.5,
+  &quot;optimal_social_time&quot;: 0.5,
+  &quot;price_of_anarchy&quot;: 1.0,
+  &quot;braess_worsens&quot;: false,
+  &quot;toll_revenue&quot;: 0.0
+}
+
+Interpretation:
+A new route can change private incentives and increase total delay. Tolls enter private cost; toll payments are excluded from travel-time social cost.
+
+Assumptions:
+- Symmetric continuous flow, linear congestible edges, constant outer edges.
+- All travelers choose minimum private path cost at nonatomic equilibrium.
+
+Limitations:
+- This construction does not estimate a real workflow equilibrium.
+- Discrete teams and heterogeneous incentives need additional modeling.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Compute default price of anarchy.</p>
+</li>
+<li>
+<p>Why exclude toll revenue from social travel time?</p>
+</li>
+<li>
+<p>Compute transfer social optimum.</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch21.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Local incentives and collective outcomes can diverge. The Braess construction makes that divergence exact: a shortcut worsens default equilibrium, a toll restores efficient routing, and low-demand transfer removes the paradox. The notebook distinguishes physical overhead from private incentive charges and compares equilibrium with a convex social optimum. Its conclusions depend on the supplied network form, continuous flow, and cost law. It does not infer how a real team will respond.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-21-congestion-incentives/SKILL.md"><code>maa-21-congestion-incentives</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 21.1</h3>
+<p><img alt="Equation 21.1" src="../../assets/math/789a238d6278b03f32dc.svg" /></p>
+<p>Equation (21.1) adds each edge's delay across all flow using that edge, producing the system's total time.</p>
+<p>Multiply traffic on every edge by its experienced latency, then add the products over the whole network.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{TL}(q) \;=\; \sum_{e\in\mathcal E} q_e\,\ell_e(q_e).
+\tag{21.1}
+</code></pre>
+<h3>Equation 21.2</h3>
+<p><img alt="Equation 21.2" src="../../assets/math/c707158415fb2c2d45b6.svg" /></p>
+<p>Equation (21.2) bounds self-directed routing's total delay against best feasible routing when every edge delay is linear.</p>
+<p>Divide equilibrium delay by optimal delay; under nonnegative straight-line latency rules, ratio never exceeds four thirds.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\frac{\operatorname{TL}(q^{\mathrm{NE}})}{\operatorname{TL}(q^{\star})} \;\leq\; \frac{4}{3}
+\qquad\text{when every }\ell_e(q_e)=a_e q_e+b_e\text{ with }a_e,b_e\geq0.
+\tag{21.2}
+</code></pre>
+<h3>Equation 21.3</h3>
+<p><img alt="Equation 21.3" src="../../assets/math/0d9a15c23069ca305b11.svg" /></p>
+<p>Equation (21.3) converts an edge's experienced delay into a local price that includes congestion imposed on existing users.</p>
+<p>Add the direct delay to flow times its slope; for straight-line delay, double only the congestion term.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\ell^{\mathrm{mc}}_e(q_e) \;=\; \ell_e(q_e)+q_e\ell'_e(q_e),
+\qquad
+\ell_e(q_e)=a_e q_e+b_e\;\Longrightarrow\;\ell^{\mathrm{mc}}_e(q_e)=2a_e q_e+b_e.
+\tag{21.3}
+</code></pre></body></html>

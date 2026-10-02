@@ -1,0 +1,125 @@
+{
+  "slug": "effect-and-retry",
+  "question": "Did the tool act, and should an unresolved request be verified or retried?",
+  "outcome": "Separate effects from acknowledgements and price a next recovery step.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "Event traces and conditional probability"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "The request left the controller. Its acknowledgement did not return. That observation supports two different stories: the tool may have done nothing, or it may have completed the effect and lost the reply. Sending the request again can resolve the first story and damage the second. A retry counter does not tell the controller which world it occupies.\n\nThis experiment gives you a local event ledger in which the actual effect and the received acknowledgement are separate fields. The ledger is constructed so the distinction can be inspected directly. In a real interface, the effect field would require an audit log, a durable receipt, or a verification query; it is not something the agent can infer from silence.\n\nThe default trace contains one effect without an acknowledgement and then a repeated request. First predict the cumulative effect count. Next ask what changes if the service stores an idempotency key and binds that key to the exact payload. Finally compare the cost of a verification query with the expected cost of a blind retry. These are three separate questions: what happened, what was confirmed, and what should happen next.",
+  "math_explanation": "Let E_t count durable effects after event t, and let C_t indicate whether at least one effect has been confirmed. A request whose effect flag is true increments E_t unless a valid idempotency contract recognizes the same key and payload. Its acknowledgement changes C_t; losing that acknowledgement does not undo the effect. A verification event can confirm an effect already present in the ledger.\n\nAn idempotency key is useful only if the receiving service records and checks it. Here the key maps to a payload identifier. Repeating the same pair suppresses an additional effect when idempotence is enabled. Reusing a stored key for a different payload raises an error because the requested contract is ambiguous. Counting repeated attempts without this mapping would not establish idempotence.\n\nFor one unresolved request, let p denote the conditional probability that it already took effect. Let c_r be the retry cost, d the harm of a duplicate, and c_v the cost of perfect verification. A nonidempotent retry has expected next-step cost c_r+pd. With the declared idempotency contract, duplicate harm vanishes and this comparison becomes c_r against c_v. This small calculation omits the benefit and cost of any later recovery steps.\n\nThe distinction between conditional belief and recorded truth matters. The trace says what happened in this constructed run; p represents what the controller believes before resolving an uncertain request. Neither quantity can replace the other in a deployed report.",
+  "method": "Read the trace in order. A request includes a key, payload identifier, actual effect flag, and received acknowledgement flag. A verification includes whether the existing effect was observed. The computation maintains the effect count, key ledger, confirmation status, and unresolved-effect status, then emits a row after each event. Exact boolean checks prevent strings such as \"false\" from being treated as truthy evidence.\n\nTwo charts show cumulative effects and confirmation over event index. The first can rise while the second remains zero. That separation is the reason this notebook exists. A confirmation of an absent effect is rejected rather than silently accepted. The local trace is deliberately stronger than ordinary client logs because it has the ground truth needed to teach and test the inference boundary.\n\nThe cost comparison uses separate declared inputs. It does not estimate the unresolved-effect probability from the trace, nor does it assume retries are independent. The changed case enables the key/payload contract while preserving the same event sequence. The transfer case replaces the retry with verification, so you can inspect how uncertainty is resolved without increasing the effect count.\n\nOnce the logical effect is confirmed and no uncertainty remains, the recommended next step is stop. The verification and retry prices remain visible for inspecting the unresolved decision point; they do not justify another request after completion. Different payloads are rejected because this ledger counts duplicates of one intended logical operation.",
+  "worked_interpretation": "The first default request produces one effect and no acknowledgement. The second produces another effect and receives an acknowledgement. The terminal ledger therefore has two effects, one duplicate relative to the intended single operation, and confirmation of at least one effect. Confirmation does not prove uniqueness.\n\nBlind retry costs 0.2+0.8(10)=8.2 in the declared next-step comparison. Verification costs 1, so at the unresolved decision point verification would be preferred. In this finished trace the second acknowledgement has already confirmed an effect, so the reported preferred_next_step is stop; the prices apply to the moment before that confirmation. Enabling idempotence suppresses the repeated same-key effect: the count stays at one and duplicate count falls to zero. The retry comparison then costs 0.2, below verification. This reversal follows from a receiving-service contract, not from the controller deciding that a retry is probably safe. Keep the key, payload, and service behavior in the evidence record.",
+  "failure_explanation": "The most dangerous shortcut is to equate an absent acknowledgement with an absent effect. That rule encourages the controller to replay actions whose consequences may already be durable. The converse shortcut also fails: receiving an acknowledgement does not establish that only one effect occurred. The default trace ends with confirmation and a duplicate.\n\nA second failure concerns idempotency scope. A key that is checked only in client memory cannot protect against service restarts, multiple clients, or an independently repeated operation. This implementation assumes the receiver's key ledger is the effect boundary. If a real service has a retention window, payload normalization rule, or transaction boundary, those conditions must be added before adopting the simplified cost comparison.\n\nVerification has its own limitations. The comparison assumes a perfect query, while real observations can be stale or ambiguous. A false negative could provoke another retry; a false positive could terminate a workflow that never completed. Do not treat the returned recommendation as a complete recovery controller. It prices one next step under a declared conditional belief and a specific duplicate-harm contract.",
+  "transfer_explanation": "The transfer trace uses a request with a lost acknowledgement followed by an explicit verification. Its effect count stays at one, and confirmation becomes true at the second event. The verification cost is 0.5; blind retry would cost 0.1+0.6(4)=2.5, so at an unresolved decision point the declared comparison again favors verification. Because this trace is already confirmed, the reported preferred_next_step is stop.\n\nFor reader data, preserve event order and give each effect-bearing request its durable operation identifier. If you have only client logs, mark actual effect as unknown in your measurement design instead of inventing a boolean and passing it to this deterministic replay. Obtain server evidence or construct separate possible traces. Compare those traces to identify which next observation would distinguish them. The method is useful precisely because it refuses to turn transport uncertainty into a fabricated state fact.",
+  "summary": "An action, an effect, and an acknowledgement are different events. The ledger counts effects separately from confirmation and shows how a blind retry can duplicate a completed operation. A valid idempotency contract suppresses repeated same-key, same-payload effects; a key conflict is rejected. The next-step cost comparison uses a declared unresolved-effect probability and duplicate harm. It does not guarantee recovery or infer remote state. For practical use, preserve durable identifiers, verify ambiguous consequences, and record the service-side conditions that make replay safe. A confirmed effect can still be duplicated, unauthorized, or incomplete at the workflow level.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "idempotent": false,
+    "events": [
+      {
+        "kind": "request",
+        "key": "release-1",
+        "payload": "edition-A",
+        "effect": true,
+        "ack": false
+      },
+      {
+        "kind": "request",
+        "key": "release-1",
+        "payload": "edition-A",
+        "effect": true,
+        "ack": true
+      }
+    ],
+    "verify_cost": 1,
+    "retry_cost": 0.2,
+    "effect_probability": 0.8,
+    "duplicate_cost": 10
+  },
+  "changed": {
+    "idempotent": true,
+    "events": [
+      {
+        "kind": "request",
+        "key": "release-1",
+        "payload": "edition-A",
+        "effect": true,
+        "ack": false
+      },
+      {
+        "kind": "request",
+        "key": "release-1",
+        "payload": "edition-A",
+        "effect": true,
+        "ack": true
+      }
+    ],
+    "verify_cost": 1,
+    "retry_cost": 0.2,
+    "effect_probability": 0.8,
+    "duplicate_cost": 10
+  },
+  "transfer": {
+    "idempotent": false,
+    "events": [
+      {
+        "kind": "request",
+        "key": "send-2",
+        "payload": "packet-B",
+        "effect": true,
+        "ack": false
+      },
+      {
+        "kind": "verify",
+        "observed_effect": true
+      }
+    ],
+    "verify_cost": 0.5,
+    "retry_cost": 0.1,
+    "effect_probability": 0.6,
+    "duplicate_cost": 4
+  },
+  "input_fields": {
+    "idempotent": "Exact boolean. True declares server-side key/payload deduplication.",
+    "events": "Ordered event list: request has kind,key,payload,effect:boolean,ack:boolean; verify has observed_effect:boolean. All requests must concern one logical payload; distinct operations require separate traces.",
+    "verify_cost": "Nonnegative one-step cost of perfect verification.",
+    "retry_cost": "Nonnegative one-step request cost.",
+    "effect_probability": "Probability [0,1] that the unresolved original request already took effect.",
+    "duplicate_cost": "Nonnegative extra harm from a duplicate effect."
+  },
+  "exercises": [
+    {
+      "question": "How many effects occur in the default trace?",
+      "answer": "Two effects. The first lost acknowledgement does not remove its effect."
+    },
+    {
+      "question": "What duplicate-harm value makes verification and retry tie?",
+      "answer": "Verification costs 1. Retry costs 0.2 plus the probability 0.8 that the effect already happened times the duplicate cost d. They tie when 1=0.2+0.8d, so d=1."
+    },
+    {
+      "question": "What happens when a stored idempotency key is reused with a different payload?",
+      "answer": "Validation rejects the conflicting key/payload contract."
+    }
+  ],
+  "routes": [
+    "lost acknowledgement tool effect",
+    "price verification versus retry",
+    "idempotency key duplicate trace"
+  ],
+  "acceptance_checks": [
+    "Nonidempotent default counts two effects.",
+    "Idempotent changed trace counts one effect.",
+    "Transfer verification confirms without adding an effect."
+  ]
+}

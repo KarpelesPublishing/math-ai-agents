@@ -1,0 +1,847 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>06-expected-utility</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 6: The Price of a Choice</h1>
+<p>A document is ready for release, but the controller still has to choose what happens next. Releasing can produce a useful result or an expensive mistake. Review avoids some uncertainty but consumes resources. Abstention preserves the current state and can also carry an opportunity cost. The relevant question is not which action sounds most confident. It is which action has the greatest value under the probabilities and consequences you are prepared to defend.</p>
+<p>This laboratory makes that boundary inspectable. The release action has two outcomes. Review and abstention have their own rows rather than hiding inside a verbal recommendation. The numbers are constructed teaching inputs. They are not measurements of a publisher, an assistant, or a review team. You can replace them with your own stated probabilities and valuations, then see exactly which part of the recommendation changes.</p>
+<p>Before executing anything, multiply each outcome probability by its utility. Add the products and subtract the action cost. Notice that a small probability can matter greatly when the corresponding loss is large. Keep that observation beside the chart: the height of each action's point on the utility plot depends on both belief and stakes.</p>
+<p><strong>Outcome:</strong> Return an expected-utility choice and a break-even value under declared stakes.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>Weighted averages</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>For an action a with mutually exclusive outcomes o, the expected utility is EU(a)=sum_o P(o|a)u(o,a)-c(a). The outcome probabilities in each row must sum to one. Utilities need not be positive, and they need not use money, but all alternatives must share the same utility scale. A unit of benefit cannot be added to an hour of delay until you state how those quantities enter one valuation.</p>
+<p>The selected action is an argmax of this expected utility over the supplied action set. This is a decision rule under declared values, not a claim that those values are correct. Expected loss is the negative of expected utility in this implementation. It is not a second independent objective or an estimate of physical harm.</p>
+<p>A break-even calculation exposes sensitivity. Let p be the probability of the first outcome of the first action, v its unknown utility, B the weighted utility of its other outcomes, c its cost, and A the best alternative's expected utility. The equality pv+B-c=A gives v=(A+c-B)/p when p is positive. At p=0 that utility cannot affect the choice, so the threshold is unavailable.</p>
+<p>For a two-outcome first action, the probability curve holds both outcome utilities fixed and varies p. Its slope is the difference between those utilities. A steep line indicates strong sensitivity to probability calibration. The curve does not estimate p; it shows what would follow if p took each plotted value.</p>
+<h2>A calculation you can run</h2>
+<p>The input is an action table, encoded as JSON. Each row supplies a unique action name, its probability vector, a utility vector of the same length, and an optional nonnegative cost. Validation rejects nonfinite numbers, negative probabilities, totals that differ from one, and vectors that do not align. These checks prevent a plausible-looking average from concealing an invalid outcome space.</p>
+<p>The computation creates one row per alternative with expected utility, expected loss, and cost. It selects the greatest expected utility and reports the first-outcome break-even utility against the best remaining alternative. Ties follow the input order; if a tie needs a different operational policy, define that policy before acting. The action plot marks each action by name on the horizontal axis, in input order, and shows utility units on the vertical axis; the markers are joined by a line only to show order, not a trend. Consult the returned table for action names.</p>
+<p>A second figure appears when the first action has exactly two outcomes. It varies the first-outcome probability while assigning the remaining probability to the second outcome. Compare this sensitivity line with the constant value of the preferred alternative. For the changed case, alter the severe loss while preserving the probabilities. That isolates a stakes change from a belief change.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 6
+inputs = {&#x27;actions&#x27;: [{&#x27;name&#x27;: &#x27;release&#x27;,
+              &#x27;probabilities&#x27;: [0.9, 0.1],
+              &#x27;utilities&#x27;: [10, -50],
+              &#x27;cost&#x27;: 0},
+             {&#x27;name&#x27;: &#x27;review&#x27;, &#x27;probabilities&#x27;: [1], &#x27;utilities&#x27;: [2], &#x27;cost&#x27;: 0},
+             {&#x27;name&#x27;: &#x27;abstain&#x27;, &#x27;probabilities&#x27;: [1], &#x27;utilities&#x27;: [0], &#x27;cost&#x27;: 0}]}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 6: expected-utility
+Should this controller release, request review, or abstain?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;selected_action&quot;: &quot;release&quot;,
+  &quot;expected_utility&quot;: 4.0,
+  &quot;break_even_first_utility&quot;: 7.777777778
+}
+
+Interpretation:
+The selected action maximizes the declared expected utility, including any abstention row.
+
+Assumptions:
+- Utilities and probabilities are supplied judgments.
+- One decision, mutually exclusive outcomes per action.
+
+Limitations:
+- No objective valuation or calibrated probability is inferred.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>The release row has expected utility 0.9(10)+0.1(-50)=4. Review has utility 2 and abstention has utility 0, so release wins under these inputs. Its expected loss is -4 because loss is defined here as negative utility. A negative reported loss is therefore a favorable valuation, not a negative count of adverse events.</p>
+<p>The first-outcome utility needed to tie review is (2+5)/0.9, approximately 7.78. The supplied value 10 exceeds that threshold. When the failure utility changes to -100, release falls to -1 while review stays at 2. The recommendation reverses without changing the model's probability of success. Read this as a statement about the action contract, not as evidence that the controller became less capable.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 53.722344 193.877891  L 565.2 193.877891  L 565.2 69.080234  L 53.722344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m95e81556a5" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m95e81556a5" x="76.971328" y="193.877891" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="76.971328" y="208.476328" transform="rotate(-0 76.971328 208.476328)">release</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m95e81556a5" x="309.461172" y="193.877891" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.461172" y="208.476328" transform="rotate(-0 309.461172 208.476328)">review</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m95e81556a5" x="541.951016" y="193.877891" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.951016" y="208.476328" transform="rotate(-0 541.951016 208.476328)">abstain</text>
+     </g>
+    </g>
+    <g id="text_4">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.461172" y="222.477109" transform="rotate(-0 309.461172 222.477109)">action</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <path d="M 53.722344 188.20527  L 565.2 188.20527  " clip-path="url(#p17a949bdf9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5">
+      <defs>
+       <path id="m2dae548063" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="188.20527" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="192.004098" transform="rotate(-0 46.722344 192.004098)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <path d="M 53.722344 159.842166  L 565.2 159.842166  " clip-path="url(#p17a949bdf9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="159.842166" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="163.640994" transform="rotate(-0 46.722344 163.640994)">1</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <path d="M 53.722344 131.479062  L 565.2 131.479062  " clip-path="url(#p17a949bdf9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="131.479062" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="135.277891" transform="rotate(-0 46.722344 135.277891)">2</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <path d="M 53.722344 103.115959  L 565.2 103.115959  " clip-path="url(#p17a949bdf9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="103.115959" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="106.914787" transform="rotate(-0 46.722344 106.914787)">3</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_12">
+      <path d="M 53.722344 74.752855  L 565.2 74.752855  " clip-path="url(#p17a949bdf9)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="74.752855" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="78.551683" transform="rotate(-0 46.722344 78.551683)">4</text>
+     </g>
+    </g>
+    <g id="text_10">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="33.9575" y="131.479062" transform="rotate(-90 33.9575 131.479062)">utility units</text>
+    </g>
+   </g>
+   <g id="line2d_14">
+    <path d="M 76.971328 74.752855  L 309.461172 131.479062  L 541.951016 188.20527  " clip-path="url(#p17a949bdf9)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m7216f619f5" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p17a949bdf9)">
+     <use xlink:href="#m7216f619f5" x="76.971328" y="74.752855" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7216f619f5" x="309.461172" y="131.479062" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m7216f619f5" x="541.951016" y="188.20527" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 53.722344 193.877891  L 53.722344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 53.722344 193.877891  L 565.2 193.877891  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="53.722344" y="63.080234" transform="rotate(-0 53.722344 63.080234)">expected utility</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 53.722344 375.477656  L 565.2 375.477656  L 565.2 250.68  L 53.722344 250.68  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_4">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m95e81556a5" x="76.971328" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="76.971328" y="390.075312" transform="rotate(-0 76.971328 390.075312)">0.0</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m95e81556a5" x="169.967266" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="169.967266" y="390.075312" transform="rotate(-0 169.967266 390.075312)">0.2</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m95e81556a5" x="262.963203" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="262.963203" y="390.075312" transform="rotate(-0 262.963203 390.075312)">0.4</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m95e81556a5" x="355.959141" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="355.959141" y="390.075312" transform="rotate(-0 355.959141 390.075312)">0.6</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m95e81556a5" x="448.955078" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="448.955078" y="390.075312" transform="rotate(-0 448.955078 390.075312)">0.8</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m95e81556a5" x="541.951016" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.951016" y="390.075312" transform="rotate(-0 541.951016 390.075312)">1.0</text>
+     </g>
+    </g>
+    <g id="text_18">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.461172" y="404.076094" transform="rotate(-0 309.461172 404.076094)">first-outcome probability</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_21">
+      <path d="M 53.722344 350.8963  L 565.2 350.8963  " clip-path="url(#p17ab06b1de)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="350.8963" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="354.695128" transform="rotate(-0 46.722344 354.695128)">−40</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_23">
+      <path d="M 53.722344 313.078828  L 565.2 313.078828  " clip-path="url(#p17ab06b1de)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="313.078828" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="316.877656" transform="rotate(-0 46.722344 316.877656)">−20</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_25">
+      <path d="M 53.722344 275.261357  L 565.2 275.261357  " clip-path="url(#p17ab06b1de)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_26">
+      <g>
+       <use xlink:href="#m2dae548063" x="53.722344" y="275.261357" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="46.722344" y="279.060185" transform="rotate(-0 46.722344 279.060185)">0</text>
+     </g>
+    </g>
+    <g id="text_22">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="19.215313" y="313.078828" transform="rotate(-90 19.215313 313.078828)">utility units</text>
+    </g>
+   </g>
+   <g id="line2d_27">
+    <path d="M 76.971328 369.805036  L 100.220313 364.132415  L 123.469297 358.459794  L 146.718281 352.787173  L 169.967266 347.114553  L 193.21625 341.441932  L 216.465234 335.769311  L 239.714219 330.09669  L 262.963203 324.42407  L 286.212188 318.751449  L 309.461172 313.078828  L 332.710156 307.406207  L 355.959141 301.733587  L 379.208125 296.060966  L 402.457109 290.388345  L 425.706094 284.715724  L 448.955078 279.043104  L 472.204062 273.370483  L 495.453047 267.697862  L 518.702031 262.025241  L 541.951016 256.352621  " clip-path="url(#p17ab06b1de)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 53.722344 375.477656  L 53.722344 250.68  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 53.722344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="53.722344" y="244.68" transform="rotate(-0 53.722344 244.68)">first action probability sensitivity</text>
+   </g>
+  </g>
+  <g id="text_24">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 6: expected utility</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p17a949bdf9">
+   <rect x="53.722344" y="69.080234" width="511.477656" height="124.797656"/>
+  </clipPath>
+  <clipPath id="p17ab06b1de">
+   <rect x="53.722344" y="250.68" width="511.477656" height="124.797656"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 6.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>An expected-utility winner can be the wrong action for an incompletely specified decision. A prohibited release must first be removed from the feasible action set. Assigning it a large negative utility is not equivalent to enforcing a hard permission boundary. Likewise, an outcome labeled success can hide costs imposed on someone outside the table. If those costs matter to the decision, they need a declared valuation or a separate constraint.</p>
+<p>The failure experiment in this notebook is a changed loss, not an adversarially chosen probability. It demonstrates that a high success probability does not settle the choice. A second useful test is to set the first-outcome probability to zero. The break-even first utility becomes unavailable because no value assigned to an impossible outcome can change expected utility. Returning zero as a threshold would manufacture information.</p>
+<p>Probability estimates also deserve their own evidence. A row containing 0.9 is a statement of belief until a calibration or measurement protocol supports it. The arithmetic can be exact while the decision remains sensitive to a poorly supported input. Keep the probability source and utility owner in the exported report.</p>
+<pre><code>changed_inputs = {&#x27;actions&#x27;: [{&#x27;name&#x27;: &#x27;release&#x27;,
+              &#x27;probabilities&#x27;: [0.9, 0.1],
+              &#x27;utilities&#x27;: [10, -100],
+              &#x27;cost&#x27;: 0},
+             {&#x27;name&#x27;: &#x27;review&#x27;, &#x27;probabilities&#x27;: [1], &#x27;utilities&#x27;: [2], &#x27;cost&#x27;: 0},
+             {&#x27;name&#x27;: &#x27;abstain&#x27;, &#x27;probabilities&#x27;: [1], &#x27;utilities&#x27;: [0], &#x27;cost&#x27;: 0}]}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 6: expected-utility
+Should this controller release, request review, or abstain?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;selected_action&quot;: &quot;review&quot;,
+  &quot;expected_utility&quot;: 2.0,
+  &quot;break_even_first_utility&quot;: 13.33333333
+}
+
+Interpretation:
+The selected action maximizes the declared expected utility, including any abstention row.
+
+Assumptions:
+- Utilities and probabilities are supplied judgments.
+- One decision, mutually exclusive outcomes per action.
+
+Limitations:
+- No objective valuation or calibrated probability is inferred.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 60.202344 193.877891  L 565.2 193.877891  L 565.2 69.080234  L 60.202344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m5d4557736a" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m5d4557736a" x="83.156783" y="193.877891" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="83.156783" y="208.476328" transform="rotate(-0 83.156783 208.476328)">release</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m5d4557736a" x="312.701172" y="193.877891" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="312.701172" y="208.476328" transform="rotate(-0 312.701172 208.476328)">review</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m5d4557736a" x="542.245561" y="193.877891" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.245561" y="208.476328" transform="rotate(-0 542.245561 208.476328)">abstain</text>
+     </g>
+    </g>
+    <g id="text_4">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="312.701172" y="222.477109" transform="rotate(-0 312.701172 222.477109)">action</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <path d="M 60.202344 188.20527  L 565.2 188.20527  " clip-path="url(#pbf3c3124d3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5">
+      <defs>
+       <path id="ma84c714704" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="188.20527" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="192.004098" transform="rotate(-0 53.202344 192.004098)">−1</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <path d="M 60.202344 150.387798  L 565.2 150.387798  " clip-path="url(#pbf3c3124d3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="150.387798" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="154.186626" transform="rotate(-0 53.202344 154.186626)">0</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <path d="M 60.202344 112.570327  L 565.2 112.570327  " clip-path="url(#pbf3c3124d3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="112.570327" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="116.369155" transform="rotate(-0 53.202344 116.369155)">1</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <path d="M 60.202344 74.752855  L 565.2 74.752855  " clip-path="url(#pbf3c3124d3)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="74.752855" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="78.551683" transform="rotate(-0 53.202344 78.551683)">2</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="32.057813" y="131.479062" transform="rotate(-90 32.057813 131.479062)">utility units</text>
+    </g>
+   </g>
+   <g id="line2d_12">
+    <path d="M 83.156783 188.20527  L 312.701172 74.752855  L 542.245561 150.387798  " clip-path="url(#pbf3c3124d3)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mc57d1cac5b" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#pbf3c3124d3)">
+     <use xlink:href="#mc57d1cac5b" x="83.156783" y="188.20527" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mc57d1cac5b" x="312.701172" y="74.752855" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mc57d1cac5b" x="542.245561" y="150.387798" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 60.202344 193.877891  L 60.202344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 60.202344 193.877891  L 565.2 193.877891  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="60.202344" y="63.080234" transform="rotate(-0 60.202344 63.080234)">expected utility</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 60.202344 375.477656  L 565.2 375.477656  L 565.2 250.68  L 60.202344 250.68  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_4">
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m5d4557736a" x="83.156783" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="83.156783" y="390.075312" transform="rotate(-0 83.156783 390.075312)">0.0</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m5d4557736a" x="174.974538" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="174.974538" y="390.075312" transform="rotate(-0 174.974538 390.075312)">0.2</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_15">
+      <g>
+       <use xlink:href="#m5d4557736a" x="266.792294" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="266.792294" y="390.075312" transform="rotate(-0 266.792294 390.075312)">0.4</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m5d4557736a" x="358.61005" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="358.61005" y="390.075312" transform="rotate(-0 358.61005 390.075312)">0.6</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m5d4557736a" x="450.427805" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="450.427805" y="390.075312" transform="rotate(-0 450.427805 390.075312)">0.8</text>
+     </g>
+    </g>
+    <g id="xtick_9">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m5d4557736a" x="542.245561" y="375.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.245561" y="390.075312" transform="rotate(-0 542.245561 390.075312)">1.0</text>
+     </g>
+    </g>
+    <g id="text_17">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="312.701172" y="404.076094" transform="rotate(-0 312.701172 404.076094)">first-outcome probability</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_5">
+     <g id="line2d_19">
+      <path d="M 60.202344 369.805036  L 565.2 369.805036  " clip-path="url(#pcfba3f6f00)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="369.805036" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="373.603864" transform="rotate(-0 53.202344 373.603864)">−100</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_21">
+      <path d="M 60.202344 344.020396  L 565.2 344.020396  " clip-path="url(#pcfba3f6f00)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="344.020396" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="347.819224" transform="rotate(-0 53.202344 347.819224)">−75</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_23">
+      <path d="M 60.202344 318.235756  L 565.2 318.235756  " clip-path="url(#pcfba3f6f00)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="318.235756" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="322.034584" transform="rotate(-0 53.202344 322.034584)">−50</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_25">
+      <path d="M 60.202344 292.451116  L 565.2 292.451116  " clip-path="url(#pcfba3f6f00)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_26">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="292.451116" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="296.249944" transform="rotate(-0 53.202344 296.249944)">−25</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_27">
+      <path d="M 60.202344 266.666477  L 565.2 266.666477  " clip-path="url(#pcfba3f6f00)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_28">
+      <g>
+       <use xlink:href="#ma84c714704" x="60.202344" y="266.666477" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.202344" y="270.465305" transform="rotate(-0 53.202344 270.465305)">0</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="19.332813" y="313.078828" transform="rotate(-90 19.332813 313.078828)">utility units</text>
+    </g>
+   </g>
+   <g id="line2d_29">
+    <path d="M 83.156783 369.805036  L 106.111222 364.132415  L 129.065661 358.459794  L 152.020099 352.787173  L 174.974538 347.114553  L 197.928977 341.441932  L 220.883416 335.769311  L 243.837855 330.09669  L 266.792294 324.42407  L 289.746733 318.751449  L 312.701172 313.078828  L 335.655611 307.406207  L 358.61005 301.733587  L 381.564489 296.060966  L 404.518928 290.388345  L 427.473366 284.715724  L 450.427805 279.043104  L 473.382244 273.370483  L 496.336683 267.697862  L 519.291122 262.025241  L 542.245561 256.352621  " clip-path="url(#pcfba3f6f00)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 60.202344 375.477656  L 60.202344 250.68  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 60.202344 375.477656  L 565.2 375.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="60.202344" y="244.68" transform="rotate(-0 60.202344 244.68)">first action probability sensitivity</text>
+   </g>
+  </g>
+  <g id="text_25">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 6: expected utility</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pbf3c3124d3">
+   <rect x="60.202344" y="69.080234" width="504.997656" height="124.797656"/>
+  </clipPath>
+  <clipPath id="pcfba3f6f00">
+   <rect x="60.202344" y="250.68" width="504.997656" height="124.797656"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 6.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer case compares retry with escalation. Retry's expected utility is 0.7(8)+0.3(-12)-1=1, which ties escalation at 1. Because retry appears first, the implementation selects it. That tie is useful: the calculation identifies an operational choice that the valuation does not uniquely resolve.</p>
+<p>Replace the table with a local action contract whose outcomes are mutually exclusive and collectively exhaustive. Include the cost of waiting, asking for help, or preserving the current state when those are real alternatives. After execution, report the winning value and the runner-up, then identify the input whose plausible change would reverse them. Do not export the selected label alone. A decision record should preserve why it won and which assumptions made the comparison possible.</p>
+<pre><code>transfer_inputs = {&#x27;actions&#x27;: [{&#x27;name&#x27;: &#x27;retry&#x27;,
+              &#x27;probabilities&#x27;: [0.7, 0.3],
+              &#x27;utilities&#x27;: [8, -12],
+              &#x27;cost&#x27;: 1},
+             {&#x27;name&#x27;: &#x27;escalate&#x27;, &#x27;probabilities&#x27;: [1], &#x27;utilities&#x27;: [1], &#x27;cost&#x27;: 0}]}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 6: expected-utility
+Should this controller release, request review, or abstain?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;selected_action&quot;: &quot;retry&quot;,
+  &quot;expected_utility&quot;: 1.0,
+  &quot;break_even_first_utility&quot;: 8.0
+}
+
+Interpretation:
+The selected action maximizes the declared expected utility, including any abstention row.
+
+Assumptions:
+- Utilities and probabilities are supplied judgments.
+- One decision, mutually exclusive outcomes per action.
+
+Limitations:
+- No objective valuation or calibrated probability is inferred.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>actions:</strong> Nonempty list of uniquely named alternatives. Each has name:string, probabilities:normalized numeric list, utilities:aligned finite numeric list, cost:nonnegative number. Include abstention explicitly.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch06.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 6: expected-utility
+Should this controller release, request review, or abstain?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;selected_action&quot;: &quot;retry&quot;,
+  &quot;expected_utility&quot;: 1.0,
+  &quot;break_even_first_utility&quot;: 8.0
+}
+
+Interpretation:
+The selected action maximizes the declared expected utility, including any abstention row.
+
+Assumptions:
+- Utilities and probabilities are supplied judgments.
+- One decision, mutually exclusive outcomes per action.
+
+Limitations:
+- No objective valuation or calibrated probability is inferred.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Calculate release utility in the default case.</p>
+</li>
+<li>
+<p>What first-outcome probability ties review under the default utilities?</p>
+</li>
+<li>
+<p>Why does the transfer case not have a unique utility winner?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch06.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Expected utility combines probabilities, consequences, and costs on a shared scale. This notebook returns an inspectable choice, its alternatives, and a break-even utility. The changed case shows a stakes-driven reversal; the transfer case shows a tie that needs an operational rule. None of those results calibrates the probabilities or authorizes an action. Use the calculation to expose the decision boundary, then apply the actual permissions and constraints before execution. When a value or probability is disputed, preserve that disagreement as an input range and inspect sensitivity rather than pretending the selected row is an objective fact.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-06-expected-utility/SKILL.md"><code>maa-06-expected-utility</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 6.1</h3>
+<p><img alt="Equation 6.1" src="../../assets/math/5be7ec724fae81adf423.svg" /></p>
+<p>Equation (6.1) converts a ranking of outcomes into numbers, so that comparisons the system could already make become arithmetic it can do.</p>
+<p>One outcome is preferred to another exactly when the first is assigned the larger number.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">y_1 \succ y_2 \iff u(y_1) &gt; u(y_2).
+\tag{6.1}
+</code></pre>
+<h3>Equation 6.2</h3>
+<p><img alt="Equation 6.2" src="../../assets/math/239d97ab52b608b1b761.svg" /></p>
+<p>Equation (6.2) collapses an entire distribution over outcomes into the single number an agent needs in order to compare one action against another.</p>
+<p>For the action under consideration, multiply each outcome's worth by its probability under that action, then add the products.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{EU}(a)=\sum_{y}p(y\mid a)\,u(y).
+\tag{6.2}
+</code></pre>
+<h3>Equation 6.3</h3>
+<p><img alt="Equation 6.3" src="../../assets/math/3b4eb1e76781ca7fa986.svg" /></p>
+<p>Equation (6.3) states the rule the rest of this book's decision-making rests on: take the action whose expected utility is highest.</p>
+<p>Compute the expected utility of every available action, then select the action achieving the maximum.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">a^{\star}=\arg\max_{a\in\mathcal{A}}\operatorname{EU}(a).
+\tag{6.3}
+</code></pre>
+<h3>Equation 6.4</h3>
+<p><img alt="Equation 6.4" src="../../assets/math/0548bb8cbea42c084933.svg" /></p>
+<p>Equation (6.4) defines the certain amount an agent would accept in place of a gamble, which turns an attitude toward risk into a measurable quantity.</p>
+<p>Find the guaranteed outcome whose worth equals the average worth of the gamble; that outcome is the certainty equivalent.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">u(\operatorname{CE})=\operatorname{E}\!\left[u(Y)\right].
+\tag{6.4}
+</code></pre></body></html>

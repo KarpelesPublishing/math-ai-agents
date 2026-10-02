@@ -1,0 +1,72 @@
+{
+  "chapter": 12,
+  "title": "Credit for Consequences",
+  "source_path": "Manuscript/part-iii/12-credit-for-consequences.md",
+  "source_sha256": "d121f2c1a0a2229a8cf748a33c12128053cb715a234aebf61304479beaf9dea1",
+  "notebook": "notebooks/12-trajectory-credit.ipynb",
+  "skill": "maa-12-trajectory-credit",
+  "skill_path": "skills/maa-12-trajectory-credit/SKILL.md",
+  "method": "trajectory-credit",
+  "outcome": "Compare Monte Carlo, TD(0), and accumulating TD(lambda) updates on one trajectory.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "Monte Carlo TD credit comparison",
+    "eligibility trace consequence update",
+    "terminal versus truncated bootstrap"
+  ],
+  "input_fields": {
+    "states": "Trajectory state identifiers, one more than reward count.",
+    "rewards": "Finite observed immediate rewards.",
+    "discount": "Gamma in [0,1].",
+    "learning_rate": "Step size in [0,1].",
+    "lambda": "Trace decay parameter in [0,1].",
+    "terminal": "Exact boolean distinguishing true termination from truncation.",
+    "values": "Initial finite value for every trajectory state."
+  },
+  "example_input": "data/examples/ch12.json",
+  "equations": [
+    {
+      "label": "EQV12-01",
+      "number": "12.1",
+      "tex": "\\hat V_{t+1}(x_t) \\;=\\; \\hat V_t(x_t) \\;+\\; \\alpha\\big[\\operatorname{Ret}_t - \\hat V_t(x_t)\\big].\n\\tag{12.1}",
+      "asset": "assets/math/d6697e3cc821de210964.svg",
+      "explanations": [
+        "Equation (12.1) drags each state's estimate toward the return that actually followed it.",
+        "Take the gap between what happened and what was predicted, keep a fraction of it, and add that to the prediction."
+      ]
+    },
+    {
+      "label": "EQV12-02",
+      "number": "12.2",
+      "tex": "\\delta_t \\;=\\; r_t \\;+\\; \\gamma\\,\\hat V_t(x_{t+1}) \\;-\\; \\hat V_t(x_t).\n\\tag{12.2}",
+      "asset": "assets/math/cc2c6da6e8a537b237b5.svg",
+      "explanations": [
+        "Equation (12.2) measures how much the agent's own opinion changed between one step and the next.",
+        "Compare what was predicted from here against the reward received plus what is predicted from there."
+      ]
+    },
+    {
+      "label": "EQV12-03",
+      "number": "12.3",
+      "tex": "\\hat V_{t+1}(x_t) \\;=\\; \\hat V_t(x_t) \\;+\\; \\alpha\\,\\delta_t.\n\\tag{12.3}",
+      "asset": "assets/math/bea157a42325799a5a1c.svg",
+      "explanations": [
+        "Equation (12.3) moves each estimate toward the estimate that came immediately after it.",
+        "Nudge the earlier prediction in the direction its own successor disagreed with it."
+      ]
+    },
+    {
+      "label": "EQV12-04",
+      "number": "12.4",
+      "tex": "\\operatorname{Ret}^{\\lambda}_t \\;=\\; (1-\\lambda)\\sum_{k=1}^{N-t-1}\\lambda^{\\,k-1}\\Big[\\textstyle\\sum_{j=0}^{k-1}\\gamma^{\\,j} r_{t+j} \\;+\\; \\gamma^{\\,k}\\hat V_t(x_{t+k})\\Big] \\;+\\; \\lambda^{N-t-1}\\operatorname{Ret}_t.\n\\tag{12.4}",
+      "asset": "assets/math/3def44a4bcac72579801.svg",
+      "explanations": [
+        "Equation (12.4) combines geometrically weighted intermediate targets with the remaining weight on the complete terminal return.",
+        "Weight intermediate lookahead targets geometrically, then place all remaining weight on the realized return through termination."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "observation_age": 0,
+  "max_age": 1,
+  "observed_version": "page-C",
+  "current_version": "page-C",
+  "current_permission": false,
+  "effect_confirmed": false,
+  "coordinate_target": "submit",
+  "semantic_target": "submit",
+  "wanted_target": "submit",
+  "change_rate": 0.05,
+  "delays": [
+    2,
+    10
+  ]
+}

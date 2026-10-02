@@ -1,0 +1,33 @@
+{
+  "budget": 3,
+  "now": 20,
+  "current_version": "doc-C",
+  "records": [
+    {
+      "id": "expired",
+      "tokens": 1,
+      "decision_value": 10,
+      "timestamp": 10,
+      "ttl": 2,
+      "authority": false,
+      "version": "doc-C"
+    },
+    {
+      "id": "current",
+      "tokens": 3,
+      "decision_value": 4,
+      "timestamp": 19,
+      "ttl": 3,
+      "authority": true,
+      "version": "doc-C"
+    }
+  ],
+  "original_action_values": [
+    1,
+    0
+  ],
+  "compressed_action_values": [
+    2,
+    1
+  ]
+}

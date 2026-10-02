@@ -1,0 +1,22 @@
+{
+  "kind": "constructed demonstration",
+  "result": {
+    "equal_weight_population_mixture": {
+      "single_run_mean": 0.5,
+      "all_success": 0.3400000000000001,
+      "at_least_one": 0.6599999999999999,
+      "power_of_mean": 0.25,
+      "coverage_using_mean": 0.75
+    },
+    "observed_bank": {
+      "trials": 4,
+      "successes": 3,
+      "all_success": 0.5,
+      "at_least_one": 1.0
+    },
+    "exposure_construction": {
+      "unfamiliar_success": 0.4,
+      "mixture_success": 0.52
+    }
+  }
+}

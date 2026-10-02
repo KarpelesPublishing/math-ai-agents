@@ -1,0 +1,88 @@
+{
+  "chapter": 8,
+  "title": "Acting in the Dark",
+  "source_path": "Manuscript/part-ii/08-acting-in-the-dark.md",
+  "source_sha256": "f4f340340df2c87670ee8979f688eff4e37cdc822668823d746b36d2faf36d12",
+  "notebook": "notebooks/08-belief-information.ipynb",
+  "skill": "maa-08-belief-information",
+  "skill_path": "skills/maa-08-belief-information/SKILL.md",
+  "method": "belief-information",
+  "outcome": "Update a belief and calculate gross and net one-step information value.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "Bayesian hidden-state belief update",
+    "one-step value of observation",
+    "uninformative signal aliasing"
+  ],
+  "input_fields": {
+    "belief": "Normalized prior state probability list.",
+    "transition": "Square row-stochastic state transition matrix.",
+    "observation": "State by observation row-stochastic matrix.",
+    "observed": "Zero-based observation index.",
+    "action_rewards": "Action by state finite reward matrix.",
+    "observation_cost": "Nonnegative cost paid before the one later action."
+  },
+  "example_input": "data/examples/ch08.json",
+  "equations": [
+    {
+      "label": "EQV8-01",
+      "number": "8.1",
+      "tex": "\\mathbf{b}_{t+1}(x') \\;=\\;\n\\frac{\\begin{gathered}\n\\operatorname{Obs}(o\\mid x',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x'\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}\n{\\begin{gathered}\n\\sum_{x''\\in\\mathcal{X}}\\operatorname{Obs}(o\\mid x'',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x''\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}.\n\\tag{8.1}",
+      "asset": "assets/math/e992bac4f67c2b9f4efc.svg",
+      "explanations": [
+        "Equation (8.1) turns yesterday's belief, one action, and one observation into today's belief.",
+        "Push the old belief forward through the action, weight each destination by how well it explains what was seen, then rescale so the weights sum to one."
+      ]
+    },
+    {
+      "label": "chapter-08-display-2",
+      "number": "un-numbered display 2",
+      "tex": "T_E=\\begin{pmatrix}\n0.1&0.9&0&0\\\\\n0.1&0&0.9&0\\\\\n0&0.1&0&0.9\\\\\n0&0&0.1&0.9\n\\end{pmatrix},\\qquad\n\\operatorname{Obs}(\\text{non-goal}\\mid x')=(1,1,0,1).",
+      "asset": "assets/math/aeaa392b80c6a5400cb4.svg",
+      "explanations": []
+    },
+    {
+      "label": "EQV8-02",
+      "number": "8.2",
+      "tex": "\\bar r(\\mathbf{b},a)\\;=\\;\\sum_{x\\in\\mathcal{X}}\\mathbf{b}(x)\\,r(x,a).\n\\tag{8.2}",
+      "asset": "assets/math/c2b31b3a9ae02b649313.svg",
+      "explanations": [
+        "Equation (8.2) prices an action under uncertainty about where the agent is.",
+        "Average the reward the action would earn in each state, weighting each state by how much belief sits on it."
+      ]
+    },
+    {
+      "label": "EQV8-03",
+      "number": "8.3",
+      "tex": "\\begin{aligned}\nV(\\mathbf{b})\n&=\\max_{a\\in\\mathcal{A}}\\Big[\\,\\bar r(\\mathbf{b},a)\\\\\n&\\quad+\\gamma\\sum_{o}\\Pr(o\\mid \\mathbf{b},a)\\,\nV\\big(\\mathbf{b}'(\\mathbf{b},a,o)\\big)\\Big].\n\\end{aligned}\n\\tag{8.3}",
+      "asset": "assets/math/cd4610a982670be0201e.svg",
+      "explanations": [
+        "Equation (8.3) values a belief by the best action available from it and the beliefs that action can lead to.",
+        "Take the immediate expected reward, add the discounted average value of the belief each possible observation would produce, and keep the best action."
+      ]
+    },
+    {
+      "label": "chapter-08-display-5",
+      "number": "8.4",
+      "tex": "V_H(\\mathbf b)=\\max_{\\alpha\\in\\Gamma_H}\\alpha^\\top\\mathbf b.\n\\tag{8.4}",
+      "asset": "assets/math/a29d857519b0a313b7c7.svg",
+      "explanations": [
+        "Equation (8.4) represents finite-horizon belief value as best dot product from finite policy-vector set.",
+        "Score each contingent plan against current belief, then select largest expected return."
+      ]
+    },
+    {
+      "label": "EQV8-04",
+      "number": "8.5",
+      "tex": "\\begin{aligned}\n\\operatorname{VOI}(O)\n&=\\sum_{o}\\Pr(o\\mid\\mathbf{b})\\,\n\\max_{a\\in\\mathcal{A}}\\bar r\\big(\\mathbf{b}'(\\mathbf{b},o),a\\big)\\\\\n&\\quad-\\max_{a\\in\\mathcal{A}}\\bar r(\\mathbf{b},a).\n\\end{aligned}\n\\tag{8.5}",
+      "asset": "assets/math/56c0b286f79d620e6ec3.svg",
+      "explanations": [
+        "Equation (8.5) prices a look by how much better the decision becomes once its answer is known.",
+        "Average the best achievable reward across the beliefs each possible answer would leave, then subtract the best achievable reward without looking."
+      ]
+    }
+  ]
+}

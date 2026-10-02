@@ -1,0 +1,67 @@
+{
+  "slug": "bounded-message-knowledge",
+  "question": "What can each party know after a request and an acknowledgement can be dropped?",
+  "outcome": "Enumerate bounded message worlds and distinguish agreement from local knowledge.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "Alice sends a handoff and Bob receives it. Bob sends an acknowledgement, but Alice may never see that reply. Bob knows the request arrived; he does not automatically know that Alice knows it arrived. A protocol that treats one receipt as shared certainty can therefore split the parties' decisions.\n\nThis notebook enumerates a bounded request-and-acknowledgement protocol. Alice commits after seeing an acknowledgement. Bob commits after seeing a request. Each party's local view is compared with every positive-probability world that looks the same to that party. The calculation reports agreement and limited knowledge separately. It does not turn a finite retry budget into a proof of common knowledge or asynchronous consensus.",
+  "math_explanation": "Each round has two potential delivery bits: request delivery and acknowledgement delivery. An acknowledgement exists only when that round's request arrives. With R rounds, the enumeration contains 2^(2R) constructed bit worlds. Their weights multiply independent delivery or drop probabilities.\n\nA party's view contains its local sends, received messages, and round ticks. Two worlds are indistinguishable to that party when these views match. Alice knows delivery in a world if every positive-probability world with her view contains at least one received request. Bob knows Alice received an acknowledgement only if every world with his view contains that acknowledgement receipt.\n\nAgreement compares Alice's acknowledgement-based commit with Bob's request-based commit. Disagreement occurs when Bob received some request but Alice received no acknowledgement. With drop probability d, its probability after R rounds is [1-(1-d)^2]^R-d^R. The first term means no successful request/ack pair; the second removes worlds where no request arrived at all. This is a bounded protocol calculation under a specific independent-drop law.",
+  "method": "Supply a round budget and message-drop probability. The code enumerates bit histories, builds local views, and retains only positive-probability worlds for knowledge tests. Excluding impossible worlds matters at d=0 or d=1, where the declared probability model itself rules out certain histories.\n\nThe metrics report world counts, agreement, Alice's delivery knowledge, Bob's acknowledgement-receipt knowledge, and Bob-only commitment. The chart uses request rounds on the horizontal axis and agreement probability on the vertical axis. Compare its analytic values with the enumerated final metric. In the changed case set drops to zero; predict how the possible-world set shrinks before rerunning. The transfer case checks a longer budget at a different loss probability.",
+  "worked_interpretation": "At d=0.3 and R=2, no successful request/ack pair has probability 0.51^2=0.2601. No request arrives with probability 0.3^2=0.09. Bob-only commitment therefore has probability 0.1701, and agreement has probability 0.8299.\n\nWith zero drops, only one positive-probability world remains. Requests and acknowledgements arrive, so both parties commit and agreement is 1. Bob can know acknowledgement receipt in this restricted model because delivery failure has been declared impossible. That conclusion depends on the model assumption, not on receiving an additional receipt.",
+  "failure_explanation": "Increasing retries does not monotonically create stronger epistemic guarantees. It can alter agreement probability while leaving Bob unable to distinguish a lost acknowledgement from a delivered one. Probability of agreement and knowledge of agreement are different quantities.\n\nThe bounded model also supplies synchronized round ticks and independent message losses. Real asynchronous systems may lack those assumptions or face crashes rather than simple drops. This notebook makes no impossibility or consensus theorem claim for those broader settings.\n\nA zero-drop result is especially easy to overread. Declaring failure probability zero removes alternate worlds by assumption. It does not prove the channel cannot fail. When the channel contract is uncertain, retain the plausible loss worlds and identify what extra receipt, timeout rule, or failure detector would be needed for the intended decision.",
+  "transfer_explanation": "At d=0.5 and R=3, Bob-only commitment is 0.75^3-0.5^3=0.296875. Agreement is 0.703125. Compute that before opening the generated result, then compare it with enumeration.\n\nFor a local handoff protocol, map which messages each participant can observe and what decision each view permits. Include dropped replies and partial histories. If a release requires evidence that the other party received an acknowledgement, an unobserved send is insufficient. Export a procedure with receipt requirements and stop conditions rather than calling the protocol successful because some world reaches completion.",
+  "summary": "Messages create different local views. Bounded enumeration checks what follows from those views under a declared drop model and separates agreement from knowledge. The default has a measurable split-decision probability; zero drops remove that split by assumption; the transfer case checks the analytic formula. This is a finite protocol diagnostic, not proof of common knowledge, fault tolerance, or general consensus. Keep receipt requirements and model assumptions explicit.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "rounds": 2,
+    "drop_probability": 0.3
+  },
+  "changed": {
+    "rounds": 2,
+    "drop_probability": 0
+  },
+  "transfer": {
+    "rounds": 3,
+    "drop_probability": 0.5
+  },
+  "input_fields": {
+    "rounds": "Integer request/acknowledgement rounds 1..6; enumeration has 2^(2 rounds) worlds.",
+    "drop_probability": "Independent per-message drop probability in [0,1]."
+  },
+  "exercises": [
+    {
+      "question": "Compute default disagreement.",
+      "answer": "0.51^2-0.3^2=0.1701."
+    },
+    {
+      "question": "Why can Bob know acknowledgement receipt at zero drops?",
+      "answer": "The declared model removes every world where the acknowledgement was lost."
+    },
+    {
+      "question": "Compute transfer agreement.",
+      "answer": "1-(0.75^3-0.5^3)=0.703125."
+    }
+  ],
+  "routes": [
+    "bounded message receipt knowledge",
+    "dropped acknowledgement consensus trace",
+    "local-view handoff agreement"
+  ],
+  "acceptance_checks": [
+    "Enumerated world weights sum to 1.",
+    "Analytic agreement equals enumerated metric.",
+    "Impossible worlds excluded from knowledge at boundary probabilities."
+  ]
+}

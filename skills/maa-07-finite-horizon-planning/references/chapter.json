@@ -1,0 +1,79 @@
+{
+  "chapter": 7,
+  "title": "The Equation That Looks Ahead",
+  "source_path": "Manuscript/part-ii/07-the-equation-that-looks-ahead.md",
+  "source_sha256": "3e4445d158ab74abb58c96da4cf59e754f9b574f4fc2b58fb8d7e3acf44051b1",
+  "notebook": "notebooks/07-finite-horizon-planning.ipynb",
+  "skill": "maa-07-finite-horizon-planning",
+  "skill_path": "skills/maa-07-finite-horizon-planning/SKILL.md",
+  "method": "finite-horizon-planning",
+  "outcome": "Compute a finite-horizon optimal policy and its value by backward induction.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "backward induction finite policy",
+    "future reward stopping decision",
+    "remaining horizon Bellman value"
+  ],
+  "input_fields": {
+    "horizon": "Integer decision count 1..200.",
+    "discount": "Gamma in [0,1].",
+    "start": "State key.",
+    "states": "Object mapping states to optional terminal:number and actions:list. Action has name,reward:number,probabilities:normalized list,next_states:aligned registered state keys."
+  },
+  "example_input": "data/examples/ch07.json",
+  "equations": [
+    {
+      "label": "EQV7-01",
+      "number": "7.1",
+      "tex": "\\operatorname{Ret}_t=\\sum_{k=0}^{\\infty}\\gamma^{k}r_{t+k}.\n\\tag{7.1}",
+      "asset": "assets/math/676a39e05b5e3136feb4.svg",
+      "explanations": [
+        "Equation (7.1) collapses a whole future of rewards into one number, weighting later rewards less than earlier ones.",
+        "Add up every future reward, multiplying each by the discount factor raised to the number of steps away it is."
+      ]
+    },
+    {
+      "label": "EQV7-02",
+      "number": "7.2",
+      "tex": "V^{\\pi}(x)=\\operatorname{E}_{\\pi}\\!\\left[\\operatorname{Ret}_t \\mid x_t=x\\right].\n\\tag{7.2}",
+      "asset": "assets/math/29045c6784efcc8a7fd3.svg",
+      "explanations": [
+        "Equation (7.2) attaches a single number to a state, saying what the agent can expect to collect from there onward under a given way of behaving.",
+        "Average the return over everything that could happen from this state, under the policy the agent is following."
+      ]
+    },
+    {
+      "label": "EQV7-03",
+      "number": "7.3",
+      "tex": "\\begin{aligned}\nV^{\\pi}(x)\n&=\\sum_{a}\\pi(a\\mid x)\\sum_{x'}P(x'\\mid x,a)\\\\\n&\\quad\\cdot\\Bigl[r(x,a,x')+\\gamma V^{\\pi}(x')\\Bigr].\n\\end{aligned}\n\\tag{7.3}",
+      "asset": "assets/math/f5b42c519e200f14b460.svg",
+      "explanations": [
+        "Equation (7.3) expresses a state's value in terms of the values of the states it leads to, turning a question about an infinite future into a relationship between neighbours.",
+        "Average over the actions the policy might take and the states each might lead to, taking the immediate reward plus the discounted value of where the agent arrives."
+      ]
+    },
+    {
+      "label": "EQV7-04",
+      "number": "7.4",
+      "tex": "V^{\\star}(x)=\\max_{a}\\sum_{x'}P(x'\\mid x,a)\\Bigl[r(x,a,x')+\\gamma V^{\\star}(x')\\Bigr].\n\\tag{7.4}",
+      "asset": "assets/math/5bfe728026d5e6cb786c.svg",
+      "explanations": [
+        "Equation (7.4) characterizes the best achievable value from every state, and the policy that achieves it falls out of the same expression.",
+        "For each action, average the immediate reward plus discounted next-state value over where it might lead, then keep the largest."
+      ]
+    },
+    {
+      "label": "chapter-07-display-5",
+      "number": "7.5",
+      "tex": "\\|V-V^\\star\\|_\\infty\\leq \\frac{\\|TV-V\\|_\\infty}{1-\\gamma}.\n\\tag{7.5}",
+      "asset": "assets/math/bb891e918caf9b7356c6.svg",
+      "explanations": [
+        "Equation (7.5) turns a Bellman residual into an upper bound on value error for declared discounted model.",
+        "Divide largest one-step inconsistency by remaining contraction margin $1-\\gamma$."
+      ]
+    }
+  ]
+}

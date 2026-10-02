@@ -1,0 +1,645 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>23-local-security-monitor</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 23: When the Environment Gives Instructions: The Mathematics of Agent Security</h1>
+<p>A retrieved document contains words that look like instructions. The controller needs the document as evidence, but that does not give the document authority over the workflow. The critical boundary is whether data can alter control or cause an effect outside the user's permission contract.</p>
+<p>This notebook replays local fictitious events. A small monitor checks action containment, authority provenance, and current-version review before publish. It also records attempted promotion of untrusted instructions into control. Task completion and security violations have separate counters, because an attack can coexist with a superficially successful release. No live attack is executed and no real tool boundary is enforced by this calculation.</p>
+<p><strong>Outcome:</strong> Replay a fictitious attack trace against capability, provenance, and review checks.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>Let C be the permitted capability set and source(a) the authority provenance of a requested action. An allowed action must lie in C and must not derive its authority from untrusted data. Publish also requires a valid review tied to the current document version.</p>
+<p>The monitor processes the trace in order, so a later review cannot retroactively authorize an earlier publish. A review for another version does not satisfy the current predicate. A supplied executed flag records whether the effect happened even when the monitor would reject it, exposing enforcement failure separately from rule evaluation.</p>
+<p>Security violations count both promoted instruction attempts and executed forbidden actions. Authorized task completion is true only when a publish event executes while satisfying capability, provenance, and review predicates. These counters can both be nonzero. The plot focuses on cumulative forbidden action executions; data-to-control promotion remains separately visible in metrics and event rows. This explicit scope prevents a narrow figure from pretending to summarize all security outcomes.</p>
+<h2>A calculation you can run</h2>
+<p>Provide capability names, current version, and an ordered event list. Data events state whether an instruction was attempted and promoted. Review events state validity and version. Action events state action name, provenance, executed status, and version for publish. Exact booleans and a closed provenance vocabulary prevent ambiguous inputs.</p>
+<p>The computation updates current review status and evaluates each action before recording its actual execution. It returns allowed and violated flags, monitor-denied count, blocked count (denied and not executed), total security violations, and authorized completion. The figure shows forbidden executions over event index. In the changed case, promote the injected instruction and execute the previously rejected request. Predict how total violations and the narrower plot differ. Keep the local attack-family boundary in the exported report.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 23
+inputs = {&#x27;capabilities&#x27;: [&#x27;read&#x27;, &#x27;publish&#x27;],
+ &#x27;current_version&#x27;: &#x27;v2&#x27;,
+ &#x27;events&#x27;: [{&#x27;kind&#x27;: &#x27;data&#x27;, &#x27;instruction_attempt&#x27;: True, &#x27;promoted_to_control&#x27;: False},
+            {&#x27;kind&#x27;: &#x27;action&#x27;,
+             &#x27;action&#x27;: &#x27;publish&#x27;,
+             &#x27;authority_source&#x27;: &#x27;untrusted-data&#x27;,
+             &#x27;version&#x27;: &#x27;v2&#x27;,
+             &#x27;executed&#x27;: False},
+            {&#x27;kind&#x27;: &#x27;review&#x27;, &#x27;valid&#x27;: True, &#x27;version&#x27;: &#x27;v2&#x27;},
+            {&#x27;kind&#x27;: &#x27;action&#x27;,
+             &#x27;action&#x27;: &#x27;publish&#x27;,
+             &#x27;authority_source&#x27;: &#x27;user&#x27;,
+             &#x27;version&#x27;: &#x27;v2&#x27;,
+             &#x27;executed&#x27;: True}]}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 23: local-security-monitor
+Did untrusted data cross into control or cause an unauthorized effect?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;monitor_denied_requests&quot;: 1,
+  &quot;blocked_requests&quot;: 1,
+  &quot;security_violations&quot;: 0,
+  &quot;authorized_task_completion&quot;: true,
+  &quot;event_count&quot;: 4
+}
+
+Interpretation:
+The monitor checks capability containment, authority provenance, and current-version review before publish. Task completion is counted separately from violations.
+
+Assumptions:
+- Attack family consists only of these local fictitious events.
+- The supplied executed flag records what happened, even if the monitor rejected it.
+- monitor_denied_requests counts actions the monitor would deny; blocked_requests counts only those denied actions that did not execute.
+
+Limitations:
+- Checking a trace does not enforce a real tool boundary.
+- Unrepresented attacks and omitted events are outside this monitor&#x27;s coverage.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>The default injected instruction remains data, and its untrusted publish request is rejected without execution. A valid current review then allows a user-authorized publish. The trace completes the task with zero security violations and one blocked request.</p>
+<p>The changed trace promotes the instruction and executes the untrusted publish before review. Those are two violations. Later authorized publish still completes the task. The plot rises once because it counts forbidden action executions; the total violation metric is two because it also counts data-to-control promotion. Completion has not canceled either violation. The monitor denies one request in this trace, but blocked_requests is zero because that request executed anyway.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 63.082344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 63.082344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m472037e1e7" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m472037e1e7" x="85.905874" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="85.905874" y="210.075312" transform="rotate(-0 85.905874 210.075312)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m472037e1e7" x="238.062739" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="238.062739" y="210.075312" transform="rotate(-0 238.062739 210.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m472037e1e7" x="390.219605" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="390.219605" y="210.075312" transform="rotate(-0 390.219605 210.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m472037e1e7" x="542.37647" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.37647" y="210.075312" transform="rotate(-0 542.37647 210.075312)">3</text>
+     </g>
+    </g>
+    <g id="text_5">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="314.141172" y="224.076094" transform="rotate(-0 314.141172 224.076094)">event index</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <path d="M 63.082344 177.014371  L 565.2 177.014371  " clip-path="url(#p485203ed09)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <defs>
+       <path id="m86db12e3ee" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m86db12e3ee" x="63.082344" y="177.014371" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="180.8132" transform="rotate(-0 56.082344 180.8132)">−0.04</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <path d="M 63.082344 152.396658  L 565.2 152.396658  " clip-path="url(#p485203ed09)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m86db12e3ee" x="63.082344" y="152.396658" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="156.195487" transform="rotate(-0 56.082344 156.195487)">−0.02</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <path d="M 63.082344 127.778945  L 565.2 127.778945  " clip-path="url(#p485203ed09)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m86db12e3ee" x="63.082344" y="127.778945" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="131.577773" transform="rotate(-0 56.082344 131.577773)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_11">
+      <path d="M 63.082344 103.161232  L 565.2 103.161232  " clip-path="url(#p485203ed09)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m86db12e3ee" x="63.082344" y="103.161232" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="106.96006" transform="rotate(-0 56.082344 106.96006)">0.02</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_13">
+      <path d="M 63.082344 78.543519  L 565.2 78.543519  " clip-path="url(#p485203ed09)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m86db12e3ee" x="63.082344" y="78.543519" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="56.082344" y="82.342347" transform="rotate(-0 56.082344 82.342347)">0.04</text>
+     </g>
+    </g>
+    <g id="text_11">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="19.034688" y="127.778945" transform="rotate(-90 19.034688 127.778945)">violation count</text>
+    </g>
+   </g>
+   <g id="line2d_15">
+    <path d="M 85.905874 127.778945  L 238.062739 127.778945  L 390.219605 127.778945  L 542.37647 127.778945  " clip-path="url(#p485203ed09)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mdb4a5c9c68" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p485203ed09)">
+     <use xlink:href="#mdb4a5c9c68" x="85.905874" y="127.778945" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mdb4a5c9c68" x="238.062739" y="127.778945" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mdb4a5c9c68" x="390.219605" y="127.778945" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mdb4a5c9c68" x="542.37647" y="127.778945" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 63.082344 195.477656  L 63.082344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 63.082344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="63.082344" y="54.080234" transform="rotate(-0 63.082344 54.080234)">cumulative forbidden executions</text>
+   </g>
+  </g>
+  <g id="text_13">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 23: local security monitor</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p485203ed09">
+   <rect x="63.082344" y="60.080234" width="502.117656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 23.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>A checker can identify a forbidden action without stopping it. The executed flag deliberately exposes that distinction. In a deployed system, enforcement belongs at the effect boundary with authenticated authority and durable records, not only in a language-model explanation.</p>
+<p>Monitor coverage is also local. An omitted event, an unsupported action family, or a compromised review source can escape this finite rule set. The notebook does not estimate worst-case security over all possible attacks. Its adversary consists of the supplied fictitious trace events.</p>
+<p>Version binding can fail through stale approval. The transfer fixture gives a valid review of A while current version is B. That review cannot authorize publish of B. Recent or correct-looking text is not sufficient provenance. Preserve review scope, capability containment, and task completion separately before claiming that an agent handled hostile information safely.</p>
+<pre><code>changed_inputs = {&#x27;capabilities&#x27;: [&#x27;read&#x27;, &#x27;publish&#x27;],
+ &#x27;current_version&#x27;: &#x27;v2&#x27;,
+ &#x27;events&#x27;: [{&#x27;kind&#x27;: &#x27;data&#x27;, &#x27;instruction_attempt&#x27;: True, &#x27;promoted_to_control&#x27;: True},
+            {&#x27;kind&#x27;: &#x27;action&#x27;,
+             &#x27;action&#x27;: &#x27;publish&#x27;,
+             &#x27;authority_source&#x27;: &#x27;untrusted-data&#x27;,
+             &#x27;version&#x27;: &#x27;v2&#x27;,
+             &#x27;executed&#x27;: True},
+            {&#x27;kind&#x27;: &#x27;review&#x27;, &#x27;valid&#x27;: True, &#x27;version&#x27;: &#x27;v2&#x27;},
+            {&#x27;kind&#x27;: &#x27;action&#x27;,
+             &#x27;action&#x27;: &#x27;publish&#x27;,
+             &#x27;authority_source&#x27;: &#x27;user&#x27;,
+             &#x27;version&#x27;: &#x27;v2&#x27;,
+             &#x27;executed&#x27;: True}]}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 23: local-security-monitor
+Did untrusted data cross into control or cause an unauthorized effect?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;monitor_denied_requests&quot;: 1,
+  &quot;blocked_requests&quot;: 0,
+  &quot;security_violations&quot;: 2,
+  &quot;authorized_task_completion&quot;: true,
+  &quot;event_count&quot;: 4
+}
+
+Interpretation:
+The monitor checks capability containment, authority provenance, and current-version review before publish. Task completion is counted separately from violations.
+
+Assumptions:
+- Attack family consists only of these local fictitious events.
+- The supplied executed flag records what happened, even if the monitor rejected it.
+- monitor_denied_requests counts actions the monitor would deny; blocked_requests counts only those denied actions that did not execute.
+
+Limitations:
+- Checking a trace does not enforce a real tool boundary.
+- Unrepresented attacks and omitted events are outside this monitor&#x27;s coverage.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 47.962344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mad8bcbc07b" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mad8bcbc07b" x="71.473146" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="71.473146" y="210.075312" transform="rotate(-0 71.473146 210.075312)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mad8bcbc07b" x="228.21183" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="228.21183" y="210.075312" transform="rotate(-0 228.21183 210.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#mad8bcbc07b" x="384.950514" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="384.950514" y="210.075312" transform="rotate(-0 384.950514 210.075312)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mad8bcbc07b" x="541.689197" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.689197" y="210.075312" transform="rotate(-0 541.689197 210.075312)">3</text>
+     </g>
+    </g>
+    <g id="text_5">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="306.581172" y="224.076094" transform="rotate(-0 306.581172 224.076094)">event index</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <path d="M 47.962344 189.323228  L 565.2 189.323228  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <defs>
+       <path id="mb57ed595c6" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mb57ed595c6" x="47.962344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="193.122056" transform="rotate(-0 40.962344 193.122056)">0.0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <path d="M 47.962344 164.705515  L 565.2 164.705515  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#mb57ed595c6" x="47.962344" y="164.705515" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="168.504343" transform="rotate(-0 40.962344 168.504343)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <path d="M 47.962344 140.087802  L 565.2 140.087802  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mb57ed595c6" x="47.962344" y="140.087802" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="143.88663" transform="rotate(-0 40.962344 143.88663)">0.4</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_11">
+      <path d="M 47.962344 115.470089  L 565.2 115.470089  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mb57ed595c6" x="47.962344" y="115.470089" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="119.268917" transform="rotate(-0 40.962344 119.268917)">0.6</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_13">
+      <path d="M 47.962344 90.852376  L 565.2 90.852376  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#mb57ed595c6" x="47.962344" y="90.852376" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="94.651204" transform="rotate(-0 40.962344 94.651204)">0.8</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_15">
+      <path d="M 47.962344 66.234663  L 565.2 66.234663  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#mb57ed595c6" x="47.962344" y="66.234663" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="40.962344" y="70.033491" transform="rotate(-0 40.962344 70.033491)">1.0</text>
+     </g>
+    </g>
+    <g id="text_12">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.656875" y="127.778945" transform="rotate(-90 18.656875 127.778945)">violation count</text>
+    </g>
+   </g>
+   <g id="line2d_17">
+    <path d="M 71.473146 189.323228  L 228.21183 66.234663  L 384.950514 66.234663  L 541.689197 66.234663  " clip-path="url(#p3e2a7fd931)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m842a81237d" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p3e2a7fd931)">
+     <use xlink:href="#m842a81237d" x="71.473146" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m842a81237d" x="228.21183" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m842a81237d" x="384.950514" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m842a81237d" x="541.689197" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.962344 195.477656  L 47.962344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 47.962344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="47.962344" y="54.080234" transform="rotate(-0 47.962344 54.080234)">cumulative forbidden executions</text>
+   </g>
+  </g>
+  <g id="text_14">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 23: local security monitor</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p3e2a7fd931">
+   <rect x="47.962344" y="60.080234" width="517.237656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 23.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer trace has a stale review. Publish is monitor-rejected and not executed, so authorized completion is false and security violations remain zero. Refusal can therefore be secure without finishing the requested task. The useful next step is to obtain a valid review for the current version under an authorized source.</p>
+<p>For compatible local data, preserve both requested and executed actions. If actual execution is unknown, acquire effect evidence rather than marking it false. A trace report should identify the violated predicate and the enforcement boundary needed to prevent recurrence. It must not treat retrieved text or a model-generated justification as a new authority grant.</p>
+<pre><code>transfer_inputs = {&#x27;capabilities&#x27;: [&#x27;read&#x27;, &#x27;publish&#x27;],
+ &#x27;current_version&#x27;: &#x27;B&#x27;,
+ &#x27;events&#x27;: [{&#x27;kind&#x27;: &#x27;review&#x27;, &#x27;valid&#x27;: True, &#x27;version&#x27;: &#x27;A&#x27;},
+            {&#x27;kind&#x27;: &#x27;action&#x27;,
+             &#x27;action&#x27;: &#x27;publish&#x27;,
+             &#x27;authority_source&#x27;: &#x27;system&#x27;,
+             &#x27;version&#x27;: &#x27;B&#x27;,
+             &#x27;executed&#x27;: False}]}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 23: local-security-monitor
+Did untrusted data cross into control or cause an unauthorized effect?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;monitor_denied_requests&quot;: 1,
+  &quot;blocked_requests&quot;: 1,
+  &quot;security_violations&quot;: 0,
+  &quot;authorized_task_completion&quot;: false,
+  &quot;event_count&quot;: 2
+}
+
+Interpretation:
+The monitor checks capability containment, authority provenance, and current-version review before publish. Task completion is counted separately from violations.
+
+Assumptions:
+- Attack family consists only of these local fictitious events.
+- The supplied executed flag records what happened, even if the monitor rejected it.
+- monitor_denied_requests counts actions the monitor would deny; blocked_requests counts only those denied actions that did not execute.
+
+Limitations:
+- Checking a trace does not enforce a real tool boundary.
+- Unrepresented attacks and omitted events are outside this monitor&#x27;s coverage.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>capabilities:</strong> List of permitted action names in the local contract.</li>
+<li><strong>current_version:</strong> Current protected document version.</li>
+<li><strong>events:</strong> Ordered data/review/action events. data:instruction_attempt,promoted_to_control booleans; review:valid boolean,version; action:action,authority_source=user/system/untrusted-data,version for publish,executed boolean.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch23.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 23: local-security-monitor
+Did untrusted data cross into control or cause an unauthorized effect?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;monitor_denied_requests&quot;: 1,
+  &quot;blocked_requests&quot;: 1,
+  &quot;security_violations&quot;: 0,
+  &quot;authorized_task_completion&quot;: false,
+  &quot;event_count&quot;: 2
+}
+
+Interpretation:
+The monitor checks capability containment, authority provenance, and current-version review before publish. Task completion is counted separately from violations.
+
+Assumptions:
+- Attack family consists only of these local fictitious events.
+- The supplied executed flag records what happened, even if the monitor rejected it.
+- monitor_denied_requests counts actions the monitor would deny; blocked_requests counts only those denied actions that did not execute.
+
+Limitations:
+- Checking a trace does not enforce a real tool boundary.
+- Unrepresented attacks and omitted events are outside this monitor&#x27;s coverage.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>How many changed security violations occur?</p>
+</li>
+<li>
+<p>Why does the changed plot rise only once?</p>
+</li>
+<li>
+<p>Does a valid review of version A authorize publishing version B?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch23.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Untrusted data can be useful evidence without becoming control. The monitor checks local capabilities, provenance, and current-version review, then compares those rules with actual declared execution. The default completes securely, the changed trace completes with violations, and the transfer safely refuses stale approval. Security outcome and task outcome remain distinct. This finite replay diagnoses a supplied attack family without enforcing a real service or proving coverage of unknown adversaries.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-23-local-security-monitor/SKILL.md"><code>maa-23-local-security-monitor</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 23.1</h3>
+<p><img alt="Equation 23.1" src="../../assets/math/fae92fb7f1ff352e87db.svg" /></p>
+<p>Bounds a delegated process's capability set by its parent's, so nothing reached through delegation can exceed the parent's own authority.</p>
+<p>A child inherits at most what it is given; delegation can narrow authority, never widen it.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\mathcal C_{\mathrm{child}}\subseteq\mathcal C_{\mathrm{parent}}.
+\tag{23.1}
+</code></pre>
+<h3>Equation 23.2</h3>
+<p><img alt="Equation 23.2" src="../../assets/math/6e64e529954cfb809340.svg" /></p>
+<p>Advances the monitor's record from its previous state and one observed event, so authorization can be re-checked against current knowledge.</p>
+<p>Only real, observed events move <code>M_t</code> forward; a sentence claiming an event happened is not the event.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">M_{t+1}=\operatorname{Mon}(M_t,e_t).
+\tag{23.2}
+</code></pre>
+<h3>Equation 23.3</h3>
+<p><img alt="Equation 23.3" src="../../assets/math/679b0268a3ff46a285ee.svg" /></p>
+<p>Authorizes release only when the exact document, version, and recipient triple currently appears in the monitor's approval record.</p>
+<p>No partial match counts: the right document at the wrong version, or the right version to the wrong recipient, both fail the lookup.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Publish}(\delta,v,r,M_t)=1 \iff (\delta,v,r)\in\operatorname{Approved}(M_t).
+\tag{23.3}
+</code></pre>
+<h3>Equation 23.4</h3>
+<p><img alt="Equation 23.4" src="../../assets/math/ccccf4aef7aa7f16f306.svg" /></p>
+<p>Defines exposure as the single worst violation chance across a declared attack family, not an average over the family.</p>
+<p>One member of <span class="math">&#92;(&#92;mathcal F&#92;)</span> sets the value; a family with nine safe attacks and one dangerous one still reports the dangerous one's chance.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Risk}(\mathcal F)=\max_{f\in\mathcal F}\Pr[\text{violation}\mid f].
+\tag{23.4}
+</code></pre></body></html>

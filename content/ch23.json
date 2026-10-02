@@ -1,0 +1,143 @@
+{
+  "slug": "local-security-monitor",
+  "question": "Did untrusted data cross into control or cause an unauthorized effect?",
+  "outcome": "Replay a fictitious attack trace against capability, provenance, and review checks.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A retrieved document contains words that look like instructions. The controller needs the document as evidence, but that does not give the document authority over the workflow. The critical boundary is whether data can alter control or cause an effect outside the user's permission contract.\n\nThis notebook replays local fictitious events. A small monitor checks action containment, authority provenance, and current-version review before publish. It also records attempted promotion of untrusted instructions into control. Task completion and security violations have separate counters, because an attack can coexist with a superficially successful release. No live attack is executed and no real tool boundary is enforced by this calculation.",
+  "math_explanation": "Let C be the permitted capability set and source(a) the authority provenance of a requested action. An allowed action must lie in C and must not derive its authority from untrusted data. Publish also requires a valid review tied to the current document version.\n\nThe monitor processes the trace in order, so a later review cannot retroactively authorize an earlier publish. A review for another version does not satisfy the current predicate. A supplied executed flag records whether the effect happened even when the monitor would reject it, exposing enforcement failure separately from rule evaluation.\n\nSecurity violations count both promoted instruction attempts and executed forbidden actions. Authorized task completion is true only when a publish event executes while satisfying capability, provenance, and review predicates. These counters can both be nonzero. The plot focuses on cumulative forbidden action executions; data-to-control promotion remains separately visible in metrics and event rows. This explicit scope prevents a narrow figure from pretending to summarize all security outcomes.",
+  "method": "Provide capability names, current version, and an ordered event list. Data events state whether an instruction was attempted and promoted. Review events state validity and version. Action events state action name, provenance, executed status, and version for publish. Exact booleans and a closed provenance vocabulary prevent ambiguous inputs.\n\nThe computation updates current review status and evaluates each action before recording its actual execution. It returns allowed and violated flags, monitor-denied count, blocked count (denied and not executed), total security violations, and authorized completion. The figure shows forbidden executions over event index. In the changed case, promote the injected instruction and execute the previously rejected request. Predict how total violations and the narrower plot differ. Keep the local attack-family boundary in the exported report.",
+  "worked_interpretation": "The default injected instruction remains data, and its untrusted publish request is rejected without execution. A valid current review then allows a user-authorized publish. The trace completes the task with zero security violations and one blocked request.\n\nThe changed trace promotes the instruction and executes the untrusted publish before review. Those are two violations. Later authorized publish still completes the task. The plot rises once because it counts forbidden action executions; the total violation metric is two because it also counts data-to-control promotion. Completion has not canceled either violation. The monitor denies one request in this trace, but blocked_requests is zero because that request executed anyway.",
+  "failure_explanation": "A checker can identify a forbidden action without stopping it. The executed flag deliberately exposes that distinction. In a deployed system, enforcement belongs at the effect boundary with authenticated authority and durable records, not only in a language-model explanation.\n\nMonitor coverage is also local. An omitted event, an unsupported action family, or a compromised review source can escape this finite rule set. The notebook does not estimate worst-case security over all possible attacks. Its adversary consists of the supplied fictitious trace events.\n\nVersion binding can fail through stale approval. The transfer fixture gives a valid review of A while current version is B. That review cannot authorize publish of B. Recent or correct-looking text is not sufficient provenance. Preserve review scope, capability containment, and task completion separately before claiming that an agent handled hostile information safely.",
+  "transfer_explanation": "The transfer trace has a stale review. Publish is monitor-rejected and not executed, so authorized completion is false and security violations remain zero. Refusal can therefore be secure without finishing the requested task. The useful next step is to obtain a valid review for the current version under an authorized source.\n\nFor compatible local data, preserve both requested and executed actions. If actual execution is unknown, acquire effect evidence rather than marking it false. A trace report should identify the violated predicate and the enforcement boundary needed to prevent recurrence. It must not treat retrieved text or a model-generated justification as a new authority grant.",
+  "summary": "Untrusted data can be useful evidence without becoming control. The monitor checks local capabilities, provenance, and current-version review, then compares those rules with actual declared execution. The default completes securely, the changed trace completes with violations, and the transfer safely refuses stale approval. Security outcome and task outcome remain distinct. This finite replay diagnoses a supplied attack family without enforcing a real service or proving coverage of unknown adversaries.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "capabilities": [
+      "read",
+      "publish"
+    ],
+    "current_version": "v2",
+    "events": [
+      {
+        "kind": "data",
+        "instruction_attempt": true,
+        "promoted_to_control": false
+      },
+      {
+        "kind": "action",
+        "action": "publish",
+        "authority_source": "untrusted-data",
+        "version": "v2",
+        "executed": false
+      },
+      {
+        "kind": "review",
+        "valid": true,
+        "version": "v2"
+      },
+      {
+        "kind": "action",
+        "action": "publish",
+        "authority_source": "user",
+        "version": "v2",
+        "executed": true
+      }
+    ]
+  },
+  "changed": {
+    "capabilities": [
+      "read",
+      "publish"
+    ],
+    "current_version": "v2",
+    "events": [
+      {
+        "kind": "data",
+        "instruction_attempt": true,
+        "promoted_to_control": true
+      },
+      {
+        "kind": "action",
+        "action": "publish",
+        "authority_source": "untrusted-data",
+        "version": "v2",
+        "executed": true
+      },
+      {
+        "kind": "review",
+        "valid": true,
+        "version": "v2"
+      },
+      {
+        "kind": "action",
+        "action": "publish",
+        "authority_source": "user",
+        "version": "v2",
+        "executed": true
+      }
+    ]
+  },
+  "transfer": {
+    "capabilities": [
+      "read",
+      "publish"
+    ],
+    "current_version": "B",
+    "events": [
+      {
+        "kind": "review",
+        "valid": true,
+        "version": "A"
+      },
+      {
+        "kind": "action",
+        "action": "publish",
+        "authority_source": "system",
+        "version": "B",
+        "executed": false
+      }
+    ]
+  },
+  "input_fields": {
+    "capabilities": "List of permitted action names in the local contract.",
+    "current_version": "Current protected document version.",
+    "events": "Ordered data/review/action events. data:instruction_attempt,promoted_to_control booleans; review:valid boolean,version; action:action,authority_source=user/system/untrusted-data,version for publish,executed boolean."
+  },
+  "exercises": [
+    {
+      "question": "How many changed security violations occur?",
+      "answer": "Two: instruction promotion and forbidden publish execution."
+    },
+    {
+      "question": "Why does the changed plot rise only once?",
+      "answer": "It counts forbidden action executions, not instruction-promotion events."
+    },
+    {
+      "question": "Does a valid review of version A authorize publishing version B?",
+      "answer": "No. Review is bound to the document version."
+    }
+  ],
+  "routes": [
+    "untrusted data control promotion",
+    "capability provenance monitor trace",
+    "stale review adversarial publish"
+  ],
+  "acceptance_checks": [
+    "Default completes with zero violations.",
+    "Changed trace can complete with two violations.",
+    "Stale review does not authorize current-version publish."
+  ]
+}

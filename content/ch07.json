@@ -1,0 +1,234 @@
+{
+  "slug": "finite-horizon-planning",
+  "question": "When should a controller accept an immediate payoff instead of preparing a better future?",
+  "outcome": "Compute a finite-horizon optimal policy and its value by backward induction.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "Preparation often looks worse than acting when you examine only the next reward. A document controller can collect an immediate modest payoff or spend one step preparing a larger release. The preparation cost is real, but so is the later opportunity. Which action wins depends on how much future remains.\n\nThis notebook turns that comparison into a finite state model. Every reward, transition probability, terminal value, and available action is declared. The goal is to understand the equation that looks ahead, then inspect how a shortened horizon changes the policy. Optimal means optimal within this supplied model; it does not mean the controller has discovered every possible real-world alternative.",
+  "math_explanation": "Let V_h(s) be the best expected return from state s with h decisions remaining. Terminal continuation defines V_0(s). For h>=1, Q_h(s,a)=r(s,a)+gamma sum_s' P(s'|s,a)V_(h-1)(s'), and V_h(s)=max_a Q_h(s,a). Recording the maximizing action gives a policy indexed by state and remaining horizon.\n\nBackward induction starts with V_0 and builds V_1,V_2,...,V_H. Each stage uses only the previous stage's values. This separation prevents a within-stage update from accidentally pretending that extra decisions remain. Rewards are expected immediate state-action rewards; their outcome dependence is already integrated into the declared number.\n\nStopping must be represented as an explicit transition or action. The example's done state has a zero-reward self-loop, so extra horizon after termination adds nothing. Discount gamma scales later reward relative to present reward. Gamma=1 is valid for this finite computation, even though some infinite-horizon formulas require a strict discount. A terminal value can encode a declared continuation estimate, but it is not learned here.",
+  "method": "Encode states as a JSON object, with an action list for every state. Each action supplies its immediate reward and a normalized transition vector aligned with next-state identifiers. Validation rejects unknown destination states, absent actions, invalid probabilities, and unsupported horizons.\n\nThe code initializes terminal values and repeatedly evaluates all actions from each state. Its returned tables preserve every value stage and policy stage. The figure shows the start state's value against remaining decisions, making horizon effects visible. Compare the first stage with the full-horizon stage before reading the selected action. In the changed case only horizon changes from three decisions to one. All transition and reward assumptions remain fixed.",
+  "worked_interpretation": "At one remaining decision, cash gives 2 and prepare gives -1, so cash wins. At two remaining decisions, preparation gives -1+6=5, while cash still gives 2. With three decisions the value remains 5 because done adds no reward.\n\nThe policy table therefore changes at draft when the remaining horizon crosses from one to two. The changed case returns cash at the start with value 2. This is a horizon-driven reversal, not inconsistent arithmetic. A controller that ignores its deadline can select preparation and then run out of opportunities before collecting the release reward.",
+  "failure_explanation": "A planning result can be internally exact and operationally wrong because its state model omits a precondition. If release needs current approval, ready must encode that approval or the action set must check it. Reward optimism cannot create a missing permission.\n\nAnother failure comes from treating a finite model policy as robust to unknown transition changes. The Bellman recursion uses the supplied kernel at every stage. A tool outage, stale memory, or different counterparty changes that kernel and can reverse action rankings. Model auditing belongs beside planning, not after an inconvenient outcome.\n\nFinally, terminal values can hide unsupported future optimism. With a short horizon, a large terminal estimate may dominate the apparent plan. Report whether terminal continuation is zero, a measured estimate, or a judgment, and inspect sensitivity before acting.",
+  "transfer_explanation": "The transfer problem discounts future reward by 0.5. Taking one now gives value 1. Waiting and collecting 4 next step gives 0+0.5(4)=2, so later wins with two decisions remaining. With one remaining decision, waiting gives zero and now wins.\n\nFor local use, begin with a state model small enough to inspect. Include deadline, authority, or tool status when they affect future choices. Export the policy stage corresponding to the actual remaining horizon, together with its alternatives and transition assumptions. A policy for three remaining steps is not automatically valid after one step has already been spent.",
+  "summary": "Backward induction prices immediate reward together with discounted continuation. Its policy depends on state and remaining horizon, and explicit stopping prevents extra horizon from manufacturing reward. The default chooses preparation when time permits; the changed case chooses the immediate payoff; the transfer case shows discounting. Preserve the finite model boundary and terminal assumptions. This method solves a declared planning problem without estimating the accuracy of that model or authorizing its actions.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "horizon": 3,
+    "discount": 1,
+    "start": "draft",
+    "states": {
+      "draft": {
+        "actions": [
+          {
+            "name": "cash",
+            "reward": 2,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "done"
+            ]
+          },
+          {
+            "name": "prepare",
+            "reward": -1,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "ready"
+            ]
+          }
+        ]
+      },
+      "ready": {
+        "actions": [
+          {
+            "name": "release",
+            "reward": 6,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "done"
+            ]
+          }
+        ]
+      },
+      "done": {
+        "actions": [
+          {
+            "name": "stop",
+            "reward": 0,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "done"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "changed": {
+    "horizon": 1,
+    "discount": 1,
+    "start": "draft",
+    "states": {
+      "draft": {
+        "actions": [
+          {
+            "name": "cash",
+            "reward": 2,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "done"
+            ]
+          },
+          {
+            "name": "prepare",
+            "reward": -1,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "ready"
+            ]
+          }
+        ]
+      },
+      "ready": {
+        "actions": [
+          {
+            "name": "release",
+            "reward": 6,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "done"
+            ]
+          }
+        ]
+      },
+      "done": {
+        "actions": [
+          {
+            "name": "stop",
+            "reward": 0,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "done"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "transfer": {
+    "horizon": 2,
+    "discount": 0.5,
+    "start": "wait",
+    "states": {
+      "wait": {
+        "actions": [
+          {
+            "name": "now",
+            "reward": 1,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "end"
+            ]
+          },
+          {
+            "name": "later",
+            "reward": 0,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "paid"
+            ]
+          }
+        ]
+      },
+      "paid": {
+        "actions": [
+          {
+            "name": "collect",
+            "reward": 4,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "end"
+            ]
+          }
+        ]
+      },
+      "end": {
+        "actions": [
+          {
+            "name": "stop",
+            "reward": 0,
+            "probabilities": [
+              1
+            ],
+            "next_states": [
+              "end"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "input_fields": {
+    "horizon": "Integer decision count 1..200.",
+    "discount": "Gamma in [0,1].",
+    "start": "State key.",
+    "states": "Object mapping states to optional terminal:number and actions:list. Action has name,reward:number,probabilities:normalized list,next_states:aligned registered state keys."
+  },
+  "exercises": [
+    {
+      "question": "Compute draft value with two decisions.",
+      "answer": "max(2,-1+6)=5."
+    },
+    {
+      "question": "Why does horizon 3 not exceed horizon 2 here?",
+      "answer": "Both routes reach done, whose subsequent rewards are zero."
+    },
+    {
+      "question": "What is transfer later value?",
+      "answer": "0+0.5*4=2."
+    }
+  ],
+  "routes": [
+    "backward induction finite policy",
+    "future reward stopping decision",
+    "remaining horizon Bellman value"
+  ],
+  "acceptance_checks": [
+    "Draft policy switches cash to prepare between horizons 1 and 2.",
+    "Done value remains zero.",
+    "Unknown next states are rejected."
+  ]
+}

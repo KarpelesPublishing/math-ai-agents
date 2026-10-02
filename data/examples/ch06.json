@@ -1,0 +1,26 @@
+{
+  "actions": [
+    {
+      "name": "retry",
+      "probabilities": [
+        0.7,
+        0.3
+      ],
+      "utilities": [
+        8,
+        -12
+      ],
+      "cost": 1
+    },
+    {
+      "name": "escalate",
+      "probabilities": [
+        1
+      ],
+      "utilities": [
+        1
+      ],
+      "cost": 0
+    }
+  ]
+}

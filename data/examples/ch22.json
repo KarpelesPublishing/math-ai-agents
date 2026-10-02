@@ -1,0 +1,18 @@
+{
+  "risk_limit": 0,
+  "risk_penalty": 100,
+  "actions": [
+    {
+      "name": "act",
+      "reward": 20,
+      "risk": 0.01,
+      "authorized": true
+    },
+    {
+      "name": "wait",
+      "reward": -1,
+      "risk": 0,
+      "authorized": true
+    }
+  ]
+}

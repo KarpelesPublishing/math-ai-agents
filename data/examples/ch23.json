@@ -1,0 +1,21 @@
+{
+  "capabilities": [
+    "read",
+    "publish"
+  ],
+  "current_version": "B",
+  "events": [
+    {
+      "kind": "review",
+      "valid": true,
+      "version": "A"
+    },
+    {
+      "kind": "action",
+      "action": "publish",
+      "authority_source": "system",
+      "version": "B",
+      "executed": false
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "slug": "score-threshold",
+  "question": "Did capability jump, or did the scoring rule create a cliff?",
+  "outcome": "Compare continuous evidence and thresholded scores without attributing a mechanism.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A controller receives a new model version and its benchmark suddenly turns green. That visual change can feel like the arrival of a new skill. Yet the evaluator might be doing something much simpler: turning a gradual score increase into a pass flag at a fixed cutoff. The same outputs can support a smooth curve and a sudden-looking staircase.\n\nThis notebook holds the supplied continuous scores fixed while changing the threshold. The experiment gives measurement its own place in the system boundary. Model change, measurement change, and environment change are different hypotheses, and a green cell cannot distinguish them. Begin by drawing the raw scores before looking at the binary result. Ask which evidence would remain if the cutoff moved.",
+  "math_explanation": "Let s(x) be a supplied continuous score at scale x. The thresholded score is B_tau(x)=1{s(x)>=tau}. A discontinuity in B_tau can occur whenever s crosses tau, even if s itself has no sharp change. This construction is a property of the measurement rule. It does not require a discontinuity inside the model.\n\nAdjacent raw-score slopes are [s(x_i)-s(x_(i-1))]/[x_i-x_(i-1)]. They have score-per-scale units, so the scale definition matters. Replacing model size with its logarithm would change their numerical meaning. The implementation requires strictly increasing scales to keep these slopes defined and aligned.\n\nCrossing count measures adjacent changes in the binary score, including downward crossings. It is not a statistical test for emergence. With only a handful of supplied points, many different underlying functions could interpolate the observations. A useful evaluation contract therefore declares the task, scoring rule, scale variable, environment, and uncertainty before attaching a mechanism label.",
+  "method": "Provide aligned lists of increasing scales and scores between zero and one. Set the threshold separately. Validation rejects a repeated scale, mismatched vector lengths, nonfinite values, and a cutoff outside the score domain. The function calculates the pass flags, adjacent raw slopes, and number of binary crossings.\n\nThe two figures share scale on the horizontal axis. The continuous chart shows score movement; the binary chart shows the measurement transformation. Compare their shapes before making any claim about new ability. In the changed case only the threshold moves from 0.5 to 0.55. The scores and scale values remain fixed. That choice isolates a measurement intervention from a model intervention. The returned interpretation keeps this distinction explicit.",
+  "worked_interpretation": "At threshold 0.5, the default flags are 0,0,0,1,1. There is one crossing between scales 3 and 4. The raw scores rise by only a few hundredths at each interval, and the largest adjacent slope is 0.04 score units per scale unit.\n\nAt threshold 0.55, the flags become 0,0,0,0,1. The location of the apparent skill arrival moves to the last observation without changing a single score. The binary jump is real as a reported measurement. The unsupported inference would be that it identifies a sudden internal mechanism or a universal capability boundary.",
+  "failure_explanation": "A threshold diagnostic can fail through overinterpretation even when its arithmetic is correct. The raw curve might conceal a genuinely sharp change between sampled scales, or the score might be a noisy estimate with a broad uncertainty interval. This notebook does not settle either possibility because it receives no replicate measurements and fits no mechanism model.\n\nA second failure comes from comparing scores produced under different tasks or environments. A larger score can result from an easier prompt, a changed tool interface, or a more forgiving evaluator. Those changes need separate records. The computation validates numeric alignment, but it cannot verify that the rows share a scientific contract. Keep the source of every score beside the figure and use a matched experiment to isolate the part of the assembled system being changed.",
+  "transfer_explanation": "The transfer data uses a wider scale range and stronger raw-score movement. Its cutoff of 0.7 produces a pass only at the final point. Calculate the adjacent slopes with their unequal scale intervals before describing the curve. A score increase of 0.3 over 20 scale units is not the same local rate as an increase of 0.2 over 40 units.\n\nFor local data, retain the original continuous outcome wherever possible. If only pass/fail results were saved, record that loss of information rather than reconstructing an invented smooth curve. The next useful measurement is the pre-threshold score or a set of outcomes under several declared cutoffs.",
+  "summary": "Thresholding can turn gradual score movement into an abrupt reported jump. Compare raw and transformed scores under a fixed evaluation contract, then test whether the conclusion survives a cutoff change. The figures describe supplied observations, not an internal mechanism. Preserve scale units, task definitions, and measurement provenance. A pass flag is an outcome of the scoring rule; calling it a skill requires a separate operational definition and evidence that the declared ability transfers to the tasks that matter.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "scales": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "scores": [
+      0.42,
+      0.46,
+      0.49,
+      0.52,
+      0.56
+    ],
+    "threshold": 0.5
+  },
+  "changed": {
+    "scales": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "scores": [
+      0.42,
+      0.46,
+      0.49,
+      0.52,
+      0.56
+    ],
+    "threshold": 0.55
+  },
+  "transfer": {
+    "scales": [
+      10,
+      20,
+      40,
+      80
+    ],
+    "scores": [
+      0.1,
+      0.3,
+      0.6,
+      0.8
+    ],
+    "threshold": 0.7
+  },
+  "input_fields": {
+    "scales": "Finite strictly increasing numeric scale values.",
+    "scores": "Aligned continuous task scores in [0,1].",
+    "threshold": "Pass cutoff in [0,1]."
+  },
+  "exercises": [
+    {
+      "question": "List default pass flags.",
+      "answer": "Each score is compared with the default cutoff 0.5: 0.42, 0.46 and 0.49 fall below it and 0.52 and 0.56 do not, so the pass flags are 0,0,0,1,1."
+    },
+    {
+      "question": "Does changing only the cutoff prove model change?",
+      "answer": "No. Outputs remain fixed; the measurement transformation changes."
+    },
+    {
+      "question": "What is the first transfer slope?",
+      "answer": "(0.3-0.1)/(20-10)=0.02 score per scale unit."
+    }
+  ],
+  "routes": [
+    "audit sudden benchmark score",
+    "threshold measurement cliff",
+    "continuous versus exact-match jump"
+  ],
+  "acceptance_checks": [
+    "Default crossing occurs at scale 4.",
+    "Changed cutoff moves crossing to scale 5.",
+    "Repeated scales are rejected."
+  ]
+}

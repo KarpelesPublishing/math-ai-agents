@@ -1,0 +1,121 @@
+{
+  "slug": "prospective-forecast",
+  "question": "Can a frozen forecast predict unseen capability observations?",
+  "outcome": "Fit a declared curve on development data and score a separate test.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "A curve can explain yesterday's observations beautifully and still fail at tomorrow's scale. The difference between explanation and forecasting lies partly in chronology: which observations were available when the family and coefficients were selected? If a test outcome helps choose the model, it is no longer independent evidence for the prediction it influenced.\n\nThis notebook gives development and test observations separate fields. The coefficients are fitted from development data alone. The test data then scores that frozen forecast. The changed case leaves the fit untouched while changing unseen outcomes, making it impossible to confuse a stable fitted line with a successful prediction. This is a narrow implemented forecasting protocol, not a universal emergence predictor.",
+  "math_explanation": "The declared family is y=alpha+beta f(x), where f(x)=x for a linear fit or f(x)=log(x) for a log fit. Let z_i=f(x_i). Least squares gives beta=sum_i(z_i-z_bar)(y_i-y_bar)/sum_i(z_i-z_bar)^2 and alpha=y_bar-beta z_bar. Variation in the development scales is necessary because a zero denominator leaves the slope unidentified.\n\nAt a test scale x_j, the frozen prediction is y_hat_j=alpha+beta f(x_j). Residuals are y_hat_j-y_j. Test RMSE is sqrt(mean residual squared), while bias is the signed mean residual. RMSE measures magnitude; bias distinguishes systematic overprediction from underprediction. Neither is a probability of being correct.\n\nThe log family requires positive scales and interprets equal multiplicative scale changes as equal increments in its transformed coordinate. Family selection is part of the prospective protocol and must occur before seeing test outcomes. The software cannot verify the historical order of an external experiment, but it rejects overlapping development and test scales and never uses test y values in the fit.",
+  "method": "Supply two aligned development vectors and two aligned test vectors. State the family explicitly. The function validates finite values, dimensional alignment, development variation, and separation of scale sets. It computes coefficients, frozen predictions, residuals, RMSE, and bias.\n\nThe forecast and unseen-observation figures share test scale and score units. The residual figure makes errors visible rather than hiding them beneath a fitted line. Run the default case, save its coefficients, and predict what will happen when only test_y changes. The coefficients must remain identical. If they move, test evidence leaked into fitting. For real data, keep a timestamped forecast artifact or preregistered protocol beside the exported result to support the prospective claim.",
+  "worked_interpretation": "The default development line has slope 0.1 and intercept 0.1. It predicts 0.5 and 0.6 at unseen scales 4 and 5, matching the supplied test outcomes. RMSE and bias are zero up to numerical rounding.\n\nThe changed test outcomes are 0.8 and 0.95. The forecast remains 0.5 and 0.6 because the development data did not change. Residuals become -0.3 and -0.35, with negative bias and a positive RMSE. That failure is informative. Refitting after seeing it might improve the retrospective graph, but it would not repair the original prospective forecast.",
+  "failure_explanation": "The simplest leakage pattern is to move a disappointing test observation into the development set and continue calling the remaining assessment unseen. Another is to inspect several families against the same test outcomes and report only the best one. Both use the test to shape the prediction, so the reported errors cease to measure the original prospective protocol.\n\nThe implementation checks explicit scale overlap, but it cannot detect hidden reuse, shared tasks, or a family chosen after reading test results. Those are evidence-management problems. Record the family, data boundary, fit command, and forecast before opening the withheld outcome file.\n\nA successful linear or log extrapolation also does not reveal an emergence mechanism. It is conditional performance of one declared family over one supplied range. New environments or measurement rules can break that relationship even if the development residuals were tiny.",
+  "transfer_explanation": "The transfer data follows a logarithmic family. Doubling scale adds approximately log(2) to its outcome. Fit in log coordinates, then predict at scales 8 and 16. The slope is approximately 1 and the intercept approximately zero, so the predictions are approximately 2.0794 and 2.7726.\n\nWhen applying the method locally, define the forecast target before choosing the family. It might be a continuous score, a completion probability, or another declared quantity. The runtime allows finite targets without pretending all are probabilities. Explain the target units and score transformation in the accompanying report. If a bounded probability is required, this unconstrained regression may be the wrong family.",
+  "summary": "A forecast is prospective only when its choices are frozen before the outcomes used to evaluate it. This computation separates development fitting from test scoring and reports both magnitude and direction of error. The changed case preserves coefficients while exposing forecast failure; the transfer case changes the declared family. Good fit does not establish mechanism, universality, or calibration. Preserve the chronology and input boundary so the numerical result can be interpreted as evidence for the protocol that actually ran.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "development_x": [
+      1,
+      2,
+      3
+    ],
+    "development_y": [
+      0.2,
+      0.3,
+      0.4
+    ],
+    "test_x": [
+      4,
+      5
+    ],
+    "test_y": [
+      0.5,
+      0.6
+    ],
+    "family": "linear"
+  },
+  "changed": {
+    "development_x": [
+      1,
+      2,
+      3
+    ],
+    "development_y": [
+      0.2,
+      0.3,
+      0.4
+    ],
+    "test_x": [
+      4,
+      5
+    ],
+    "test_y": [
+      0.8,
+      0.95
+    ],
+    "family": "linear"
+  },
+  "transfer": {
+    "development_x": [
+      1,
+      2,
+      4
+    ],
+    "development_y": [
+      0,
+      0.69314718056,
+      1.38629436112
+    ],
+    "test_x": [
+      8,
+      16
+    ],
+    "test_y": [
+      2.07944154168,
+      2.77258872224
+    ],
+    "family": "log"
+  },
+  "input_fields": {
+    "development_x": "At least two development scales with variation.",
+    "development_y": "Aligned finite development observations.",
+    "test_x": "Separate unseen scales, with no development overlap.",
+    "test_y": "Aligned withheld observations used only for scoring.",
+    "family": "linear or log, declared before inspecting test outcomes."
+  },
+  "exercises": [
+    {
+      "question": "What are default fit coefficients?",
+      "answer": "The three development points (1,0.2), (2,0.3) and (3,0.4) lie on one line with slope (0.4-0.2)/(3-1)=0.1 and intercept 0.2-0.1(1)=0.1."
+    },
+    {
+      "question": "Does the changed test update the fit?",
+      "answer": "No. The fit uses only the development points, so the slope stays 0.1 and the intercept 0.1, and the predictions stay 0.5 and 0.6. The changed test values 0.8 and 0.95 only change the residuals (-0.3 and -0.35) and the error summaries."
+    },
+    {
+      "question": "Why must log-family scales be positive?",
+      "answer": "The real natural logarithm is undefined at zero and negative scales."
+    }
+  ],
+  "routes": [
+    "freeze prospective capability forecast",
+    "development test leakage audit",
+    "score unseen curve prediction"
+  ],
+  "acceptance_checks": [
+    "Default unseen RMSE is approximately zero.",
+    "Changed test leaves coefficients fixed but raises RMSE.",
+    "Overlapping development and test scales are rejected."
+  ]
+}

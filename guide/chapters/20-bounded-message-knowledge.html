@@ -1,0 +1,540 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>20-bounded-message-knowledge</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 20: Messages, Beliefs, and Consensus</h1>
+<p>Alice sends a handoff and Bob receives it. Bob sends an acknowledgement, but Alice may never see that reply. Bob knows the request arrived; he does not automatically know that Alice knows it arrived. A protocol that treats one receipt as shared certainty can therefore split the parties' decisions.</p>
+<p>This notebook enumerates a bounded request-and-acknowledgement protocol. Alice commits after seeing an acknowledgement. Bob commits after seeing a request. Each party's local view is compared with every positive-probability world that looks the same to that party. The calculation reports agreement and limited knowledge separately. It does not turn a finite retry budget into a proof of common knowledge or asynchronous consensus.</p>
+<p><strong>Outcome:</strong> Enumerate bounded message worlds and distinguish agreement from local knowledge.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>Each round has two potential delivery bits: request delivery and acknowledgement delivery. An acknowledgement exists only when that round's request arrives. With R rounds, the enumeration contains 2^(2R) constructed bit worlds. Their weights multiply independent delivery or drop probabilities.</p>
+<p>A party's view contains its local sends, received messages, and round ticks. Two worlds are indistinguishable to that party when these views match. Alice knows delivery in a world if every positive-probability world with her view contains at least one received request. Bob knows Alice received an acknowledgement only if every world with his view contains that acknowledgement receipt.</p>
+<p>Agreement compares Alice's acknowledgement-based commit with Bob's request-based commit. Disagreement occurs when Bob received some request but Alice received no acknowledgement. With drop probability d, its probability after R rounds is [1-(1-d)^2]^R-d^R. The first term means no successful request/ack pair; the second removes worlds where no request arrived at all. This is a bounded protocol calculation under a specific independent-drop law.</p>
+<h2>A calculation you can run</h2>
+<p>Supply a round budget and message-drop probability. The code enumerates bit histories, builds local views, and retains only positive-probability worlds for knowledge tests. Excluding impossible worlds matters at d=0 or d=1, where the declared probability model itself rules out certain histories.</p>
+<p>The metrics report world counts, agreement, Alice's delivery knowledge, Bob's acknowledgement-receipt knowledge, and Bob-only commitment. The chart uses request rounds on the horizontal axis and agreement probability on the vertical axis. Compare its analytic values with the enumerated final metric. In the changed case set drops to zero; predict how the possible-world set shrinks before rerunning. The transfer case checks a longer budget at a different loss probability.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 20
+inputs = {&#x27;rounds&#x27;: 2, &#x27;drop_probability&#x27;: 0.3}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 20: bounded-message-knowledge
+What can each party know after a request and an acknowledgement can be dropped?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;enumerated_worlds&quot;: 16,
+  &quot;possible_worlds&quot;: 16,
+  &quot;agreement_probability&quot;: 0.8299,
+  &quot;alice_knows_delivery_probability&quot;: 0.7399,
+  &quot;bob_knows_ack_receipt_probability&quot;: 0.0,
+  &quot;bob_commits_without_alice_probability&quot;: 0.1701
+}
+
+Interpretation:
+Alice commits after an acknowledgement; Bob commits after a request. Local knowledge is checked over indistinguishable positive-probability bounded histories.
+
+Assumptions:
+- Independent drops per message opportunity.
+- Bob does not observe whether his acknowledgement arrived.
+- The model contains a fixed bounded number of rounds.
+
+Limitations:
+- Finite agreement probability is not common knowledge or an asynchronous consensus theorem.
+- No hidden timeout, failure detector, or extra receipt is assumed.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>At d=0.3 and R=2, no successful request/ack pair has probability 0.51^2=0.2601. No request arrives with probability 0.3^2=0.09. Bob-only commitment therefore has probability 0.1701, and agreement has probability 0.8299.</p>
+<p>With zero drops, only one positive-probability world remains. Requests and acknowledgements arrive, so both parties commit and agreement is 1. Bob can know acknowledgement receipt in this restricted model because delivery failure has been declared impossible. That conclusion depends on the model assumption, not on receiving an additional receipt.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 60.922344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 60.922344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m53a41e5b0c" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m53a41e5b0c" x="83.844055" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="83.844055" y="210.075312" transform="rotate(-0 83.844055 210.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m53a41e5b0c" x="542.278288" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="542.278288" y="210.075312" transform="rotate(-0 542.278288 210.075312)">2</text>
+     </g>
+    </g>
+    <g id="text_3">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="313.061172" y="224.076094" transform="rotate(-0 313.061172 224.076094)">request rounds</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_3">
+      <path d="M 60.922344 189.323228  L 565.2 189.323228  " clip-path="url(#p2274b7e60b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <defs>
+       <path id="m47bf44c366" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m47bf44c366" x="60.922344" y="189.323228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.922344" y="193.122056" transform="rotate(-0 53.922344 193.122056)">0.79</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_5">
+      <path d="M 60.922344 158.473963  L 565.2 158.473963  " clip-path="url(#p2274b7e60b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m47bf44c366" x="60.922344" y="158.473963" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.922344" y="162.272792" transform="rotate(-0 53.922344 162.272792)">0.80</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_7">
+      <path d="M 60.922344 127.624699  L 565.2 127.624699  " clip-path="url(#p2274b7e60b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m47bf44c366" x="60.922344" y="127.624699" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.922344" y="131.423527" transform="rotate(-0 53.922344 131.423527)">0.81</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_9">
+      <path d="M 60.922344 96.775434  L 565.2 96.775434  " clip-path="url(#p2274b7e60b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m47bf44c366" x="60.922344" y="96.775434" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.922344" y="100.574263" transform="rotate(-0 53.922344 100.574263)">0.82</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_11">
+      <path d="M 60.922344 65.92617  L 565.2 65.92617  " clip-path="url(#p2274b7e60b)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m47bf44c366" x="60.922344" y="65.92617" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="53.922344" y="69.724998" transform="rotate(-0 53.922344 69.724998)">0.83</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="25.254375" y="127.778945" transform="rotate(-90 25.254375 127.778945)">agreement probability</text>
+    </g>
+   </g>
+   <g id="line2d_13">
+    <path d="M 83.844055 189.323228  L 542.278288 66.234663  " clip-path="url(#p2274b7e60b)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="me2df32683c" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p2274b7e60b)">
+     <use xlink:href="#me2df32683c" x="83.844055" y="189.323228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#me2df32683c" x="542.278288" y="66.234663" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 60.922344 195.477656  L 60.922344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 60.922344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="60.922344" y="54.080234" transform="rotate(-0 60.922344 54.080234)">agreement across retry budget</text>
+   </g>
+  </g>
+  <g id="text_11">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 20: bounded message knowledge</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p2274b7e60b">
+   <rect x="60.922344" y="60.080234" width="504.277656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 20.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>Increasing retries does not monotonically create stronger epistemic guarantees. It can alter agreement probability while leaving Bob unable to distinguish a lost acknowledgement from a delivered one. Probability of agreement and knowledge of agreement are different quantities.</p>
+<p>The bounded model also supplies synchronized round ticks and independent message losses. Real asynchronous systems may lack those assumptions or face crashes rather than simple drops. This notebook makes no impossibility or consensus theorem claim for those broader settings.</p>
+<p>A zero-drop result is especially easy to overread. Declaring failure probability zero removes alternate worlds by assumption. It does not prove the channel cannot fail. When the channel contract is uncertain, retain the plausible loss worlds and identify what extra receipt, timeout rule, or failure detector would be needed for the intended decision.</p>
+<pre><code>changed_inputs = {&#x27;rounds&#x27;: 2, &#x27;drop_probability&#x27;: 0}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 20: bounded-message-knowledge
+What can each party know after a request and an acknowledgement can be dropped?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;enumerated_worlds&quot;: 16,
+  &quot;possible_worlds&quot;: 1,
+  &quot;agreement_probability&quot;: 1.0,
+  &quot;alice_knows_delivery_probability&quot;: 1.0,
+  &quot;bob_knows_ack_receipt_probability&quot;: 1.0,
+  &quot;bob_commits_without_alice_probability&quot;: 0.0
+}
+
+Interpretation:
+Alice commits after an acknowledgement; Bob commits after a request. Local knowledge is checked over indistinguishable positive-probability bounded histories.
+
+Assumptions:
+- Independent drops per message opportunity.
+- Bob does not observe whether his acknowledgement arrived.
+- The model contains a fixed bounded number of rounds.
+
+Limitations:
+- Finite agreement probability is not common knowledge or an asynchronous consensus theorem.
+- No hidden timeout, failure detector, or extra receipt is assumed.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="237.6pt" viewBox="0 0 576 237.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 237.6  L 576 237.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 54.442344 195.477656  L 565.2 195.477656  L 565.2 60.080234  L 54.442344 60.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mef237eaa20" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mef237eaa20" x="77.658601" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="210.075312" transform="rotate(-0 77.658601 210.075312)">1</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mef237eaa20" x="541.983743" y="195.477656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="210.075312" transform="rotate(-0 541.983743 210.075312)">2</text>
+     </g>
+    </g>
+    <g id="text_3">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="224.076094" transform="rotate(-0 309.821172 224.076094)">request rounds</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_3">
+      <path d="M 54.442344 177.014371  L 565.2 177.014371  " clip-path="url(#p4dc8e82c49)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <defs>
+       <path id="me4d6edf8b7" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#me4d6edf8b7" x="54.442344" y="177.014371" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="180.8132" transform="rotate(-0 47.442344 180.8132)">0.96</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_5">
+      <path d="M 54.442344 152.396658  L 565.2 152.396658  " clip-path="url(#p4dc8e82c49)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#me4d6edf8b7" x="54.442344" y="152.396658" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="156.195487" transform="rotate(-0 47.442344 156.195487)">0.98</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_7">
+      <path d="M 54.442344 127.778945  L 565.2 127.778945  " clip-path="url(#p4dc8e82c49)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#me4d6edf8b7" x="54.442344" y="127.778945" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="131.577773" transform="rotate(-0 47.442344 131.577773)">1.00</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_9">
+      <path d="M 54.442344 103.161232  L 565.2 103.161232  " clip-path="url(#p4dc8e82c49)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#me4d6edf8b7" x="54.442344" y="103.161232" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="106.96006" transform="rotate(-0 47.442344 106.96006)">1.02</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_11">
+      <path d="M 54.442344 78.543519  L 565.2 78.543519  " clip-path="url(#p4dc8e82c49)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#me4d6edf8b7" x="54.442344" y="78.543519" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="82.342347" transform="rotate(-0 47.442344 82.342347)">1.04</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="18.774375" y="127.778945" transform="rotate(-90 18.774375 127.778945)">agreement probability</text>
+    </g>
+   </g>
+   <g id="line2d_13">
+    <path d="M 77.658601 127.778945  L 541.983743 127.778945  " clip-path="url(#p4dc8e82c49)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mf8ef4897b8" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p4dc8e82c49)">
+     <use xlink:href="#mf8ef4897b8" x="77.658601" y="127.778945" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mf8ef4897b8" x="541.983743" y="127.778945" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 54.442344 195.477656  L 54.442344 60.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 54.442344 195.477656  L 565.2 195.477656  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="54.080234" transform="rotate(-0 54.442344 54.080234)">agreement across retry budget</text>
+   </g>
+  </g>
+  <g id="text_11">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="13.870125" transform="rotate(-0 46.08 13.870125)">Chapter 20: bounded message knowledge</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p4dc8e82c49">
+   <rect x="54.442344" y="60.080234" width="510.757656" height="135.397422"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 20.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>At d=0.5 and R=3, Bob-only commitment is 0.75^3-0.5^3=0.296875. Agreement is 0.703125. Compute that before opening the generated result, then compare it with enumeration.</p>
+<p>For a local handoff protocol, map which messages each participant can observe and what decision each view permits. Include dropped replies and partial histories. If a release requires evidence that the other party received an acknowledgement, an unobserved send is insufficient. Export a procedure with receipt requirements and stop conditions rather than calling the protocol successful because some world reaches completion.</p>
+<pre><code>transfer_inputs = {&#x27;rounds&#x27;: 3, &#x27;drop_probability&#x27;: 0.5}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 20: bounded-message-knowledge
+What can each party know after a request and an acknowledgement can be dropped?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;enumerated_worlds&quot;: 64,
+  &quot;possible_worlds&quot;: 64,
+  &quot;agreement_probability&quot;: 0.703125,
+  &quot;alice_knows_delivery_probability&quot;: 0.578125,
+  &quot;bob_knows_ack_receipt_probability&quot;: 0.0,
+  &quot;bob_commits_without_alice_probability&quot;: 0.296875
+}
+
+Interpretation:
+Alice commits after an acknowledgement; Bob commits after a request. Local knowledge is checked over indistinguishable positive-probability bounded histories.
+
+Assumptions:
+- Independent drops per message opportunity.
+- Bob does not observe whether his acknowledgement arrived.
+- The model contains a fixed bounded number of rounds.
+
+Limitations:
+- Finite agreement probability is not common knowledge or an asynchronous consensus theorem.
+- No hidden timeout, failure detector, or extra receipt is assumed.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>rounds:</strong> Integer request/acknowledgement rounds 1..6; enumeration has 2^(2 rounds) worlds.</li>
+<li><strong>drop_probability:</strong> Independent per-message drop probability in [0,1].</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch20.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 20: bounded-message-knowledge
+What can each party know after a request and an acknowledgement can be dropped?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;enumerated_worlds&quot;: 64,
+  &quot;possible_worlds&quot;: 64,
+  &quot;agreement_probability&quot;: 0.703125,
+  &quot;alice_knows_delivery_probability&quot;: 0.578125,
+  &quot;bob_knows_ack_receipt_probability&quot;: 0.0,
+  &quot;bob_commits_without_alice_probability&quot;: 0.296875
+}
+
+Interpretation:
+Alice commits after an acknowledgement; Bob commits after a request. Local knowledge is checked over indistinguishable positive-probability bounded histories.
+
+Assumptions:
+- Independent drops per message opportunity.
+- Bob does not observe whether his acknowledgement arrived.
+- The model contains a fixed bounded number of rounds.
+
+Limitations:
+- Finite agreement probability is not common knowledge or an asynchronous consensus theorem.
+- No hidden timeout, failure detector, or extra receipt is assumed.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Compute default disagreement.</p>
+</li>
+<li>
+<p>Why can Bob know acknowledgement receipt at zero drops?</p>
+</li>
+<li>
+<p>Compute transfer agreement.</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch20.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Messages create different local views. Bounded enumeration checks what follows from those views under a declared drop model and separates agreement from knowledge. The default has a measurable split-decision probability; zero drops remove that split by assumption; the transfer case checks the analytic formula. This is a finite protocol diagnostic, not proof of common knowledge, fault tolerance, or general consensus. Keep receipt requirements and model assumptions explicit.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-20-bounded-message-knowledge/SKILL.md"><code>maa-20-bounded-message-knowledge</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 20.1</h3>
+<p><img alt="Equation 20.1" src="../../assets/math/f8ef23bd6086319132c4.svg" /></p>
+<p>Defines each next mutual-knowledge level by having every party know preceding level.</p>
+<p>First level means every party knows F; each later level wraps that group condition once more.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{MK}_{\mathcal P}^{n+1}(F) = \bigwedge_{i \in \mathcal P} \operatorname{Know}_i\!\left(\operatorname{MK}_{\mathcal P}^{n}(F)\right), \qquad \operatorname{MK}_{\mathcal P}^{1}(F) = \bigwedge_{i \in \mathcal P} \operatorname{Know}_i(F).\tag{20.1}
+</code></pre>
+<h3>Equation 20.2</h3>
+<p><img alt="Equation 20.2" src="../../assets/math/fdc2593e0526f40abc3c.svg" /></p>
+<p>Defines common knowledge as every finite mutual-knowledge level holding together.</p>
+<p>Common knowledge requires no final depth: levels one, two, and every higher finite level hold.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{CK}_{\mathcal P}(F) \quad\Longleftrightarrow\quad \bigwedge_{n=1}^{\infty} \operatorname{MK}_{\mathcal P}^{n}(F).\tag{20.2}
+</code></pre></body></html>

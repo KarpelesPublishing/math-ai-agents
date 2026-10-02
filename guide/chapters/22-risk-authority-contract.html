@@ -1,0 +1,910 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>22-risk-authority-contract</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../index.html">Laboratory guide</a></nav><p class="tag">Executed locally with a fresh process and IPython kernel. This page is a reading edition; it does not run code. Constructed examples do not measure deployed agents.</p><h1>Chapter 22: Safe Enough to Act</h1>
+<p>The most rewarding action is not always one the controller may take. A fast release can have high expected utility while lacking current approval. A different action can be authorized and still exceed a declared risk budget. Those are separate reasons to refuse execution.</p>
+<p>This notebook compares three decision boundaries: unconstrained penalty maximization, penalty maximization after authority filtering, and reward maximization after both authority and expected-risk filtering. The example includes explicit abstention. Its purpose is to show what each mathematical formulation permits, rather than treating a large penalty as an invisible substitute for an action prohibition. The changed case relaxes only the expected-risk threshold.</p>
+<p><strong>Outcome:</strong> Compare penalty choice with hard authorization and expected-risk constraints.</p>
+<ul>
+<li>Inspect the declared input contract</li>
+<li>Predict the hand-checkable case</li>
+<li>Run the shared computation</li>
+<li>Change the critical assumption</li>
+<li>Apply the method to the transfer data</li>
+</ul>
+<p><strong>Guided route:</strong> Run the worked calculation, inspect its figure, change the stated assumption, and try the transfer case. Read the explanations beside each result before opening the answers.</p>
+<p><strong>Deeper route:</strong> First read the mathematics and canonical equation reference. Audit the input contract, predict the changed result, then inspect the shared chapter implementation and solve the questions independently. Both routes use the same calculations and preserve the equations.</p>
+<h2>Technical Requirements</h2>
+<p>Python 3.11 or later, the complete laboratory folder, and the notebook dependencies listed in <code>requirements-notebooks.txt</code> (the launcher's <strong>Install notebook tools</strong> choice installs them; see START-HERE). Standard-library chapter commands also support Python 3.10. No API key, model account or network call is used by this experiment.</p>
+<p>Prior knowledge:</p>
+<ul>
+<li>Python lists and dictionaries</li>
+<li>The mapped chapter and its notation</li>
+</ul>
+<h2>The question and its mathematics</h2>
+<p>Let reward R(a), expected adverse-event probability rho(a), penalty lambda&gt;=0, and current permission A(a) describe an action. Penalty choice maximizes R(a)-lambda rho(a). A finite lambda trades reward against risk; it does not enforce rho(a)&lt;=b or A(a)=true.</p>
+<p>Authority filtering forms the set of actions whose permission predicate is true. The constrained choice further requires rho(a)&lt;=b and maximizes reward within that intersection. An empty intersection returns no feasible choice. Abstention appears only if it is explicitly supplied with its own reward, risk, and permission.</p>
+<p>An expected-risk limit is a statement about a probability or average, not a pathwise guarantee. A permitted action with rho=0.05 can still realize an adverse event. Similarly, a penalty-optimal action can violate the declared limit when reward is large enough. The method accepts supplied risks; it does not estimate them or prove that a real system's risk is below the given number.</p>
+<h2>A calculation you can run</h2>
+<p>Provide action rows and declare the risk threshold and penalty separately. Validation checks finite rewards, probability domains, and exact permission booleans. The function returns unconstrained penalty choice, authorized penalty choice, constrained choice, and the number of feasible actions. Every alternative remains in the table with its flags and penalized value.</p>
+<p>Reward and risk plots use separate vertical units. Compare selected labels with those figures instead of reading a reward bar as safety evidence. Run the default case and identify the first filter that removes each rejected action. In the changed case raise the expected-risk limit to 0.25 while preserving rewards, risks, and permissions. Predict whether a forbidden action can become available through that change.</p>
+<p>The next cell finds the bundle and imports the same computation used by the chapter skill. It does not change your system Python.</p>
+<pre><code>from pathlib import Path
+import sys, json
+LAB_ROOT = next((p for p in [Path.cwd(), *Path.cwd().parents] if (p / &quot;lab-manifest.json&quot;).is_file()), None)
+if LAB_ROOT is None:
+    raise RuntimeError(&quot;Open this notebook from the complete extracted laboratory folder.&quot;)
+sys.path.insert(0, str(LAB_ROOT / &quot;src&quot;))
+from math_ai_agents.core import analyze, report_text
+from math_ai_agents.plotting import figure_svg
+from IPython.display import SVG, display
+</code></pre>
+<p>Set the declared inputs below. These are constructed teaching values, not measurements from a production agent. Change a value only after predicting what it should change.</p>
+<pre><code>chapter = 22
+inputs = {&#x27;risk_limit&#x27;: 0.1,
+ &#x27;risk_penalty&#x27;: 5,
+ &#x27;actions&#x27;: [{&#x27;name&#x27;: &#x27;fast-release&#x27;, &#x27;reward&#x27;: 10, &#x27;risk&#x27;: 0.3, &#x27;authorized&#x27;: False},
+             {&#x27;name&#x27;: &#x27;reviewed-release&#x27;, &#x27;reward&#x27;: 5, &#x27;risk&#x27;: 0.05, &#x27;authorized&#x27;: True},
+             {&#x27;name&#x27;: &#x27;risky-authorized&#x27;, &#x27;reward&#x27;: 8, &#x27;risk&#x27;: 0.2, &#x27;authorized&#x27;: True},
+             {&#x27;name&#x27;: &#x27;abstain&#x27;, &#x27;reward&#x27;: 0, &#x27;risk&#x27;: 0, &#x27;authorized&#x27;: True}]}
+report = analyze(chapter, inputs)
+# This input was explicitly taken from the teaching fixture.
+report[&#x27;evidence_kind&#x27;] = &#x27;constructed teaching example&#x27;
+print(report_text(report))</code></pre>
+<div class="output"><pre>Chapter 22: risk-authority-contract
+Which choices satisfy both current authority and a declared expected-risk limit?
+Evidence: constructed teaching example
+
+Calculated quantities:
+{
+  &quot;unconstrained_penalty_choice&quot;: &quot;fast-release&quot;,
+  &quot;authorized_penalty_choice&quot;: &quot;risky-authorized&quot;,
+  &quot;constrained_choice&quot;: &quot;reviewed-release&quot;,
+  &quot;feasible_count&quot;: 2
+}
+
+Interpretation:
+A finite penalty can favor a forbidden or over-limit action. Authorization filters the action set; an expected-risk constraint filters authorized alternatives again.
+
+Assumptions:
+- Risks are supplied expected probabilities for the same adverse event.
+- Authorization is a current hard predicate.
+
+Limitations:
+- Expected risk does not establish pathwise safety.
+- Missing feasible actions requires abstention or a new authorized alternative.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<p>Fast-release has penalized value 10-5(0.3)=8.5 and wins unconstrained penalty choice, but it is unauthorized. Among authorized actions, risky-authorized has value 8-5(0.2)=7 and wins the penalty comparison. It exceeds the default risk limit 0.1.</p>
+<p>The hard constrained choice is reviewed-release, with reward 5 and risk 0.05. Abstention is also feasible but has reward 0. When the limit changes to 0.25, risky-authorized becomes feasible and wins at reward 8. Fast-release stays forbidden because a risk-threshold change cannot create permission. The three selected labels therefore answer different questions.</p>
+<p>The plot below uses the calculated quantities. Read each panel's units before comparing its values.</p>
+<pre><code>display(SVG(figure_svg(report)))</code></pre>
+<div class="output"><pre>Matplotlib is building the font cache; this may take a moment.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 54.442344 194.361406  L 565.2 194.361406  L 565.2 69.080234  L 54.442344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m2532421cb5" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m2532421cb5" x="77.658601" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="208.959062" transform="rotate(-0 77.658601 208.959062)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m2532421cb5" x="232.433648" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="232.433648" y="208.959062" transform="rotate(-0 232.433648 208.959062)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m2532421cb5" x="387.208696" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.208696" y="208.959062" transform="rotate(-0 387.208696 208.959062)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m2532421cb5" x="541.983743" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="208.959062" transform="rotate(-0 541.983743 208.959062)">3</text>
+     </g>
+    </g>
+    <g id="text_5">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="222.959062" transform="rotate(-0 309.821172 222.959062)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <path d="M 54.442344 188.666808  L 565.2 188.666808  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <defs>
+       <path id="m5891e29200" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="188.666808" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="192.465636" transform="rotate(-0 47.442344 192.465636)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <path d="M 54.442344 165.888413  L 565.2 165.888413  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="165.888413" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="169.687241" transform="rotate(-0 47.442344 169.687241)">2</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <path d="M 54.442344 143.110018  L 565.2 143.110018  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="143.110018" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="146.908846" transform="rotate(-0 47.442344 146.908846)">4</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_11">
+      <path d="M 54.442344 120.331623  L 565.2 120.331623  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="120.331623" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="124.130451" transform="rotate(-0 47.442344 124.130451)">6</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_13">
+      <path d="M 54.442344 97.553228  L 565.2 97.553228  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="97.553228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="101.352056" transform="rotate(-0 47.442344 101.352056)">8</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_15">
+      <path d="M 54.442344 74.774833  L 565.2 74.774833  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="74.774833" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="78.573661" transform="rotate(-0 47.442344 78.573661)">10</text>
+     </g>
+    </g>
+    <g id="text_12">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="28.315" y="131.72082" transform="rotate(-90 28.315 131.72082)">reward units</text>
+    </g>
+   </g>
+   <g id="line2d_17">
+    <path d="M 77.658601 74.774833  L 232.433648 131.72082  L 387.208696 97.553228  L 541.983743 188.666808  " clip-path="url(#p01ed989703)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="m9f941547c8" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p01ed989703)">
+     <use xlink:href="#m9f941547c8" x="77.658601" y="74.774833" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9f941547c8" x="232.433648" y="131.72082" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9f941547c8" x="387.208696" y="97.553228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9f941547c8" x="541.983743" y="188.666808" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 54.442344 194.361406  L 54.442344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 54.442344 194.361406  L 565.2 194.361406  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="63.080234" transform="rotate(-0 54.442344 63.080234)">reward by action</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 54.442344 375.8  L 565.2 375.8  L 565.2 250.518828  L 54.442344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_5">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m2532421cb5" x="77.658601" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="390.397656" transform="rotate(-0 77.658601 390.397656)">0</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m2532421cb5" x="232.433648" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="232.433648" y="390.397656" transform="rotate(-0 232.433648 390.397656)">1</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m2532421cb5" x="387.208696" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.208696" y="390.397656" transform="rotate(-0 387.208696 390.397656)">2</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m2532421cb5" x="541.983743" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="390.397656" transform="rotate(-0 541.983743 390.397656)">3</text>
+     </g>
+    </g>
+    <g id="text_18">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="404.397656" transform="rotate(-0 309.821172 404.397656)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_7">
+     <g id="line2d_22">
+      <path d="M 54.442344 370.105401  L 565.2 370.105401  " clip-path="url(#pa59621fb8f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="370.105401" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="373.904229" transform="rotate(-0 47.442344 373.904229)">0.0</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_24">
+      <path d="M 54.442344 332.14141  L 565.2 332.14141  " clip-path="url(#pa59621fb8f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="332.14141" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="335.940238" transform="rotate(-0 47.442344 335.940238)">0.1</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_26">
+      <path d="M 54.442344 294.177418  L 565.2 294.177418  " clip-path="url(#pa59621fb8f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="294.177418" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="297.976246" transform="rotate(-0 47.442344 297.976246)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_28">
+      <path d="M 54.442344 256.213427  L 565.2 256.213427  " clip-path="url(#pa59621fb8f)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#m5891e29200" x="54.442344" y="256.213427" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="260.012255" transform="rotate(-0 47.442344 260.012255)">0.3</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="25.136875" y="313.159414" transform="rotate(-90 25.136875 313.159414)">expected adverse-event probability</text>
+    </g>
+   </g>
+   <g id="line2d_30">
+    <path d="M 77.658601 256.213427  L 232.433648 351.123406  L 387.208696 294.177418  L 541.983743 370.105401  " clip-path="url(#pa59621fb8f)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#pa59621fb8f)">
+     <use xlink:href="#m9f941547c8" x="77.658601" y="256.213427" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9f941547c8" x="232.433648" y="351.123406" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9f941547c8" x="387.208696" y="294.177418" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#m9f941547c8" x="541.983743" y="370.105401" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 54.442344 375.8  L 54.442344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 54.442344 375.8  L 565.2 375.8  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="244.518828" transform="rotate(-0 54.442344 244.518828)">risk by action</text>
+   </g>
+  </g>
+  <g id="text_25">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 22: risk authority contract</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p01ed989703">
+   <rect x="54.442344" y="69.080234" width="510.757656" height="125.281172"/>
+  </clipPath>
+  <clipPath id="pa59621fb8f">
+   <rect x="54.442344" y="250.518828" width="510.757656" height="125.281172"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 22.L1:</strong> Calculated chapter experiment. Each panel labels its input and output units; interpret it under the assumptions printed in the report.</p>
+<h2>Change the assumption</h2>
+<p>A large penalty can look like a safety rule while leaving prohibited behavior available. If reward grows or the penalty is miscalibrated, the controller may choose the forbidden row. The hard authorization predicate avoids that particular tradeoff by removing the action before optimization.</p>
+<p>Risk estimates also carry uncertainty. A supplied value 0.05 is not evidence of a bound unless an evaluation or formal process supports it. This notebook does not add confidence limits to supplied probabilities. When a limit must be conservative, provide a justified upper estimate or use a separate measurement design.</p>
+<p>Pathwise properties need another representation. A mean-risk constraint cannot ensure that every trajectory respects a temporal invariant or that a tool never receives an unauthorized command. Use an explicit monitor and effect trace for those questions. Keep refusal and escalation alternatives visible when no permitted action meets the risk contract.</p>
+<pre><code>changed_inputs = {&#x27;risk_limit&#x27;: 0.25,
+ &#x27;risk_penalty&#x27;: 5,
+ &#x27;actions&#x27;: [{&#x27;name&#x27;: &#x27;fast-release&#x27;, &#x27;reward&#x27;: 10, &#x27;risk&#x27;: 0.3, &#x27;authorized&#x27;: False},
+             {&#x27;name&#x27;: &#x27;reviewed-release&#x27;, &#x27;reward&#x27;: 5, &#x27;risk&#x27;: 0.05, &#x27;authorized&#x27;: True},
+             {&#x27;name&#x27;: &#x27;risky-authorized&#x27;, &#x27;reward&#x27;: 8, &#x27;risk&#x27;: 0.2, &#x27;authorized&#x27;: True},
+             {&#x27;name&#x27;: &#x27;abstain&#x27;, &#x27;reward&#x27;: 0, &#x27;risk&#x27;: 0, &#x27;authorized&#x27;: True}]}
+changed = analyze(chapter, changed_inputs)
+changed[&#x27;evidence_kind&#x27;] = &#x27;constructed changed-assumption example&#x27;
+print(report_text(changed))
+display(SVG(figure_svg(changed)))</code></pre>
+<div class="output"><pre>Chapter 22: risk-authority-contract
+Which choices satisfy both current authority and a declared expected-risk limit?
+Evidence: constructed changed-assumption example
+
+Calculated quantities:
+{
+  &quot;unconstrained_penalty_choice&quot;: &quot;fast-release&quot;,
+  &quot;authorized_penalty_choice&quot;: &quot;risky-authorized&quot;,
+  &quot;constrained_choice&quot;: &quot;risky-authorized&quot;,
+  &quot;feasible_count&quot;: 3
+}
+
+Interpretation:
+A finite penalty can favor a forbidden or over-limit action. Authorization filters the action set; an expected-risk constraint filters authorized alternatives again.
+
+Assumptions:
+- Risks are supplied expected probabilities for the same adverse event.
+- Authorization is a current hard predicate.
+
+Limitations:
+- Expected risk does not establish pathwise safety.
+- Missing feasible actions requires abstention or a new authorized alternative.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<div class="output"><svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="576pt" height="417.6pt" viewBox="0 0 576 417.6" version="1.1"><title>Calculated chapter experiment</title><desc>Labeled plot of the explicitly supplied chapter inputs. See the adjacent explanation for assumptions.</desc>
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Mathematics of AI Agents Laboratory</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 417.6  L 576 417.6  L 576 0  L 0 0  z " style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 54.442344 194.361406  L 565.2 194.361406  L 565.2 69.080234  L 54.442344 69.080234  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m4680e269b1" d="M 0 0  L 0 3.5  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m4680e269b1" x="77.658601" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="208.959062" transform="rotate(-0 77.658601 208.959062)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m4680e269b1" x="232.433648" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="232.433648" y="208.959062" transform="rotate(-0 232.433648 208.959062)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m4680e269b1" x="387.208696" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.208696" y="208.959062" transform="rotate(-0 387.208696 208.959062)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m4680e269b1" x="541.983743" y="194.361406" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="208.959062" transform="rotate(-0 541.983743 208.959062)">3</text>
+     </g>
+    </g>
+    <g id="text_5">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="222.959062" transform="rotate(-0 309.821172 222.959062)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_5">
+      <path d="M 54.442344 188.666808  L 565.2 188.666808  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <defs>
+       <path id="mfee08457df" d="M 0 0  L -3.5 0  " style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="188.666808" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="192.465636" transform="rotate(-0 47.442344 192.465636)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_7">
+      <path d="M 54.442344 165.888413  L 565.2 165.888413  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="165.888413" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="169.687241" transform="rotate(-0 47.442344 169.687241)">2</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_9">
+      <path d="M 54.442344 143.110018  L 565.2 143.110018  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="143.110018" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="146.908846" transform="rotate(-0 47.442344 146.908846)">4</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_11">
+      <path d="M 54.442344 120.331623  L 565.2 120.331623  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="120.331623" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="124.130451" transform="rotate(-0 47.442344 124.130451)">6</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_13">
+      <path d="M 54.442344 97.553228  L 565.2 97.553228  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="97.553228" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="101.352056" transform="rotate(-0 47.442344 101.352056)">8</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_15">
+      <path d="M 54.442344 74.774833  L 565.2 74.774833  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="74.774833" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="78.573661" transform="rotate(-0 47.442344 78.573661)">10</text>
+     </g>
+    </g>
+    <g id="text_12">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="28.315" y="131.72082" transform="rotate(-90 28.315 131.72082)">reward units</text>
+    </g>
+   </g>
+   <g id="line2d_17">
+    <path d="M 77.658601 74.774833  L 232.433648 131.72082  L 387.208696 97.553228  L 541.983743 188.666808  " clip-path="url(#p6111a69deb)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <defs>
+     <path id="mbefea5b8b9" d="M 0 2  C 0.530406 2 1.03916 1.789267 1.414214 1.414214  C 1.789267 1.03916 2 0.530406 2 0  C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214  C 1.03916 -1.789267 0.530406 -2 0 -2  C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214  C -1.789267 -1.03916 -2 -0.530406 -2 0  C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214  C -1.03916 1.789267 -0.530406 2 0 2  z " style="stroke: #31586b"/>
+    </defs>
+    <g clip-path="url(#p6111a69deb)">
+     <use xlink:href="#mbefea5b8b9" x="77.658601" y="74.774833" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mbefea5b8b9" x="232.433648" y="131.72082" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mbefea5b8b9" x="387.208696" y="97.553228" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mbefea5b8b9" x="541.983743" y="188.666808" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 54.442344 194.361406  L 54.442344 69.080234  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 54.442344 194.361406  L 565.2 194.361406  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="63.080234" transform="rotate(-0 54.442344 63.080234)">reward by action</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_5">
+    <path d="M 54.442344 375.8  L 565.2 375.8  L 565.2 250.518828  L 54.442344 250.518828  z " style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_5">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m4680e269b1" x="77.658601" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="77.658601" y="390.397656" transform="rotate(-0 77.658601 390.397656)">0</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_19">
+      <g>
+       <use xlink:href="#m4680e269b1" x="232.433648" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="232.433648" y="390.397656" transform="rotate(-0 232.433648 390.397656)">1</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m4680e269b1" x="387.208696" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="387.208696" y="390.397656" transform="rotate(-0 387.208696 390.397656)">2</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_21">
+      <g>
+       <use xlink:href="#m4680e269b1" x="541.983743" y="375.8" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="541.983743" y="390.397656" transform="rotate(-0 541.983743 390.397656)">3</text>
+     </g>
+    </g>
+    <g id="text_18">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.821172" y="404.397656" transform="rotate(-0 309.821172 404.397656)">case</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_7">
+     <g id="line2d_22">
+      <path d="M 54.442344 370.105401  L 565.2 370.105401  " clip-path="url(#pb345f589ab)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_23">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="370.105401" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="373.904229" transform="rotate(-0 47.442344 373.904229)">0.0</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_24">
+      <path d="M 54.442344 332.14141  L 565.2 332.14141  " clip-path="url(#pb345f589ab)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_25">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="332.14141" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="335.940238" transform="rotate(-0 47.442344 335.940238)">0.1</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_26">
+      <path d="M 54.442344 294.177418  L 565.2 294.177418  " clip-path="url(#pb345f589ab)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_27">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="294.177418" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="297.976246" transform="rotate(-0 47.442344 297.976246)">0.2</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_28">
+      <path d="M 54.442344 256.213427  L 565.2 256.213427  " clip-path="url(#pb345f589ab)" style="fill: none; stroke: #d4d8da; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_29">
+      <g>
+       <use xlink:href="#mfee08457df" x="54.442344" y="256.213427" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="47.442344" y="260.012255" transform="rotate(-0 47.442344 260.012255)">0.3</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="25.136875" y="313.159414" transform="rotate(-90 25.136875 313.159414)">expected adverse-event probability</text>
+    </g>
+   </g>
+   <g id="line2d_30">
+    <path d="M 77.658601 256.213427  L 232.433648 351.123406  L 387.208696 294.177418  L 541.983743 370.105401  " clip-path="url(#pb345f589ab)" style="fill: none; stroke: #31586b; stroke-width: 1.8; stroke-linecap: square"/>
+    <g clip-path="url(#pb345f589ab)">
+     <use xlink:href="#mbefea5b8b9" x="77.658601" y="256.213427" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mbefea5b8b9" x="232.433648" y="351.123406" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mbefea5b8b9" x="387.208696" y="294.177418" style="fill: #31586b; stroke: #31586b"/>
+     <use xlink:href="#mbefea5b8b9" x="541.983743" y="370.105401" style="fill: #31586b; stroke: #31586b"/>
+    </g>
+   </g>
+   <g id="patch_6">
+    <path d="M 54.442344 375.8  L 54.442344 250.518828  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 54.442344 375.8  L 565.2 375.8  " style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: start" x="54.442344" y="244.518828" transform="rotate(-0 54.442344 244.518828)">risk by action</text>
+   </g>
+  </g>
+  <g id="text_25">
+   <text style="font-size: 12px; font-family: 'DejaVu Sans'; text-anchor: start" x="46.08" y="17.470125" transform="rotate(-0 46.08 17.470125)">Chapter 22: risk authority contract</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p6111a69deb">
+   <rect x="54.442344" y="69.080234" width="510.757656" height="125.281172"/>
+  </clipPath>
+  <clipPath id="pb345f589ab">
+   <rect x="54.442344" y="250.518828" width="510.757656" height="125.281172"/>
+  </clipPath>
+ </defs>
+</svg></div>
+<p><strong>Figure 22.L2:</strong> The changed-assumption result. Compare the printed quantities and the stated assumptions with the first run. A different input need not imply a causal effect in a deployed agent.</p>
+<h2>Try a new case</h2>
+<p>The transfer limit is zero. Act has risk 0.01 and is therefore infeasible, even though its penalized value is 19 under penalty 100. Wait has risk 0 and reward-1, so it is the only constrained choice. Negative reward does not invalidate a feasible refusal.</p>
+<p>For local use, identify who owns the permission predicate and who owns the risk threshold. State the adverse event precisely and keep its probability denominator consistent across alternatives. A practical report should explain which rows fail authority, which fail expected risk, and which remain available. It should not convert a low average into a guarantee about every run.</p>
+<pre><code>transfer_inputs = {&#x27;risk_limit&#x27;: 0,
+ &#x27;risk_penalty&#x27;: 100,
+ &#x27;actions&#x27;: [{&#x27;name&#x27;: &#x27;act&#x27;, &#x27;reward&#x27;: 20, &#x27;risk&#x27;: 0.01, &#x27;authorized&#x27;: True},
+             {&#x27;name&#x27;: &#x27;wait&#x27;, &#x27;reward&#x27;: -1, &#x27;risk&#x27;: 0, &#x27;authorized&#x27;: True}]}
+transfer = analyze(chapter, transfer_inputs)
+transfer[&#x27;evidence_kind&#x27;] = &#x27;constructed transfer example&#x27;
+print(report_text(transfer))</code></pre>
+<div class="output"><pre>Chapter 22: risk-authority-contract
+Which choices satisfy both current authority and a declared expected-risk limit?
+Evidence: constructed transfer example
+
+Calculated quantities:
+{
+  &quot;unconstrained_penalty_choice&quot;: &quot;act&quot;,
+  &quot;authorized_penalty_choice&quot;: &quot;act&quot;,
+  &quot;constrained_choice&quot;: &quot;wait&quot;,
+  &quot;feasible_count&quot;: 1
+}
+
+Interpretation:
+A finite penalty can favor a forbidden or over-limit action. Authorization filters the action set; an expected-risk constraint filters authorized alternatives again.
+
+Assumptions:
+- Risks are supplied expected probabilities for the same adverse event.
+- Authorization is a current hard predicate.
+
+Limitations:
+- Expected risk does not establish pathwise safety.
+- Missing feasible actions requires abstention or a new authorized alternative.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Apply the method to your inputs</h2>
+<p>The example file below has the exact input shape the method accepts. Copy it to a new file, replace its values, then point <code>reader_file</code> at your copy. Run the cell again. Supplied inputs retain their stated provenance; the program cannot establish that they are representative observations.</p>
+<ul>
+<li><strong>risk_limit:</strong> Maximum allowed adverse-event probability in [0,1].</li>
+<li><strong>risk_penalty:</strong> Nonnegative utility deduction per unit probability.</li>
+<li><strong>actions:</strong> Each row has name,reward:finite number,risk:probability,authorized:exact boolean. Abstention must be an explicit row.</li>
+</ul>
+<pre><code>reader_file = LAB_ROOT / &#x27;data/examples/ch22.json&#x27;
+reader_inputs = json.loads(reader_file.read_text())
+reader_report = analyze(chapter, reader_inputs)
+print(report_text(reader_report))</code></pre>
+<div class="output"><pre>Chapter 22: risk-authority-contract
+Which choices satisfy both current authority and a declared expected-risk limit?
+Evidence: supplied local inputs; provenance not independently verified
+
+Calculated quantities:
+{
+  &quot;unconstrained_penalty_choice&quot;: &quot;act&quot;,
+  &quot;authorized_penalty_choice&quot;: &quot;act&quot;,
+  &quot;constrained_choice&quot;: &quot;wait&quot;,
+  &quot;feasible_count&quot;: 1
+}
+
+Interpretation:
+A finite penalty can favor a forbidden or over-limit action. Authorization filters the action set; an expected-risk constraint filters authorized alternatives again.
+
+Assumptions:
+- Risks are supplied expected probabilities for the same adverse event.
+- Authorization is a current hard predicate.
+
+Limitations:
+- Expected risk does not establish pathwise safety.
+- Missing feasible actions requires abstention or a new authorized alternative.
+
+Execution: completed locally; constructed inputs are not deployment measurements.
+</pre></div>
+<h2>Questions</h2>
+<ol>
+<li>
+<p>Which default action wins the hard constraint?</p>
+</li>
+<li>
+<p>Can risk_limit = 0.25 authorize fast-release?</p>
+</li>
+<li>
+<p>Why does transfer choose wait despite negative reward?</p>
+</li>
+</ol>
+<p>Answers: <a href="../../solutions/ch22.md">separate solutions</a>. Try the calculation before opening them.</p>
+<h2>Summary</h2>
+<p>Reward penalties, expected-risk constraints, and hard authority are different decision rules. The notebook compares their choices explicitly and preserves every rejected alternative's reason. Relaxing risk can admit a previously over-limit action but cannot grant permission. The transfer case shows that a finite penalty can still prefer positive risk under a zero-risk contract. Use the constrained result within its declared probability model, while reserving pathwise and enforcement claims for separate evidence.</p>
+<p>Limits of this experiment:</p>
+<ul>
+<li>This is a local calculation under declared inputs, not an empirical claim about a deployed agent.</li>
+<li>Read the returned assumptions and limitations before applying the numerical result.</li>
+</ul>
+<p>The assistant skill is <a href="../../skills/maa-22-risk-authority-contract/SKILL.md"><code>maa-22-risk-authority-contract</code></a>. It uses this notebook's tested computation and input contract.</p>
+<h2>Equations from the chapter</h2>
+<p>These are the unchanged display equations and their explanations from the canonical chapter. They are a reference for the experiment, not a claim that every equation is numerically implemented by this one method.</p>
+<h3>Equation 22.1</h3>
+<p><img alt="Equation 22.1" src="../../assets/math/eb14c1e8bbd95b7a8e74.svg" /></p>
+<p>Separates goal-seeking from permission: reward is maximized only among policies that meet every declared auxiliary-cost limit.</p>
+<p>The same policy <span class="math">&#92;(&#92;pi&#92;)</span> appears in both ledgers, while each <code>i</code> names a distinct measured hazard and <code>d_i</code> names its limit.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\begin{aligned}
+\text{maximize}_{\pi}\quad &amp; \operatorname{Ret}^{\pi}\\
+\text{subject to}\quad &amp; \operatorname{Cost}_i^{\pi}\le d_i \quad \text{for every declared } i.
+\end{aligned}\tag{22.1}
+</code></pre>
+<h3>Equation 22.2</h3>
+<p><img alt="Equation 22.2" src="../../assets/math/e3a0e835f74db5a1ee08.svg" /></p>
+<p>Turns one auxiliary cost into a fixed reward penalty so ordinary reward optimization can rank policies by one blended score.</p>
+<p><span class="math">&#92;(&#92;lambda&#95;{&#92;mathrm{safe}}&#92;)</span> sets a constant exchange rate between reward units and the first declared cost's units.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Score}_{\lambda_{\mathrm{safe}}}(\pi)
+=\operatorname{Ret}^{\pi}-\lambda_{\mathrm{safe}}\operatorname{Cost}_1^{\pi}.
+\tag{22.2}
+</code></pre>
+<h3>Equation 22.3</h3>
+<p><img alt="Equation 22.3" src="../../assets/math/371c8675bdb06b88d9bb.svg" /></p>
+<p>Bounds one update's modeled excess over cost limit by a term controlled by policy-step size, discounting, and constraint advantage.</p>
+<p>The right side is <code>d_i</code> plus a nonnegative allowance, so the displayed result permits bounded violation rather than asserting satisfaction.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Cost}_i^{\pi_{k+1}}
+\le d_i+
+\frac{\sqrt{2\delta}\,\gamma\,\epsilon_i}{(1-\gamma)^2}.
+\tag{22.3}
+</code></pre>
+<h3>Equation 22.4</h3>
+<p><img alt="Equation 22.4" src="../../assets/math/23fd856a63c4e5644b78.svg" /></p>
+<p>Reserves room below a deployment cost limit for known modeling, approximation, sampling, and update-bound exposure.</p>
+<p>Optimization targets a stricter internal ceiling, leaving <span class="math">&#92;(&#92;varepsilon&#95;{&#92;mathrm{safe}}&#92;)</span> between measured planning cost and external limit <code>d_i</code>.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{Cost}_i^{\pi}
+\le d_i-\varepsilon_{\mathrm{safe}},
+\qquad \varepsilon_{\mathrm{safe}}&gt;0.
+\tag{22.4}
+</code></pre>
+<h3>Equation 22.5</h3>
+<p><img alt="Equation 22.5" src="../../assets/math/efc01bbeb46ffdf27496.svg" /></p>
+<p>Replaces a mean-cost target with a declared upper-tail severity measure for episode cost <code>C</code>.</p>
+<p>The threshold <code>z</code> searches tail cutoffs, while <span class="math">&#92;(1/(1-&#92;alpha)&#92;)</span> scales severity beyond each cutoff.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">\operatorname{CVaR}_{\alpha}(C)
+= \inf_{z\in\mathbb R}\left[z+\frac{1}{1-\alpha}\,\mathbb E[(C-z)_+]\right].
+\tag{22.5}
+</code></pre>
+<h3>Equation 22.6</h3>
+<p><img alt="Equation 22.6" src="../../assets/math/e765c8011cb6df6a9d96.svg" /></p>
+<p>Carries a declared finite-horizon risk budget forward, preventing one charged action from spending more authority than remains.</p>
+<p><code>b_t</code> is an accounting state, while <span class="math">&#92;(&#92;widehat r&#95;t(a&#95;t)&#92;)</span> needs its own calibration and threat-model evidence.</p>
+<p>LaTeX source, preserved for inspection:</p>
+<pre><code class="language-latex">b_{t+1}=b_t-\widehat r_t(a_t),\qquad b_0=B,\qquad \widehat r_t(a_t)\le b_t.
+\tag{22.6}
+</code></pre></body></html>

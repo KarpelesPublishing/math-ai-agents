@@ -1,0 +1,126 @@
+{
+  "slug": "cross-play-transfer",
+  "question": "Does successful self-play transfer to the partners the controller will actually meet?",
+  "outcome": "Compute diagonal, cross-play, and deployment-mixture performance.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "roadmap": [
+    "Inspect the declared input contract",
+    "Predict the hand-checkable case",
+    "Run the shared computation",
+    "Change the critical assumption",
+    "Apply the method to the transfer data"
+  ],
+  "opening": "Two controllers coordinate well with copies of themselves and badly with each other. Their private conventions are useful locally but do not travel. A deployment that changes partners can therefore change the effective environment without changing either controller's underlying model.\n\nThis notebook makes the distinction visible in a cross-play matrix. Rows are candidate policies and columns are partners. Diagonal cells measure matching-policy coordination, while off-diagonal cells reveal transfer. Weighted row values answer a deployment question: which policy works best against the partners expected here? A changed supervisor distribution can reverse the preferred policy, so diagonal success alone is an incomplete selection rule.",
+  "math_explanation": "For matrix M_ij, mean self-play is the average diagonal value. Mean cross-play averages off-diagonal values when at least two policies exist. These descriptive summaries weight their cells uniformly; they are not automatically the deployment estimand.\n\nWith target partner weights w_j summing to one, policy i has value V_i=sum_j w_j M_ij. A second weight vector computes another environment mixture over the same columns. Selecting argmax_i V_i conditions the recommendation on that distribution. Changing weights can reverse the winner even when every matrix entry is fixed.\n\nThe supplied entries are probabilities or compatible normalized performance values under a shared success definition. The runtime does not estimate them from counts. Matching task distributions, budgets, and measurement rules is an assumption of the comparison. If partners adapt to the selected policy, a frozen matrix may cease to describe their behavior; the report should then become a dynamic-game measurement design rather than a static guarantee.",
+  "method": "Provide a square matrix and two normalized column-weight vectors. The function validates probabilities and dimensions, computes diagonal and off-diagonal summaries, then evaluates every row under both mixtures. It returns selected policy indices and their expected mixture values.\n\nThe figures show self-play diagonal values, partner-transfer values, and changed-supervisor values separately. Policy index identifies each row; retain a name mapping in reader notes when policies have operational names. In the changed case the primary partner mixture becomes concentrated on column 0. Predict whether that favors the first policy's strong diagonal or the second policy's more even transfer. No matrix observations change.",
+  "worked_interpretation": "Default mean self-play is (0.95+0.9)/2=0.925. Mean cross-play is (0.2+0.4)/2=0.3, so the proportional loss of Equation 19.2 is (0.925-0.3)/0.925, about 0.676, which the report returns as joint_policy_correlation_loss. Under equal partner weights, policy 0 scores 0.575 and policy 1 scores 0.65, so policy 1 wins despite policy 0's stronger diagonal.\n\nWith weights [0.9,0.1], policy 0 scores 0.875 and policy 1 scores 0.45. The preferred policy reverses. The second supervisor mixture already demonstrates that reversal in the default report. Interpret it as conditional transfer across partner distributions, not proof that one policy is intrinsically more cooperative.",
+  "failure_explanation": "A cross-play matrix can conceal unmatched conditions. If one row receives easier tasks, more time, or a different supervisor, weighted averages compare more than policy behavior. Preserve those conditions before treating a cell difference as transfer evidence.\n\nUniform off-diagonal averaging is also easy to misuse. The deployed system may almost never encounter some partners, while frequently meeting an omitted partner. A high average across the supplied bank says little about an unsupported population.\n\nAnother failure is strategic adaptation. A partner that reacts to the deployed policy creates a changing environment. Static matrix values may describe the initial interaction but not later equilibria. This laboratory calculates a declared finite comparison and does not infer common knowledge, incentives, or an equilibrium from success entries.",
+  "transfer_explanation": "The transfer matrix includes a specialist for column 0, a generalist with success 0.6 everywhere, and a specialist for column 2. Under weights [0.2,0.6,0.2], the generalist wins at 0.6 while each specialist scores 0.2. Concentrating the supervisor on the two extreme columns gives the specialists 0.5 each, still below 0.6.\n\nFor local data, collect off-diagonal cells deliberately rather than testing only familiar pairings. Record counts and uncertainty separately if entries are estimates. Define the partner mixture relevant to deployment and inspect plausible shifts before choosing a policy. Self-play remains a useful diagnostic, but it answers a narrower question.",
+  "summary": "Self-play measures coordination with a matching partner; cross-play tests transfer. Deployment choice depends on partner weights, and changed counterparties can reverse rankings without changing policies. The notebook separates these quantities and checks a specialist/generalist transfer case. Its matrix is a finite declared environment, not a universal cooperation score or dynamic equilibrium model. Preserve matched conditions and the intended partner population beside the result.",
+  "limitations": [
+    "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
+    "Read the returned assumptions and limitations before applying the numerical result."
+  ],
+  "defaults": {
+    "matrix": [
+      [
+        0.95,
+        0.2
+      ],
+      [
+        0.4,
+        0.9
+      ]
+    ],
+    "partner_weights": [
+      0.5,
+      0.5
+    ],
+    "supervisor_weights": [
+      0.9,
+      0.1
+    ]
+  },
+  "changed": {
+    "matrix": [
+      [
+        0.95,
+        0.2
+      ],
+      [
+        0.4,
+        0.9
+      ]
+    ],
+    "partner_weights": [
+      0.9,
+      0.1
+    ],
+    "supervisor_weights": [
+      0.9,
+      0.1
+    ]
+  },
+  "transfer": {
+    "matrix": [
+      [
+        1,
+        0,
+        0
+      ],
+      [
+        0.6,
+        0.6,
+        0.6
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "partner_weights": [
+      0.2,
+      0.6,
+      0.2
+    ],
+    "supervisor_weights": [
+      0.5,
+      0,
+      0.5
+    ]
+  },
+  "input_fields": {
+    "matrix": "Square policy by partner success-probability matrix, entries in [0,1].",
+    "partner_weights": "Normalized target partner distribution.",
+    "supervisor_weights": "Normalized changed partner or supervisor distribution over the same columns."
+  },
+  "exercises": [
+    {
+      "question": "Compute default policy 1 mixture value.",
+      "answer": "0.5*0.4+0.5*0.9=0.65."
+    },
+    {
+      "question": "Why does the changed mixture favor policy 0?",
+      "answer": "Under the changed partner weights [0.9,0.1], policy 0 is worth 0.9(0.95)+0.1(0.2)=0.875 and policy 1 is worth 0.9(0.4)+0.1(0.9)=0.45. Its strong column 0 value 0.95 receives weight 0.9."
+    },
+    {
+      "question": "Which transfer policy wins?",
+      "answer": "Policy 1 is a generalist: it succeeds with probability 0.6 against every partner, so under weights [0.2,0.6,0.2] it is worth 0.6, while policies 0 and 2 are each worth 0.2."
+    }
+  ],
+  "routes": [
+    "self-play cross-play partner transfer",
+    "counterparty distribution policy audit",
+    "supervisor mixture coordination"
+  ],
+  "acceptance_checks": [
+    "Mixture values equal independent weighted row sums.",
+    "Changed partner weights reverse winner.",
+    "One-policy cross-play mean is unavailable.",
+    "joint_policy_correlation_loss equals (mean diagonal minus mean off-diagonal) over mean diagonal; it is null when there is no off-diagonal or the diagonal mean is zero."
+  ]
+}
