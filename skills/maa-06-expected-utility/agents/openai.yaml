@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 6: The Price of a Choice"
-  short_description: "Calculate and interpret Chapter 6 agent methods"
-  default_prompt: "Use $maa-06-expected-utility to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

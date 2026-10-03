@@ -1,7 +1,0 @@
-{
-  "training_seed": 17,
-  "evaluation_seed": 29,
-  "episodes": 5000,
-  "learning_rate": 0.03,
-  "evaluation_trials": 1000
-}

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 4: The Path from Prediction to Action"
-  short_description: "Calculate and interpret Chapter 4 agent methods"
-  default_prompt: "Use $maa-04-permission-reachability to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

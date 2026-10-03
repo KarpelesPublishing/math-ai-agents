@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 16: Thought as Search"
-  short_description: "Calculate and interpret Chapter 16 agent methods"
-  default_prompt: "Use $maa-16-sample-allocation to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

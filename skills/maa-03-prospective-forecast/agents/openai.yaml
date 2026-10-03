@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 3: How to Predict Emergence"
-  short_description: "Calculate and interpret Chapter 3 agent methods"
-  default_prompt: "Use $maa-03-prospective-forecast to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

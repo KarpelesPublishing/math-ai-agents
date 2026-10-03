@@ -1,6 +1,0 @@
-interface:
-  display_name: "Mathematics of AI Agents"
-  short_description: "Route and apply the book's tested agent mathematics"
-  default_prompt: "Use $math-ai-agents to select the right method, run my calculation and explain its limits."
-policy:
-  allow_implicit_invocation: true

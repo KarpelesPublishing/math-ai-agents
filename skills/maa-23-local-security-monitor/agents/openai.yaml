@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 23: When the Environment Gives Instructions: The Mathematics of Agent Security"
-  short_description: "Calculate and interpret Chapter 23 agent methods"
-  default_prompt: "Use $maa-23-local-security-monitor to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

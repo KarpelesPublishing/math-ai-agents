@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 24: How Much Capability Have We Extracted?"
-  short_description: "Calculate and interpret Chapter 24 agent methods"
-  default_prompt: "Use $maa-24-matched-capability to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

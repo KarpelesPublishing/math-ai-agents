@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 13: Learning to Choose: Training an Agent from Trajectories"
-  short_description: "Calculate and interpret Chapter 13 agent methods"
-  default_prompt: "Use $maa-13-finite-policy-learning to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

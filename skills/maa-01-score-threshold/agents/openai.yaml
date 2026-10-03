@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 1: When a Score Becomes a Skill"
-  short_description: "Calculate and interpret Chapter 1 agent methods"
-  default_prompt: "Use $maa-01-score-threshold to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Chapter 10: Plans Within Plans: Hierarchical Actions and Reusable Skills"
-  short_description: "Calculate and interpret Chapter 10 agent methods"
-  default_prompt: "Use $maa-10-option-duration to analyze my supplied inputs and explain the result."
-policy:
-  allow_implicit_invocation: true

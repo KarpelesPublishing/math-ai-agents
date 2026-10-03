@@ -1,4 +1,0 @@
-/* Fixture theme: proves theme_css is inlined after the base style. Look only. */
-:root{--teal:#1d5a8a;--gold:#8a4b1d}
-.demo{border:1px solid var(--line);border-radius:8px;padding:20px}
-.chapter-pager a{border:1px solid var(--line);padding:10px 14px}
