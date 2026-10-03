@@ -4,7 +4,7 @@
 
 The default development line has slope 0.1 and intercept 0.1. It predicts 0.5 and 0.6 at unseen scales 4 and 5, matching the supplied test outcomes. RMSE and bias are zero up to numerical rounding.
 
-The changed test outcomes are 0.8 and 0.95. The forecast remains 0.5 and 0.6 because the development data did not change. Residuals become -0.3 and -0.35, with negative bias and a positive RMSE. That failure is informative. Refitting after seeing it might improve the retrospective graph, but it would not repair the original prospective forecast.
+The changed test outcomes are 0.8 and 0.95. The forecast remains 0.5 and 0.6 because the development data did not change. Residuals, computed as forecast minus observation, become -0.3 and -0.35, with bias -0.325 and RMSE about 0.326. The book reports residuals as observation minus forecast (+0.3 and +0.35); only the sign convention differs. That failure is informative. Refitting after seeing it might improve the retrospective graph, but it would not repair the original prospective forecast.
 
 ## Changed assumption
 
