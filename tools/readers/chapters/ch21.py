@@ -4,10 +4,14 @@ Four demonstrations on the chapter's Braess network (one unit of traffic by
 default, two outer routes, a directed zero-latency middle link) and on
 Equations (21.1) to (21.3). Demonstrations 1, 2 and 4 call the laboratory's
 own congestion function (math_ai_agents.chapters.ch21.evaluate), so the
-reader, the notebook and the chapter skill agree. Demonstration 3 adds the
-chapter's marginal-cost charge (a charge on every congestible edge), which the
-laboratory does not compute; it is derived directly and checked against the
-laboratory's optimum. Every number is a constructed teaching value.
+reader, the notebook and the chapter skill agree. Demonstration 1 shows why the
+stable pattern and the best pattern differ (route costs against the flow on the
+middle link, and total latency against the same flow), with and without the
+link. Demonstration 3 adds the chapter's marginal-cost charge (a charge on every
+congestible edge), which the laboratory does not compute; it is derived directly
+and checked against the laboratory's optimum, and it is set beside no charge and
+tolls on the link alone (computed by the laboratory). Every number is a
+constructed teaching value.
 
 Network units used throughout: each congestible edge (S-U and L-T) has
 latency equal to its flow, each fixed edge (U-T and S-L) has latency 1, and
@@ -58,9 +62,25 @@ def route_flows(m):
             "S-U-L-T": float(m["equilibrium_shortcut_flow"])}
 
 
+# Closed forms for the network (capacity 1, outer delay 1, link delay o); each is checked against the laboratory below.
+
+def eq_link_flow(D, o=0.0):
+    return min(D, max(0.0, 2 * (1.0 - o) - D))
+
+
+def opt_link_flow(D, o=0.0):
+    return min(D, max(0.0, (1.0 - o) - D))
+
+
+def tl_at(D, z):
+    """Total latency when z is on the middle link and (D - z) / 2 on each outer route (overhead 0)."""
+    v = (D + z) / 2
+    return 2 * v * v + (D - z)
+
+
 # Demonstration 1
 
-def free_link_picture(demand=1):
+def free_link_picture(demand=1, network="link"):
     D = float(demand)
     m = lab(D)
     before = float(m["without_shortcut_total_time"])
@@ -72,39 +92,98 @@ def free_link_picture(demand=1):
     xo = (D - zo) / 2
     if abs(total_latency(x, z) - eq) > 1e-9 or abs(total_latency(xo, zo) - opt) > 1e-9:
         raise AssertionError("edge-by-edge total disagrees with the laboratory")
-    rows = [("Before the\nlink", D / 2, 0.0), ("Link added,\nequilibrium", x, z), ("Social\noptimum", xo, zo)]
+    if abs(eq_link_flow(D) - z) > 1e-9 or abs(opt_link_flow(D) - zo) > 1e-9 or abs(tl_at(D, z) - eq) > 1e-9 or abs(tl_at(D, zo) - opt) > 1e-9:
+        raise AssertionError("closed forms disagree with the laboratory")
 
     fig, (left, right) = new_figure(ncols=2, height=4.3)
-    pos = np.arange(3)
-    for i, (_, outer, mid) in enumerate(rows):
-        left.bar(i, outer, width=0.6, color=PALETTE["navy"], edgecolor="white")
-        left.bar(i, outer, bottom=outer, width=0.6, color="#9fb7c9", edgecolor=PALETTE["ink"], hatch="..", linewidth=0.6)
-        if mid > 0:
-            left.bar(i, mid, bottom=2 * outer, width=0.6, color="white", edgecolor=PALETTE["gold"], hatch="///", linewidth=1.2)
-    handles = [Patch(facecolor=PALETTE["navy"], edgecolor="white", label="S-U-T"),
-               Patch(facecolor="#9fb7c9", edgecolor=PALETTE["ink"], hatch="..", label="S-L-T"),
-               Patch(facecolor="white", edgecolor=PALETTE["gold"], hatch="///", label="S-U-L-T (link)")]
-    left.set_xticks(pos, [r[0] for r in rows])
-    left.set_ylim(0, D * 1.75)
-    left.legend(handles=handles, loc="upper left", fontsize=10.5, frameon=False, ncol=1)
-    left.set_xlabel("Allocation")
-    left.set_ylabel("Flow on each route (stacked, total = demand)")
-    left.set_title("Who takes which route", fontsize=11.5)
+    if network == "link":
+        zs = np.linspace(0, D, 101)
+        c_out = (D + zs) / 2 + 1
+        c_mid = D + zs
+        (lo,) = left.plot(zs, c_out, color=PALETTE["navy"], linewidth=2)
+        (lm,) = left.plot(zs, c_mid, color=PALETTE["terracotta"], linewidth=2, linestyle="dashed")
+        left.axvline(z, color=PALETTE["grey"], linestyle=":", linewidth=1.5)
+        left.plot([z], [(D + z) / 2 + 1], "o", color=PALETTE["navy"], markersize=8)
+        left.plot([z], [D + z], "s", color=PALETTE["terracotta"], markersize=8, markerfacecolor="white", markeredgewidth=2)
+        left.set_xlim(-0.03 * D, D * 1.03)
+        left.set_ylim(0, max(c_out.max(), c_mid.max()) * 1.18)
+        left.legend([lo, lm], ["outer route: v + 1", "middle route: 2 v"], loc="lower right", fontsize=10.5, frameon=False)
+        label_point(left, z, left.get_ylim()[1], f"equilibrium z = {fmt(z, 2)}", color=PALETTE["grey"], dx=-4 if z > D / 2 else 4, dy=-4,
+                    ha="right" if z > D / 2 else "left", va="top").set_bbox(WHITE)
+        left.set_xlabel("Flow z on the middle route (v = (D + z) / 2 on each congestible edge)")
+        left.set_ylabel("Route cost a traveller sees")
+        left.set_title("Who gains by switching, at each z", fontsize=11.5)
 
-    vals = [before, eq, opt]
-    colors = [PALETTE["navy"], PALETTE["terracotta"], PALETTE["teal"]]
-    hatches = ["", "xx", "//"]
-    for i, (v, c, h) in enumerate(zip(vals, colors, hatches)):
-        right.bar(i, v, width=0.6, color=c, hatch=h, edgecolor="white")
-        right.text(i, v + max(vals) * 0.02, fmt(v, 3), ha="center", va="bottom", fontsize=11, color=PALETTE["ink"])
-    right.set_xticks(pos, [r[0] for r in rows])
-    right.set_ylim(0, max(vals) * 1.18)
-    right.set_xlabel("Allocation")
-    right.set_ylabel("Total latency TL (constructed units)")
-    right.set_title("Equation (21.1) summed over the edges", fontsize=11.5)
+        tl = np.array([tl_at(D, t) for t in zs])
+        right.plot(zs, tl, color=PALETTE["teal"], linewidth=2)
+        right.set_xlim(-0.03 * D, D * 1.03)
+        right.set_ylim(tl.min() * 0.8, tl.max() * 1.18)
+        same = abs(z - zo) <= TOL
+        if same:
+            right.plot([z], [eq], "o", color=PALETTE["teal"], markersize=10)
+            label_point(right, z, eq, f"equilibrium = optimum, {fmt(eq, 3)}", color=PALETTE["teal"], dx=0, dy=-14,
+                        ha="right" if z > D / 2 else "left", va="top").set_bbox(WHITE)
+        else:
+            right.plot([zo], [opt], "o", color=PALETTE["teal"], markersize=10)
+            right.plot([z], [eq], "s", color=PALETTE["terracotta"], markersize=9)
+            label_point(right, zo, opt, f"optimum {fmt(opt, 3)}", color=PALETTE["teal"], dx=6 if zo <= z else -6, dy=-12,
+                        ha="left" if zo <= z else "right", va="top").set_bbox(WHITE)
+            label_point(right, z, eq, f"equilibrium {fmt(eq, 3)}", color=PALETTE["terracotta"], dx=-6 if z >= zo else 6, dy=12,
+                        ha="right" if z >= zo else "left", va="bottom").set_bbox(WHITE)
+        right.set_xlabel("Flow z on the middle route")
+        right.set_ylabel("Total latency TL (constructed units)")
+        right.set_title("Equation (21.1) at each z", fontsize=11.5)
+    else:
+        qs = np.linspace(0, D, 101)
+        (lu,) = left.plot(qs, 1 + qs, color=PALETTE["navy"], linewidth=2)
+        (ll,) = left.plot(qs, 1 + D - qs, color=PALETTE["terracotta"], linewidth=2, linestyle="dashed")
+        left.axvline(D / 2, color=PALETTE["grey"], linestyle=":", linewidth=1.5)
+        left.plot([D / 2], [1 + D / 2], "o", color=PALETTE["navy"], markersize=8)
+        left.set_xlim(-0.03 * D, D * 1.03)
+        left.set_ylim(0, 1 + D + 0.4)
+        left.legend([lu, ll], ["upper route: 1 + q", "lower route: 1 + D - q"], loc="lower center", fontsize=10.5, frameon=False)
+        label_point(left, D / 2, left.get_ylim()[1], f"equal at q = {fmt(D / 2, 2)}", color=PALETTE["grey"], dx=4, dy=-4, ha="left", va="top").set_bbox(WHITE)
+        left.set_xlabel("Flow q on the upper route (D - q on the lower)")
+        left.set_ylabel("Route cost a traveller sees")
+        left.set_title("Without the link: the routes must match", fontsize=11.5)
 
+        tl = np.array([q * (1 + q) + (D - q) * (1 + D - q) for q in qs])
+        if abs(tl.min() - before) > 1e-9:
+            raise AssertionError("brute-force minimum disagrees with the closed form")
+        right.plot(qs, tl, color=PALETTE["teal"], linewidth=2)
+        right.plot([D / 2], [before], "o", color=PALETTE["teal"], markersize=10)
+        right.set_xlim(-0.03 * D, D * 1.03)
+        right.set_ylim(tl.min() * 0.8, tl.max() * 1.18)
+        label_point(right, D / 2, before, f"equilibrium = optimum, {fmt(before, 3)}", color=PALETTE["teal"], dx=0, dy=-14, ha="center", va="top").set_bbox(WHITE)
+        right.set_xlabel("Flow q on the upper route")
+        right.set_ylabel("Total latency TL (constructed units)")
+        right.set_title("Equation (21.1) at each q", fontsize=11.5)
+
+    v = x + z
     link_users = "none" if z <= TOL else ("all travellers" if abs(z - D) <= TOL else f"{fmt(z, 2)} of {fmt(D, 2)} units")
     ratio = eq / opt
+    if network == "nolink":
+        metrics = {
+            "Total latency, link removed (equilibrium)": fmt(before, 3),
+            "Split on the upper route": f"{fmt(D / 2, 2)} of {fmt(D, 2)} units",
+            "Latency of each trip": fmt(1 + D / 2, 3),
+            "Total latency, social optimum": fmt(before, 3),
+            "Equilibrium over optimum": fmt(1.0, 3),
+        }
+        interpretation = (f"Without the link the two routes cost 1 + q and 1 + {fmt(D, 2)} - q, equal only at q = {fmt(D, 2)} / 2 = {fmt(D / 2, 2)}, so each trip costs 1 + {fmt(D / 2, 2)} = {fmt(1 + D / 2, 3)}. "
+                          f"Total latency = {fmt(D, 2)} x ({fmt(D, 2)} / 2 + 1) = {fmt(before, 3)}, and the same split minimizes it, so private choice and the planner agree (ratio 1.000). "
+                          "Both routes are used because putting everything on one gives that route cost 1 + D against 1 for the unused one.")
+        steps = [
+            f"Without the link the routes cost 1 + q (upper) and 1 + {fmt(D, 2)} - q (lower).",
+            f"Equal costs need q = {fmt(D, 2)} / 2 = {fmt(D / 2, 2)}.",
+            f"Each trip then costs 1 + {fmt(D / 2, 2)} = {fmt(1 + D / 2, 3)}.",
+            f"Total latency = {fmt(D, 2)} x ({fmt(D, 2)} / 2 + 1) = {fmt(before, 3)}.",
+            "The same split minimizes total latency, so equilibrium over optimum = 1.000.",
+        ]
+        alt = (f"Left, two route-cost lines, upper rising and lower falling, crossing at q = {fmt(D / 2, 2)}. "
+               f"Right, total latency against q with its minimum {fmt(before, 3)} at the same point.")
+        return fig, metrics, interpretation, {"alt": alt, "steps": steps}
+
     metrics = {
         "Total latency before the link": fmt(before, 3),
         "Total latency, link added (equilibrium)": fmt(eq, 3),
@@ -113,7 +192,6 @@ def free_link_picture(demand=1):
         "Flow on the middle link": link_users,
         "Equilibrium over optimum": fmt(ratio, 3),
     }
-    v = x + z
     edge_sum = (f"2 x {fmt(v, 2)} x {fmt(v, 2)} + 2 x {fmt(x, 2)} x 1.00 = {fmt(2 * v * v, 2)} + {fmt(2 * x, 2)} = {fmt(eq, 2)}")
     if abs(eq - before) <= TOL and z <= TOL:
         verdict = (f"The link is available but nobody uses it: the middle route costs 2 x {fmt(v, 2)} = {fmt(2 * v, 2)}, "
@@ -125,10 +203,23 @@ def free_link_picture(demand=1):
     else:
         verdict = (f"Here the link lowers total latency from {fmt(before, 3)} to {fmt(eq, 3)}, and the equilibrium already matches "
                    f"the optimum ({fmt(opt, 3)}). The paradox needs enough demand; it is not a property of every shortcut.")
-    interpretation = (f"At equilibrium with the link, {link_users + ' take' if z > TOL else 'no one takes'} the middle link, so each congestible edge "
+    switch = "so travellers switch to the link" if D / 2 + 1 > D + TOL else ("so there is a tie" if abs(D / 2 + 1 - D) <= TOL else "so nobody gains by switching")
+    interpretation = (f"At z = 0 an outer route costs {fmt(D, 2)} / 2 + 1 = {fmt(D / 2 + 1, 2)} and the middle route costs {fmt(D, 2)} + 0 = {fmt(D, 2)}, {switch}. "
+                      f"At equilibrium with the link, {link_users + ' take' if z > TOL else 'no one takes'} the middle link, so each congestible edge "
                       f"carries {fmt(v, 2)}. Summing flow x latency over the five edges (the middle link and its zero latency add nothing): "
                       f"{edge_sum}. Before the link the same demand split evenly: {fmt(D, 2)} x ({fmt(D, 2)} / 2 + 1) = {fmt(before, 3)}. {verdict}")
-    return fig, metrics, interpretation
+    steps = [
+        f"Demand D = {fmt(D, 2)}. With z on the middle route, each congestible edge carries v = (D + z) / 2.",
+        f"At z = 0: outer route {fmt(D, 2)} / 2 + 1 = {fmt(D / 2 + 1, 2)}; middle route {fmt(D, 2)} + 0 = {fmt(D, 2)}.",
+        f"Equilibrium z = {fmt(z, 2)}, so v = ({fmt(D, 2)} + {fmt(z, 2)}) / 2 = {fmt(v, 2)}.",
+        f"Seen costs at equilibrium: outer {fmt(v, 2)} + 1 = {fmt(v + 1, 2)}, middle 2 x {fmt(v, 2)} = {fmt(2 * v, 2)}.",
+        f"Total latency at equilibrium = {edge_sum}.",
+        f"Social optimum: z = {fmt(zo, 2)}, total latency {fmt(opt, 3)}.",
+        f"Ratio = {fmt(eq, 3)} / {fmt(opt, 3)} = {fmt(ratio, 3)}.",
+    ]
+    alt = (f"Left, route costs against the flow z on the middle link: the outer route rises slowly and the middle route rises faster, with the equilibrium at z = {fmt(z, 2)}. "
+           f"Right, total latency against z, with the optimum {fmt(opt, 3)} at z = {fmt(zo, 2)} and the equilibrium {fmt(eq, 3)} at z = {fmt(z, 2)}.")
+    return fig, metrics, interpretation, {"alt": alt, "steps": steps}
 
 
 # Demonstration 2
@@ -144,31 +235,54 @@ def bound_picture(overhead=0.0):
     k = int(np.argmax(ratios))
     peak_demand = float(GRID[k])
     mm = 1.0 - o  # demand at which the all-link equilibrium is just beaten by the no-link optimum
+    z_eq = np.array([float(lab(d, overhead=o)["equilibrium_shortcut_flow"]) for d in GRID])
+    z_opt = np.array([float(lab(d, overhead=o)["optimal_shortcut_flow"]) for d in GRID])
+    if (np.abs(z_eq - np.array([eq_link_flow(d, o) for d in GRID])).max() > 1e-9
+            or np.abs(z_opt - np.array([opt_link_flow(d, o) for d in GRID])).max() > 1e-9):
+        raise AssertionError("closed-form link flows disagree with the laboratory")
 
-    fig, ax = new_figure(height=4.3)
+    fig, (left, ax2) = new_figure(ncols=2, height=4.3)
+    ax = left
     ax.axhspan(4 / 3, 1.5, facecolor="none", edgecolor=PALETTE["grey"], hatch="///", linewidth=0)
     ax.plot(GRID, ratios, color=PALETTE["teal"], linewidth=2)
     ax.axhline(4 / 3, color=PALETTE["terracotta"], linestyle="dashed", linewidth=1.6)
-    label_point(ax, 0.05, 4 / 3, "bound 4/3 = 1.33", color=PALETTE["terracotta"], dx=2, dy=4, ha="left").set_bbox(WHITE)
-    label_point(ax, 2.5, 1.46, "above 4/3: impossible when\nevery delay is linear", color=PALETTE["grey"], dx=-4, dy=0, ha="right", va="top").set_bbox(WHITE)
+    label_point(ax, 0.05, 4 / 3, "bound 4/3", color=PALETTE["terracotta"], dx=2, dy=-4, ha="left", va="top").set_bbox(WHITE)
+    label_point(ax, 2.5, 1.48, "above 4/3:\nnot possible", color=PALETTE["grey"], dx=-4, dy=0, ha="right", va="top").set_bbox(WHITE)
     if flat:
         label_point(ax, 1.25, top, "ratio is 1.00 at every demand", color=PALETTE["navy"], dx=0, dy=9, ha="center").set_bbox(WHITE)
     else:
         ax.plot([peak_demand], [top], "o", color=PALETTE["navy"], markersize=9)
-        label_point(ax, peak_demand, top, f"peak {fmt(top, 2)} at demand {fmt(peak_demand, 2)}", color=PALETTE["navy"],
-                    dx=10, dy=12, ha="left", va="bottom").set_bbox(WHITE)
+        label_point(ax, peak_demand, top, f"peak {fmt(top, 2)}\nat demand {fmt(peak_demand, 2)}", color=PALETTE["navy"],
+                    dx=10, dy=-14, ha="left", va="top").set_bbox(WHITE)
     ax.set_xlim(0, 2.5)
     ax.set_ylim(0.95, 1.5)
     ax.set_xlabel("Demand (units of traffic from S to T)")
     ax.set_ylabel("Equilibrium total latency / optimal total latency")
     ax.set_title(f"Delay on the middle link: {fmt(o, 2)}", fontsize=11.5)
 
+    (le,) = ax2.plot(GRID, z_eq, color=PALETTE["terracotta"], linewidth=2)
+    (lo,) = ax2.plot(GRID, z_opt, color=PALETTE["navy"], linewidth=2, linestyle="dashed")
+    ax2.fill_between(GRID, z_opt, z_eq, where=z_eq > z_opt + 1e-12, facecolor="none", edgecolor=PALETTE["gold"], hatch="///", linewidth=0)
+    if not flat:
+        ax2.axvline(mm, color=PALETTE["grey"], linestyle=":", linewidth=1.4)
+    ax2.set_xlim(0, 2.5)
+    ax2.set_ylim(-0.08, 1.15)
+    ax2.legend([le, lo], ["equilibrium", "optimum"], loc="upper right", fontsize=10.5, frameon=False)
+    ax2.set_xlabel("Demand (units of traffic from S to T)")
+    ax2.set_ylabel("Flow on the middle link")
+    ax2.set_title("Hatched: more link use than the optimum", fontsize=11.0)
+
     if flat:
         peak_text = "every demand (flat)"
         calc = (f"With delay {fmt(o, 2)} on the link, a link trip costs 2v + {fmt(o, 2)} against v + 1 on an outer route, so nobody uses it (v is the flow on a congestible edge). "
                 f"At demand 1 the equilibrium and the optimum coincide: 1 x (1 / 2 + 1) = 1.50 and 1.50 / 1.50 = 1.00")
         meaning = "The ratio never leaves 1.00: a link with a constant delay of 1, the delay of a fixed edge, changes nothing, so no gap opens."
-        wc_eq = wc_opt = None
+        steps = [
+            f"A link trip costs 2v + {fmt(o, 2)} against v + 1 on an outer route, where v is the flow on a congestible edge.",
+            f"Even with nobody else on it, 2 x 0.50 + {fmt(o, 2)} = {fmt(1 + o, 2)}, never below the outer route's v + 1.",
+            "So the equilibrium puts no flow on the link at any demand, and neither does the optimum.",
+            "At demand 1 both give 1 x (1 / 2 + 1) = 1.50, so the ratio is 1.50 / 1.50 = 1.00.",
+        ]
     else:
         peak_text = fmt(peak_demand, 2)
         eq_total = mm * (2 * mm + o)
@@ -183,6 +297,14 @@ def bound_picture(overhead=0.0):
             meaning = "This reaches 4/3 exactly: the bound is tight for the chapter's own network."
         else:
             meaning = f"This stays {fmt(4 / 3 - top, 3)} below 4/3: a slower link shrinks the damage, and the bound still holds."
+        steps = [
+            f"A link trip costs 2v + {fmt(o, 2)} against v + 1 on an outer route, where v is the flow on a congestible edge.",
+            f"The ratio peaks where the optimum has just shut the link but the equilibrium still crowds onto it: m = 1 - {fmt(o, 2)} = {fmt(mm, 2)}.",
+            f"Equilibrium total at m: {fmt(mm, 2)} x (2 x {fmt(mm, 2)} + {fmt(o, 2)}) = {exact(eq_total)}.",
+            f"Optimal total at m: {fmt(mm, 2)} x ({fmt(mm, 2)} / 2 + 1) = {exact(opt_total)}.",
+            f"Ratio = {exact(eq_total)} / {exact(opt_total)} = {fmt(top, 3)}.",
+            f"Room below the bound = 4 / 3 - {fmt(top, 4)} = {fmt(4 / 3 - top, 3)} (the ratio carried to four decimals).",
+        ]
     metrics = {
         "Largest ratio on the grid": fmt(top, 3),
         "Demand at the largest ratio": peak_text,
@@ -191,12 +313,18 @@ def bound_picture(overhead=0.0):
     }
     interpretation = (f"{calc}. {meaning} The curve is computed on 50 demands from 0.05 to 2.50, and no point crosses 4/3. "
                       "The line is a ceiling for linear delays only; the chapter says the broader class has no finite ceiling.")
-    return fig, metrics, interpretation
+    alt = ((f"Left, the equilibrium to optimum ratio against demand, a flat line at 1.00 under a dashed 4/3 bound. " if flat else
+            f"Left, the equilibrium to optimum ratio against demand, peaking at {fmt(top, 3)} at demand {fmt(peak_demand, 2)} under a dashed 4/3 bound. ")
+           + "Right, the flow on the middle link at equilibrium and at the optimum against demand"
+           + (", both zero." if flat else ", with a hatched gap where the equilibrium uses the link more than the optimum does."))
+    return fig, metrics, interpretation, {"alt": alt, "steps": steps}
 
 
 # Demonstration 3
 
-RULES = {"none": "No charge", "marginal": "Marginal-cost charge", "toll": "Toll 0.5 on the link only"}
+RULES = {"none": "No charge", "marginal": "Marginal-cost charge", "toll": "Toll of 0.5 on the middle link only",
+         "toll49": "Toll of 0.49 on the middle link only"}
+TOLLS = {"toll": 0.5, "toll49": 0.49}
 
 
 def mc_equilibrium(D):
@@ -205,22 +333,23 @@ def mc_equilibrium(D):
     return (D - z) / 2, z
 
 
-def charged_picture(rule="none", demand=1):
+def charged_picture(rule="marginal", demand=1):
     D = float(demand)
+    tl = TOLLS.get(rule, 0.0)
     if rule == "marginal":
         x, z = mc_equilibrium(D)
         lo = lab(D)
         if abs(z - float(lo["optimal_shortcut_flow"])) > 1e-9:
             raise AssertionError("marginal-cost equilibrium disagrees with the laboratory optimum")
     else:
-        m = lab(D, toll=0.5 if rule == "toll" else 0.0)
+        m = lab(D, toll=tl)
         x, z = float(m["equilibrium_outer_flow_each"]), float(m["equilibrium_shortcut_flow"])
     v = x + z
     physical = 2 * v * v + 2 * x
     opt = float(lab(D)["optimal_social_time"])
     slope = 2.0 if rule == "marginal" else 1.0
     outer_cost = slope * v + 1.0
-    middle_cost = 2 * slope * v + (0.5 if rule == "toll" else 0.0)
+    middle_cost = 2 * slope * v + tl
     costs = {"S-U-T": outer_cost, "S-L-T": outer_cost, "S-U-L-T": middle_cost}
     flows = {"S-U-T": x, "S-L-T": x, "S-U-L-T": z}
     used = [c for r, c in costs.items() if flows[r] > TOL]
@@ -259,30 +388,30 @@ def charged_picture(rule="none", demand=1):
     right.set_ylim(0, D * 1.6)
     right.set_xlabel("Route")
     right.set_ylabel("Flow on the route")
-    right.set_title(f"Route costs the choosers see; physical total {fmt(physical, 3)}", fontsize=11.5)
+    right.set_title(f"Route costs the choosers see; physical total {fmt(physical, 4)}", fontsize=11.0)
 
     if rule == "marginal":
         step = (f"Corrected cost of an outer route = 2 x {fmt(v, 2)} + 1 = {fmt(outer_cost, 2)}; of the middle route = "
                 f"2 x {fmt(v, 2)} + 2 x {fmt(v, 2)} = {fmt(middle_cost, 2)}")
-    elif rule == "toll":
-        step = (f"Outer route = {fmt(v, 2)} + 1 = {fmt(outer_cost, 2)}; middle route = {fmt(v, 2)} + {fmt(v, 2)} + 0.50 toll = {fmt(middle_cost, 2)}")
+    elif rule in TOLLS:
+        step = (f"Outer route = {fmt(v, 2)} + 1 = {fmt(outer_cost, 2)}; middle route = {fmt(v, 2)} + {fmt(v, 2)} + {fmt(tl, 2)} toll = {fmt(middle_cost, 2)}")
     else:
         step = f"Outer route = {fmt(v, 2)} + 1 = {fmt(outer_cost, 2)}; middle route = {fmt(v, 2)} + {fmt(v, 2)} = {fmt(middle_cost, 2)}"
     gap = physical - opt
     if abs(gap) <= TOL:
-        after = f"Physical total latency {fmt(physical, 3)} equals the social optimum {fmt(opt, 3)}."
+        after = f"Physical total latency {fmt(physical, 4)} equals the social optimum {fmt(opt, 4)}."
     else:
-        after = f"Physical total latency {fmt(physical, 3)} is {fmt(gap, 3)} above the social optimum {fmt(opt, 3)}."
+        after = f"Physical total latency {fmt(physical, 4)} is {fmt(gap, 4)} above the social optimum {fmt(opt, 4)}."
     if rule == "marginal":
         tail = ("The charge makes each chooser face the delay it adds for others, so the equilibrium lands on the optimum. "
                 "Charge payments are transfers and are left out of physical latency.")
-    elif rule == "toll":
+    elif rule in TOLLS:
         if abs(gap) <= TOL:
             tail = ("A toll on the link alone reaches the optimum here although it charges only one edge, "
                     "unlike the chapter's rule, which charges every congestible edge.")
         else:
             tail = ("A toll on the link alone does not reach the optimum here, and it charges only one edge, "
-                    "unlike the chapter's rule, which charges every congestible edge.")
+                    "unlike the chapter's rule, which charges every congestible edge. At demand 1 the smallest toll that empties the link is 0.5.")
     else:
         tail = "Nothing prices the exported delay, so each trip takes the cheaper-looking route."
     metrics = {
@@ -290,13 +419,23 @@ def charged_picture(rule="none", demand=1):
         "Outer route cost seen": fmt(outer_cost, 2),
         "Middle route cost seen": fmt(middle_cost, 2),
         "Flow on the middle route": fmt(z, 2),
-        "Physical total latency": fmt(physical, 3),
-        "Social optimum": fmt(opt, 3),
+        "Physical total latency": fmt(physical, 4),
+        "Social optimum": fmt(opt, 4),
     }
     interpretation = (f"At demand {fmt(D, 2)} the equilibrium puts {fmt(x, 2)} on each outer route and {fmt(z, 2)} on the middle, so each "
                       f"congestible edge carries {fmt(v, 2)}. {step}. Physical total = 2 x {fmt(v, 2)} x {fmt(v, 2)} + 2 x {fmt(x, 2)} x 1.00 = "
-                      f"{fmt(physical, 3)}. {after} {tail}")
-    return fig, metrics, interpretation
+                      f"{fmt(physical, 4)}. {after} {tail}")
+    steps = [
+        f"Rule: {RULES[rule].lower()}; demand D = {fmt(D, 2)}.",
+        f"Travellers pick the cheapest seen route: {fmt(x, 2)} on each outer route and {fmt(z, 2)} on the middle.",
+        f"Each congestible edge carries v = {fmt(x, 2)} + {fmt(z, 2)} = {fmt(v, 2)}.",
+        step + ".",
+        f"Physical total = 2 x {fmt(v, 2)} x {fmt(v, 2)} + 2 x {fmt(x, 2)} x 1.00 = {fmt(physical, 4)}.",
+        f"Social optimum = {fmt(opt, 4)}; excess = {fmt(physical, 4)} - {fmt(opt, 4)} = {fmt(gap, 4)}.",
+    ]
+    alt = (f"Left, the delay line q with the doubled marginal-cost line and the fixed edge at 1, with a marker at flow {fmt(v, 2)}. "
+           f"Right, flows on the three routes for '{RULES[rule].lower()}' at demand {fmt(D, 2)}: {fmt(x, 2)}, {fmt(x, 2)} and {fmt(z, 2)}, with the costs each chooser sees.")
+    return fig, metrics, interpretation, {"alt": alt, "steps": steps}
 
 
 # Demonstration 4
@@ -363,7 +502,16 @@ def capacity_picture(rate=1, extra=0.5):
                       f"Ratio = {fmt(eq, 3)} / {fmt(opt, 3)} = {fmt(ratio, 3)}, against the guaranteed factor 1 / {fmt(g, 2)} = {fmt(factor, 2)}. "
                       "This network sits far under the guarantee, which is a worst case over all networks, not a forecast. "
                       "The benchmark is burdened with extra traffic, not given extra capacity.")
-    return fig, metrics, interpretation
+    steps = [
+        f"Equilibrium at r = {fmt(r, 2)}: everyone takes the link, so each congestible edge carries {fmt(r, 2)}.",
+        f"Equilibrium cost = 2 x {fmt(r, 2)} x {fmt(r, 2)} = {fmt(eq, 3)}.",
+        f"The benchmark must carry (1 + {fmt(g, 2)}) x {fmt(r, 2)} = {fmt(d, 3)}.",
+        f"Its optimal cost: {hand_text}.",
+        f"Ratio = {fmt(eq, 3)} / {fmt(opt, 3)} = {fmt(ratio, 3)}; guaranteed factor 1 / {fmt(g, 2)} = {fmt(factor, 2)}.",
+    ]
+    alt = (f"Left, the optimal cost curve against the traffic rate, with the equilibrium cost {fmt(eq, 3)} at r = {fmt(r, 2)} and the optimum {fmt(opt, 3)} at {fmt(d, 3)} marked. "
+           f"Right, the guaranteed factor 1 over extra against this network's ratio {fmt(ratio, 3)}, well below it.")
+    return fig, metrics, interpretation, {"alt": alt, "steps": steps}
 
 
 CHAPTER = {
@@ -372,27 +520,47 @@ CHAPTER = {
     "subtitle": "Each participant can make a sensible local choice while the whole workflow gets slower; a rule decides whether local incentives add up to the task.",
     "summary": (
         "These four demonstrations use the chapter's five-edge traffic network: one unit of traffic from S to T, two routes that each mix a "
-        "congestible edge with a fixed one, and a free directed link in the middle. They show what the free link does, how far the damage can go "
-        "for linear delays, how a charge on exported delay repairs it, and what the capacity comparison does and does not promise."
+        "congestible edge with a fixed one, and a free directed link in the middle. They show why the free link moves the stable pattern away from the best one, how far the damage can go "
+        "for linear delays, how a charge on exported delay repairs it (and how a toll on the link alone differs), and what the capacity comparison does and does not promise."
     ),
+    "ask_skill": {"prompt": (
+        "Here are my routes, their delays and the demand. Find the equilibrium, the social optimum and the ratio, tell me whether the four-thirds "
+        "bound applies to my delays, and test whether a charge on each congestible edge restores the optimum.")},
     "demos": [
         {
             "id": "C21-D01",
             "title": "A free link: better, worse or unchanged",
-            "question": "When a zero-latency link is added, does the stable pattern of choices get better or worse, and how does that depend on demand?",
+            "question": "When a zero-latency link is added, why does the stable pattern of choices differ from the best one, and how does that depend on demand?",
             "equations": [EQ_TL],
             "symbols": (
                 "S is the source, T the target, U the upper junction and L the lower junction. The three routes are S-U-T, S-L-T and S-U-L-T, which crosses the directed middle link from U to L. q is a flow (the amount of traffic) and q_e the traffic on edge e. The latency function l_e(q_e) is the delay a traveller meets on "
                 "edge e. TL(q) is total latency: the sum over edges of traffic times delay. Here the two congestible edges (S-U and L-T) have "
-                "delay equal to their flow, the two fixed edges (U-T and S-L) have delay 1, and the middle link has delay 0. Demand is the total "
-                "traffic from S to T. The equilibrium is the pattern in which no traveller can lower their own delay by switching routes."
+                "delay equal to their flow, the two fixed edges (U-T and S-L) have delay 1, and the middle link has delay 0. Demand D is the total "
+                "traffic from S to T; z is the flow on the middle route, and v = (D + z) / 2 is then the flow on each congestible edge. The equilibrium is the pattern in which no traveller can lower their own delay by switching routes. "
+                "Choosing 'link removed' deletes the middle link, so only the two outer routes remain."
             ),
             "prediction": "At the chapter's demand of 1, will total latency with the link be higher, lower or the same as before? Then try demand 2.",
+            "prediction_options": ["Higher", "Lower", "The same"],
+            "prediction_answer": 0,
+            "prediction_feedback": {
+                "correct": "At demand 1 everyone takes the link, each trip costs 2, and total latency rises from 1.5 to 2. Select demand 1 with the link to see it.",
+                "incorrect": "At demand 1 everyone takes the link, each trip costs 2, and total latency rises from 1.5 to 2 although no road got slower. Select demand 1 with the link to see it.",
+            },
+            "misconception": {
+                "title": "More options must make everyone better off",
+                "text": ("The chapter says this is no contradiction: each traveller correctly reads the available routes, and only the premise that more options must improve their collection fails. "
+                         "The measurement that lies by omission records each traveller's best response, not whether those responses add up to the system's job."),
+            },
+            "scope_note": {
+                "text": ("Braess's network does not prove that new tools, shared agents, markets, or centralized review make real teams worse. It gives a mechanism to test: changed options alter the equilibrium created by local rules."),
+                "source_section": "What this does not settle",
+            },
             "explanation": (
-                "With the link, each traveller who enters at S-U and leaves by L-T meets only the two congestible edges, so the middle route is "
-                "never worse than an outer route as long as demand is at most the chapter's 1. At demand 1 everyone takes it, each trip costs 1 + 1 = 2, and TL rises from 1.5 to 2, while the "
-                "best split is still the old one. At low demand the link is a real gain, and at high demand it is unused because the outer routes "
-                "have already become as slow as the middle."
+                "The left panel prices each route at every possible flow z on the middle link: the middle route rises twice as fast as an outer route because it uses both congestible edges, "
+                "so it stays cheaper than an outer route until z reaches 2 - D, and travellers keep switching until then. The right panel prices the whole system at the same z: total latency is smallest at z = 1 - D, "
+                "or at zero when that is negative (for the demands from 0.5 to 2 offered here). The two panels have different minimisers, which is the gap between a stable private pattern and the best total. "
+                "At demand 1 everyone takes the link, each trip costs 1 + 1 = 2, and TL rises from 1.5 to 2, while the best split is still the old one. At low demand the link is a real gain, and at high demand it is unused because the outer routes "
+                "have already become as slow as the middle. Without the link the two panels agree on one split."
             ),
             "application": (
                 "Before adding a shared shortcut such as a common reviewer, a shared tool or a fast lane, ask what everyone will do once it exists, "
@@ -400,37 +568,55 @@ CHAPTER = {
             ),
             "assumptions": (
                 "One unit-scale network with linear congestible edges, many small travellers who each pick the cheapest route, and a total-delay "
-                "objective. It does not say that any real shortcut, tool or team behaves this way. When demand is large enough to make the "
-                "outer routes slow, the paradox disappears."
+                "objective. It does not say that any real shortcut, tool or team behaves this way. In this construction the paradox disappears once demand is large enough "
+                "to make the outer routes as slow as the middle route (the two totals tie at demand 2); this is a result of the reader's computation, not a statement of the chapter."
             ),
             "check": "At demand 1.5, what does each trip cost with the link, and how does that compare with the cost of an outer route?",
             "answer": (
                 "Equilibrium puts 0.5 on each outer route and 0.5 on the middle, so each congestible edge carries 1.0. An outer route costs "
                 "1.0 + 1 = 2.0 and the middle costs 1.0 + 1.0 = 2.0, a tie. Total latency is 2 x 1.0 x 1.0 + 2 x 0.5 x 1 = 3.0, which is 2.0 per trip."
             ),
-            "provenance": "Constructed example: the chapter's one-unit network with demand varied; equilibrium and optimum are computed with the laboratory's congestion function.",
+            "provenance": "Constructed example: the chapter's one-unit network with demand varied, with and without the link; equilibrium and optimum are computed with the laboratory's congestion function.",
             "source_section": "A free connection changes what best means",
             "source_anchor": "a-free-connection-changes-what-best-means",
             "controls": [
                 {"key": "demand", "label": "Demand (units of traffic from S to T)", "values": [0.5, 1, 1.5, 2], "default": 1},
+                {"key": "network", "label": "Network", "values": ["link", "nolink"], "default": "link",
+                 "value_labels": ["With the free link", "Link removed"]},
             ],
             "function": "free_link_picture",
         },
         {
             "id": "C21-D02",
             "title": "How bad can it get with linear delays",
-            "question": "Across every demand, how large can the ratio of equilibrium delay to optimal delay be when every delay is linear?",
+            "question": "Across every demand, how large can the ratio of equilibrium delay to optimal delay be when every delay is linear, and where does the gap come from?",
             "equations": [EQ_BOUND],
             "symbols": (
                 "S is the source, T the target, U the upper junction and L the lower junction. The three routes are S-U-T, S-L-T and S-U-L-T, which crosses the directed middle link from U to L. TL(q) is total latency. q^NE is the equilibrium flow and q* the flow with the smallest total latency, so the ratio compares "
                 "self-directed routing with the best feasible routing. Linear means each edge delay is a times its flow plus b, with a and b "
-                "not negative. The control sets a constant delay on the middle link (the b of that edge); 0 is the chapter's free link."
+                "not negative. The control sets a constant delay on the middle link (the b of that edge); 0 is the chapter's free link. In the right panel, the flow on the middle link is shown for the equilibrium and for the optimum at each demand."
             ),
             "prediction": "Make the link slower (delay 0.5). Does the highest ratio rise, fall or stay at 4/3?",
+            "prediction_options": ["Rise above 4/3", "Stay at 4/3", "Fall below 4/3"],
+            "prediction_answer": 2,
+            "prediction_feedback": {
+                "correct": "With delay 0.5 the peak is at demand 0.5: 0.5 x (2 x 0.5 + 0.5) / (0.5 x (0.5 / 2 + 1)) = 0.75 / 0.625 = 1.2, below 4/3. Select 0.5 to see it.",
+                "incorrect": "With delay 0.5 the peak falls to 0.75 / 0.625 = 1.2, below 4/3, and it can never rise above 4/3 when every delay is linear. Select 0.5 to see it.",
+            },
+            "misconception": {
+                "title": "Four thirds is a generic comfort number",
+                "text": ("The chapter says treating four thirds as a generic comfort number would repeat the opening error, substituting a convenient measurement for the object being measured. "
+                         "Under only continuous, nondecreasing latency functions the ratio can be unbounded, so the bound belongs to a declared model of delay, not to the word equilibrium."),
+            },
+            "scope_note": {
+                "text": ("The linear four-thirds bound does not cover every queue or institution. Check the latency-function class before applying the ratio: a linear approximation over ordinary load does not establish a guarantee past that operating range."),
+                "source_section": "What this does not settle",
+            },
             "explanation": (
-                "Each curve is the lab's equilibrium total divided by its optimal total at every demand. The ratio is 1 when the link is unused or "
-                "already optimal. It peaks where demand is just large enough that the optimum shuts the link while the equilibrium still crowds "
-                "onto it. With a free link the peak reaches 4/3 exactly, and no linear delay example can go higher."
+                "Each point of the left curve is the lab's equilibrium total divided by its optimal total at one demand. The ratio is 1 when the link is unused or "
+                "already optimal. The right panel shows why it rises: it peaks where demand is just large enough that the optimum shuts the link while the equilibrium still crowds "
+                "onto it (the hatched gap). With a free link the peak reaches 4/3 exactly, and no linear delay example can go higher. "
+                "The chapter's strings-and-springs image states the same bound as a distance: after severing, the weight hangs at least 1 / (4 / 3) = 0.75 of its original distance below the support."
             ),
             "application": (
                 "When someone quotes a worst-case ratio for a queue or workflow, first check that its delays really are linear over the range "
@@ -446,7 +632,7 @@ CHAPTER = {
                 "The peak is at demand m = 1 - 0.25 = 0.75. Equilibrium: 0.75 x (2 x 0.75 + 0.25) = 0.75 x 1.75 = 1.3125. Optimum: "
                 "0.75 x (0.75 / 2 + 1) = 0.75 x 1.375 = 1.03125. The ratio is 1.3125 / 1.03125 = 1.273, below 4/3."
             ),
-            "provenance": "Constructed example: the chapter's network with a middle-link delay defined for this reader; ratios are computed with the laboratory's congestion function.",
+            "provenance": "Constructed example: the chapter's network with a middle-link delay defined for this reader; ratios and flows are computed with the laboratory's congestion function.",
             "source_section": "What linear bound says, and what it does not",
             "source_anchor": "what-linear-bound-says-and-what-it-does-not",
             "controls": [
@@ -458,19 +644,35 @@ CHAPTER = {
         {
             "id": "C21-D03",
             "title": "Charging for the delay you export",
-            "question": "If every congestible edge charges its own delay plus the delay the traveller adds for others, where does the equilibrium land?",
+            "question": "If every congestible edge charges its own delay plus the delay the traveller adds for others, where does the equilibrium land, and how does a toll on the link alone compare?",
             "equations": [EQ_MC],
             "symbols": (
                 "S is the source, T the target, U the upper junction and L the lower junction. The three routes are S-U-T, S-L-T and S-U-L-T, which crosses the directed middle link from U to L. l_e(q_e) is the delay on edge e at flow q_e. The marginal-cost latency adds q_e times the slope of l_e, which is the extra delay "
                 "one more unit of flow imposes on those already there. For a delay a x q + b the charged cost is 2 x a x q + b: the congestion term "
-                "doubles and the fixed term does not. Here a = 1 and b = 0 on a congestible edge, and a = 0 and b = 1 on a fixed edge."
+                "doubles and the fixed term does not. Here a = 1 and b = 0 on a congestible edge, and a = 0 and b = 1 on a fixed edge. A toll on the link alone adds a fixed charge to the middle route only; it is a different rule from the marginal-cost charge."
             ),
-            "prediction": "At demand 1 with the marginal-cost charge, how much traffic uses the middle link, and what is the physical total latency?",
+            "prediction": "At demand 1 with the marginal-cost charge, how much traffic uses the middle link?",
+            "prediction_options": ["All of it (1.00)", "Half of it (0.50)", "None (0.00)"],
+            "prediction_answer": 2,
+            "prediction_feedback": {
+                "correct": "Charged costs are 2v + 1 for an outer route and 4v for the middle; at v = 0.5 they tie at 2, so the flow stays on the outer routes, and the physical total is 1.5. Marginal-cost charge at demand 1 shows it.",
+                "incorrect": "Charged costs are 2v + 1 for an outer route and 4v for the middle; at v = 0.5 they tie at 2, so no traffic uses the middle link and the physical total is 1.5. Marginal-cost charge at demand 1 shows it.",
+            },
+            "misconception": {
+                "title": "Treating the toll on the link as the marginal-cost charge",
+                "text": ("The chapter says the notebook's toll of 0.5 on the shortcut alone differs from its marginal-cost charge of 0.5 on each congestible edge. "
+                         "The charge also stays out of physical travel time: payments are transfers, and adding them to travel time would change the objective being minimized."),
+            },
+            "scope_note": {
+                "text": ("Marginal-cost pricing does not decide fairness, authority, or legitimacy. Those require objectives and constraints stated outside the routing model."),
+                "source_section": "What this does not settle",
+            },
             "explanation": (
                 "Travellers still choose the cheapest route, but now by the charged cost. The charge turns the old comparison 1 + v against 2v "
                 "into 2v + 1 against 4v, which moves traffic back toward the outer routes. The physical delay then equals the best possible total. "
-                "The third rule, a toll only on the link, is the notebook's variant: a different rule, although at these two demands it gives "
-                "the same flows and the same total as the marginal-cost charge."
+                "A toll of 0.5 on the link alone is the notebook's variant: a different rule, although at the demands shown it gives "
+                "the same flows and the same total as the marginal-cost charge. At demand 1 the smallest toll that empties the link is 0.5, and 0.49 leaves 0.02 of the traffic on it. "
+                "At demand 0.5, the notebook's transfer case, the link is privately efficient, so the paradox depends on the demand regime."
             ),
             "application": (
                 "In a shared workflow, the charge might be a rising budget for a busy shared tool, a queue-aware scheduler or a concurrency limit. "
@@ -486,13 +688,13 @@ CHAPTER = {
                 "Both route types are used, so their charged costs match: 2v + 1 = 4v gives v = 0.5. The middle flow is 1 - 0.75 = 0.25, "
                 "each outer route carries 0.25, and the physical total is 2 x 0.5 x 0.5 + 2 x 0.25 = 1.0."
             ),
-            "provenance": "Constructed example: the chapter's network and its marginal-cost charge; the no-charge and toll cases use the laboratory's congestion function, and the marginal-cost flows are derived here and checked against the laboratory's optimum.",
+            "provenance": "Constructed example: the chapter's network and its marginal-cost charge at the laboratory's default demand 1, a changed toll and the transfer demand 0.5; the no-charge and toll cases use the laboratory's congestion function, and the marginal-cost flows are derived here and checked against the laboratory's optimum.",
             "source_section": "Prices that make group target locally legible",
             "source_anchor": "prices-that-make-group-target-locally-legible",
             "controls": [
-                {"key": "rule", "label": "Charging rule", "values": ["none", "marginal", "toll"], "default": "marginal",
-                 "value_labels": ["No charge", "Marginal-cost charge", "Toll of 0.5 on the middle link only"]},
-                {"key": "demand", "label": "Demand (units of traffic from S to T)", "values": [1, 0.75], "default": 1},
+                {"key": "rule", "label": "Charging rule", "values": ["none", "marginal", "toll", "toll49"], "default": "marginal",
+                 "value_labels": ["No charge", "Marginal-cost charge", "Toll of 0.5 on the middle link only", "Toll of 0.49 on the middle link only"]},
+                {"key": "demand", "label": "Demand (units of traffic from S to T)", "values": [1, 0.75, 0.5], "default": 1},
             ],
             "function": "charged_picture",
         },
@@ -507,7 +709,22 @@ CHAPTER = {
                 "The theorem combines them: equilibrium cost at r is at most 1 / extra times the benchmark's cost at (1 + extra) r. The cost is total "
                 "latency, as in Equation (21.1). Nobody adds a road: the network stays the same and only the benchmark's burden changes."
             ),
-            "prediction": "With extra = 1 (the benchmark carries twice the traffic), is the equilibrium cost at r = 1 below or above the optimal cost at rate 2?",
+            "prediction": "With extra = 1 (the benchmark carries twice the traffic) at r = 1, is the equilibrium cost below or above the optimal cost at rate 2?",
+            "prediction_options": ["Below it", "Above it"],
+            "prediction_answer": 0,
+            "prediction_feedback": {
+                "correct": "Equilibrium at r = 1 costs 2 x 1 x 1 = 2, while the optimum at rate 2 costs 2 x (2 / 2 + 1) = 4. Select rate 1 and extra 1.",
+                "incorrect": "Equilibrium at r = 1 costs 2 x 1 x 1 = 2, while the optimum at rate 2 costs 2 x (2 / 2 + 1) = 4, so it is below. Select rate 1 and extra 1.",
+            },
+            "misconception": {
+                "title": "Reading 'twice the traffic' as doubled capacity",
+                "text": ("The chapter says the phrase 'forced to carry twice the traffic' is the whole statement: it does not mean that capacity was doubled. "
+                         "The network is unchanged and the comparison changes the amount of demand the optimal benchmark must serve."),
+            },
+            "scope_note": {
+                "text": ("The bicriteria comparison says how much worse a self-directed allocation can be relative to a deliberately burdened benchmark. It does not identify which server to buy."),
+                "source_section": "It does not identify which server to buy",
+            },
             "explanation": (
                 "Left panel: the optimal cost grows with the traffic it must carry, so asking the benchmark to carry more makes the comparison easier "
                 "for the equilibrium. Right panel: the guaranteed factor 1 / extra falls from 4 to 1 as extra grows from 0.25 to 1, while this "
@@ -518,7 +735,7 @@ CHAPTER = {
                 "More capacity can lower delay at a given flow, but it can also make a stage attractive to more work and shift the equilibrium again."
             ),
             "assumptions": (
-                "The chapter's linear network and the two demands r = 0.5 and 1. The guarantee is a bound over all networks in its class, and "
+                "The chapter's linear network and the rates r = 0.5, 0.75 and 1. The guarantee is a bound over all networks in its class, and "
                 "this network does not come close to it, so the picture shows the comparison, not tightness. It says nothing about adding capacity "
                 "to a real system, where demand responds."
             ),
@@ -531,7 +748,7 @@ CHAPTER = {
             "source_section": "Capacity is a comparison, not a cure",
             "source_anchor": "capacity-is-a-comparison-not-a-cure",
             "controls": [
-                {"key": "rate", "label": "Traffic rate r", "values": [0.5, 1], "default": 1},
+                {"key": "rate", "label": "Traffic rate r", "values": [0.5, 0.75, 1], "default": 1},
                 {"key": "extra", "label": "Extra-traffic fraction", "values": [0.25, 0.5, 1], "default": 0.5},
             ],
             "function": "capacity_picture",

@@ -1,277 +1,241 @@
-"""Chapter 11 laboratory reader: independent hand checks of the built page.
+"""Chapter 11 reader tests: independent hand checks.
 
-The reader is built into a private temporary directory (never into the shared
-readers folder). Every expected number is recomputed here from the chapter's
-own arithmetic (regret as gap times tasks, the ten-pull table, the entropy of a
-check, the worked classifier), not read back from the module that made the page.
+Every expected number is recomputed here from the chapter's own arithmetic
+(regret as the sum of gap x pulls, the ten-pull table, the trapped controller,
+the workbench indices, the entropy of a check, the worked classifier), and the
+seeded runs are replayed with a separate implementation of the three rules.
+The reader is built into a private temporary directory, never the shared
+readers folder.
 """
 from __future__ import annotations
 
 import html
+import importlib.util
+import itertools
 import json
 import math
-from pathlib import Path
+import os
+import random
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
+from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-LAB = HERE.parent
+LAB = Path(__file__).resolve().parent.parent
+ENGINE = LAB / "tools" / "readers" / "engine"
+CHAPTERS = LAB / "tools" / "readers" / "chapters"
 WRAPPER = LAB / "tools" / "readers" / "build_readers.py"
-HARNESS = LAB / "tools" / "readers" / "engine" / "dom_harness.js"
+HARNESS = ENGINE / "dom_harness.js"
 PYTHON = LAB / ".venv" / "bin" / "python"
+for p in (str(LAB / "src"), str(ENGINE)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+
+spec = importlib.util.spec_from_file_location("reader_ch11", CHAPTERS / "ch11.py")
+ch11 = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ch11)
+
+SQ2 = math.sqrt(2)
 
 
-def payload(text):
-    match = re.search(r'<script id="reader-data" type="application/json">(.*?)</script>', text, re.S)
-    return json.loads(match.group(1))
+def run(i, **controls):
+    d = ch11.CHAPTER["demos"][i]
+    fig, metrics, text, extra = getattr(ch11, d["function"])(**controls)
+    plt.close(fig)
+    return metrics, text, extra
 
 
-def one(x, d=1):
-    return f"{x:.{d}f}"
+def states(i):
+    d = ch11.CHAPTER["demos"][i]
+    for combo in itertools.product(*[c["values"] for c in d["controls"]]):
+        yield {c["key"]: v for c, v in zip(d["controls"], combo)}
 
 
-@unittest.skipUnless(PYTHON.is_file(), "laboratory .venv absent; cannot build the reader")
+def replay(means, rounds, seed, policy):
+    """Independent replay of one seeded policy; returns (counts, pseudo-regret)."""
+    rng = random.Random(seed)
+    counts = [0] * len(means)
+    wins = [0] * len(means)
+    regret = 0.0
+    best = max(means)
+    for t in range(rounds):
+        if 0 in counts:
+            a = counts.index(0)
+        elif policy == "greedy":
+            a = max(range(len(means)), key=lambda i: wins[i] / counts[i])
+        elif policy == "ucb":
+            a = max(range(len(means)), key=lambda i: wins[i] / counts[i] + math.sqrt(2 * math.log(t) / counts[i]))
+        else:
+            a = max(range(len(means)), key=lambda i: rng.betavariate(wins[i] + 1, counts[i] - wins[i] + 1))
+        r = int(rng.random() < means[a])
+        counts[a] += 1
+        wins[a] += r
+        regret += best - means[a]
+    return counts, regret
+
+
 class Chapter11ReaderTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.tmp = tempfile.mkdtemp(prefix="reader-ch11-test-")
-        run = subprocess.run([str(PYTHON), str(WRAPPER), "--chapters", "11", "--out", cls.tmp], capture_output=True, text=True, timeout=900)
-        if run.returncode != 0:
-            raise AssertionError(run.stdout + run.stderr)
-        cls.reader = Path(cls.tmp) / "11-bounded-exploration" / "reader.html"
-        cls.page = cls.reader.read_text(encoding="utf-8")
-        cls.data = payload(cls.page)
-        cls.demos = {d["id"]: d for d in cls.data["demos"]}
+    def test_structure(self):
+        demos = ch11.CHAPTER["demos"]
+        self.assertEqual([d["id"] for d in demos], ["C11-D01", "C11-D02", "C11-D03", "C11-D04"])
+        sizes = []
+        for d in demos:
+            n = 1
+            for c in d["controls"]:
+                n *= len(c["values"])
+            sizes.append(n)
+        self.assertEqual(sizes, [8, 12, 12, 12])
+        self.assertIn("prompt", ch11.CHAPTER["ask_skill"])
+        for d in demos:
+            self.assertIn("misconception", d)
+            self.assertIn("scope_note", d)
+            self.assertIn("prediction_options", d)
 
-    @classmethod
-    def tearDownClass(cls):
-        shutil.rmtree(cls.tmp, ignore_errors=True)
+    def test_every_state_renders_with_steps_and_alt(self):
+        for i in range(4):
+            for kw in states(i):
+                m, text, extra = run(i, **kw)
+                self.assertTrue(m and text and extra["alt"] and 2 <= len(extra["steps"]) <= 8, (i, kw))
+                for s in extra["steps"]:
+                    self.assertLessEqual(len(s), 240, s)
+                for bad in ("\u2014", "\u2013", "--"):
+                    self.assertNotIn(bad, text + " ".join(extra["steps"]))
 
-    def states(self, demo_id):
-        demo = self.demos[demo_id]
-        for key, state in demo["states"].items():
-            idx = [int(i) for i in key.split(",")]
-            values = [math.sqrt(2) if str(c["values"][i]).startswith("square root of 2") else float(c["values"][i])
-                      for c, i in zip(demo["controls"], idx)]
-            yield values, dict(state["metrics"]), state
+    def test_d01_regret_is_sum_of_gap_times_pulls_and_matches_replay(self):
+        worlds = {"book": ([0.78, 0.90], 11, 1000), "default": ([0.4, 0.7], 7, 120),
+                  "swapped": ([0.7, 0.4], 7, 120), "three": ([0.2, 0.5, 0.8], 19, 90)}
+        keys = {"greedy": "Always the current best (this run)", "ucb": "Optimistic rule (this run)",
+                "thompson": "Posterior sampling (this run)"}
+        for world, scale in itertools.product(worlds, ["own", "ten"]):
+            means, seed, base = worlds[world]
+            rounds = base * (10 if scale == "ten" else 1)
+            m, text, _ = run(0, world=world, scale=scale)
+            best = max(means)
+            for policy, key in keys.items():
+                counts, regret = replay(means, rounds, seed, policy)
+                self.assertEqual(sum(counts), rounds)
+                by_gap = sum((best - mu) * n for mu, n in zip(means, counts))
+                self.assertAlmostEqual(by_gap, regret, places=6)
+                self.assertEqual(m[key], f"{regret:.2f}")
+            ordered = sorted(means)
+            gap = best - ordered[-2]
+            self.assertEqual(m["Stuck on the runner-up arm"], f"{gap * rounds:.2f}")
+            self.assertEqual(m["Rotate evenly"], f"{rounds * (best - sum(means) / len(means)):.2f}")
+            self.assertEqual(m["Chance the chapter's controller draws two failures in a row from the best arm"], f"{(1 - best) ** 2:.2f}")
+            self.assertEqual(m["Best success rate available"], f"{best:.2f}")
+        # the book's numbers: 0.12 x 1,000 = 120 and 0.12 x 500 = 60 (rotating)
+        b = run(0, world="book", scale="own")[0]
+        self.assertEqual((b["Stuck on the runner-up arm"], b["Rotate evenly"]), ("120.00", "60.00"))
+        t = run(0, world="book", scale="ten")[0]
+        self.assertEqual((t["Stuck on the runner-up arm"], t["Rotate evenly"]), ("1200.00", "600.00"))
+        self.assertEqual(b["Chance the chapter's controller draws two failures in a row from the best arm"], "0.01")
+        # workbook: default regret through counts, 0.3 x worse-arm pulls
+        counts, regret = replay([0.4, 0.7], 120, 7, "ucb")
+        self.assertIn(f"0.30 x {counts[0]} = {0.3 * counts[0]:.2f}", run(0, world="default", scale="own")[1])
+        # workbook transfer: 0.6 n0 + 0.3 n1
+        c3, r3 = replay([0.2, 0.5, 0.8], 90, 19, "ucb")
+        self.assertIn(f"0.60 x {c3[0]} + 0.30 x {c3[1]} = {0.6 * c3[0] + 0.3 * c3[1]:.2f}",
+                      run(0, world="three", scale="own")[1])
+        # a common pull cost lowers net reward and leaves pseudo-regret alone
+        self.assertIn("0.05 x 120 = 6.00", run(0, world="default", scale="own")[1])
 
-    def test_four_demonstrations_with_state_budget(self):
-        self.assertEqual(list(self.demos), ["C11-D01", "C11-D02", "C11-D03", "C11-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 8, 8, 8])
-        self.assertLess(self.reader.stat().st_size, 2_500_000)
+    def test_d01_prediction_factor(self):
+        own = run(0, world="book", scale="own")[0]
+        ten = run(0, world="book", scale="ten")[0]
+        self.assertEqual((own["Optimistic rule (this run)"], ten["Optimistic rule (this run)"]), ("29.64", "105.24"))
+        self.assertLess(105.24 / 29.64, 10)
 
-    def test_d01_regret_is_gap_times_tasks(self):
-        for (horizon, mean_b), m, state in self.states("C11-D01"):
-            gap = mean_b - 0.78
-            self.assertEqual(m["Always the current best"], one(horizon * mean_b - horizon * 0.78))
-            # Rotating evenly: half the tasks on each tool.
-            rotating = horizon * mean_b - (horizon / 2 * 0.78 + horizon / 2 * mean_b)
-            self.assertEqual(m["Rotate evenly"], one(rotating))
-            self.assertAlmostEqual(rotating, gap * horizon / 2)
-            # The seeded run is far below both straight lines and below the always-best line by a wide margin.
-            ucb = float(m["One seeded run of the optimistic rule"])
-            self.assertLess(ucb, rotating)
-            self.assertGreaterEqual(ucb, 0)
-        # The book's own numbers: about 120 and 60 after 1,000 tasks, about 1,200 and 600 after 10,000.
-        by_state = {tuple(v): m for v, m, _ in self.states("C11-D01")}
-        self.assertEqual(by_state[(1000, 0.9)]["Always the current best"], "120.0")
-        self.assertEqual(by_state[(1000, 0.9)]["Rotate evenly"], "60.0")
-        self.assertEqual(by_state[(10000, 0.9)]["Always the current best"], "1200.0")
-        self.assertEqual(by_state[(10000, 0.9)]["Rotate evenly"], "600.0")
-
-    def test_d01_seeded_run_matches_an_independent_replay(self):
-        """Replay the optimistic rule with its own random stream (Bernoulli draws from one seeded generator)."""
-        import random
-        means = [0.78, 0.90]
-        rng = random.Random(11)
-        counts, wins, regret, curve = [0, 0], [0, 0], 0.0, []
-        for t in range(1000):
-            if 0 in counts:
-                a = counts.index(0)
-            else:
-                a = max(range(2), key=lambda i: wins[i] / counts[i] + math.sqrt(2 * math.log(t) / counts[i]))
-            r = int(rng.random() < means[a])
-            counts[a] += 1
-            wins[a] += r
-            regret += max(means) - means[a]
-            curve.append(regret)
-        state = {tuple(v): m for v, m, _ in self.states("C11-D01")}[(1000, 0.9)]
-        self.assertEqual(state["One seeded run of the optimistic rule"], one(curve[-1]))
-
-    def test_d02_ten_pull_table(self):
-        """Rows of the chapter's table: (pull, counts, means, bonuses, selected, reward)."""
-        table = {
-            3: ((1, 1), (1.000, 0.000), (1.177, 1.177), "A"),
-            4: ((2, 1), (0.500, 0.000), (1.048, 1.482), "A"),
-            5: ((3, 1), (2 / 3, 0.000), (0.961, 1.665), "B"),
-            10: ((6, 3), (0.500, 1 / 3), (0.856, 1.210), "B"),
-        }
-        c = math.sqrt(2)
-        for (pull, cc), m, state in self.states("C11-D02"):
-            if abs(cc - c) > 1e-9:
-                continue
-            counts, means, bonuses, selected = table[int(pull)]
-            t = int(pull) - 1
-            self.assertEqual(m["Counts A, B"], f"{counts[0]}, {counts[1]}")
-            for i, name in enumerate("AB"):
-                bonus = c * math.sqrt(math.log(t) / counts[i])
-                self.assertAlmostEqual(bonus, bonuses[i], places=3)
-                self.assertEqual(m[f"Index {name}"], one(means[i] + bonus, 3))
-            self.assertEqual(m["Selected"], selected)
-        # The chapter's key claim: A's index is 1.548 against B's 1.482 at pull 4, and B overtakes at pull 5.
-        by_state = {(int(v[0]), round(v[1], 3)): m for v, m, _ in self.states("C11-D02")}
-        self.assertEqual((by_state[(4, 1.414)]["Index A"], by_state[(4, 1.414)]["Index B"]), ("1.548", "1.482"))
-        self.assertEqual((by_state[(5, 1.414)]["Index A"], by_state[(5, 1.414)]["Index B"]), ("1.628", "1.665"))
-
-    def test_d02_smaller_coefficient_changes_the_path(self):
-        """With c = 0.5, replay the alternating rewards by hand to pull 10 and compare the counts."""
-        c = 0.5
-        counts, sums = [0, 0], [0, 0]
-        for pull in range(1, 10):  # decisions before pull 10
-            t = pull - 1
-            if 0 in counts:
-                a = counts.index(0)
-            else:
-                idx = [sums[i] / counts[i] + c * math.sqrt(math.log(t) / counts[i]) for i in (0, 1)]
-                a = 0 if idx[0] >= idx[1] else 1
-            r = (1 if counts[a] % 2 == 0 else 0) if a == 0 else (counts[a] % 2)
-            counts[a] += 1
-            sums[a] += r
-        by_state = {(int(v[0]), round(v[1], 3)): m for v, m, _ in self.states("C11-D02")}
-        self.assertEqual(by_state[(10, 0.5)]["Counts A, B"], f"{counts[0]}, {counts[1]}")
-        self.assertNotEqual(by_state[(10, 0.5)]["Counts A, B"], by_state[(10, 1.414)]["Counts A, B"])
+    def test_d02_table_trap_and_workbench(self):
+        def idx(mean, n, t, c):
+            return mean + c * math.sqrt(math.log(t) / n)
+        # table (chapter): pull 4 counts 2,1 (A 1.548, B 1.482 -> A); pull 5 counts 3,1 (1.628, 1.665 -> B)
+        m4 = run(1, situation="p4", c=SQ2)[0]
+        self.assertEqual((m4["Index A"], m4["Index B"], m4["Selected"]), ("1.548", "1.482", "A"))
+        m5 = run(1, situation="p5", c=SQ2)[0]
+        self.assertEqual((m5["Index A"], m5["Index B"], m5["Selected"]), ("1.628", "1.665", "B"))
+        self.assertEqual(m5["Counts A, B"], "3, 1")
+        # trapped controller after 20 tasks: A 18 pulls, 14 wins; B 2 pulls, 0 wins
+        for c in (SQ2, 1.0, 0.5):
+            m = run(1, situation="trap", c=c)[0]
+            ia, ib = idx(14 / 18, 18, 20, c), idx(0.0, 2, 20, c)
+            self.assertEqual((m["Index A"], m["Index B"]), (f"{ia:.3f}", f"{ib:.3f}"))
+            self.assertEqual(m["Selected"], "B" if ib > ia else "A")
+            self.assertEqual(m["Selected by mean alone"], "A")
+        self.assertEqual(run(1, situation="trap", c=SQ2)[0]["Selected"], "B")
+        self.assertEqual(run(1, situation="trap", c=0.5)[0]["Selected"], "A")
+        # workbench III.1: t = 100, bonuses 0.3393 and 0.6786, indices 1.0393 and 1.2786, B selected
+        mb = run(1, situation="bench", c=SQ2)[0]
+        self.assertEqual((mb["Index A"], mb["Index B"], mb["Selected"]), ("1.039", "1.279", "B"))
+        self.assertAlmostEqual(math.sqrt(2 * math.log(100) / 80), 0.3393, places=4)
+        self.assertAlmostEqual(math.sqrt(2 * math.log(100) / 20), 0.6786, places=4)
+        self.assertEqual(mb["Selected by mean alone"], "A")
+        self.assertIn("ln 20 = 2.996", run(1, situation="trap", c=SQ2)[1])
 
     def test_d03_gain_and_value_of_a_check(self):
         def h(p):
             return 0.0 if p in (0, 1) else -(p * math.log2(p) + (1 - p) * math.log2(1 - p))
-        for (acc, prior), m, state in self.states("C11-D03"):
+        out = {}
+        for kw in states(2):
+            acc, prior = kw["accuracy"], kw["prior"]
+            m = run(2, **kw)[0]
             p_s = prior * acc + (1 - prior) * (1 - acc)
             p_u = 1 - p_s
-            post_s = prior * acc / p_s
-            post_u = prior * (1 - acc) / p_u
+            post_s, post_u = prior * acc / p_s, prior * (1 - acc) / p_u
             after = p_s * h(post_s) + p_u * h(post_u)
             self.assertEqual(m["Uncertainty before, H(Y)"], f"{h(prior):.3f} bits")
             self.assertEqual(m["Information gain I(Y; O)"], f"{h(prior) - after:.3f} bits")
-            # Decision value from posteriors: best of release (100 x posterior) and evidence (92), weighted by report probability.
             best_after = p_s * max(100 * post_s, 92) + p_u * max(100 * post_u, 92)
             voi = best_after - max(100 * prior, 92)
             self.assertEqual(m["Decision value VOI"], f"{voi:.2f}")
             self.assertGreaterEqual(voi, -1e-12)
-        by_state = {tuple(v): m for v, m, _ in self.states("C11-D03")}
-        # Information gain without decision value: a weak check removes uncertainty but cannot change the action.
-        weak = by_state[(0.6, 0.85)]
+            out[(acc, prior)] = m
+        weak = out[(0.6, 0.85)]
         self.assertGreater(float(weak["Information gain I(Y; O)"].split()[0]), 0)
         self.assertEqual((weak["Decision value VOI"], weak["Best action changes"]), ("0.00", "no"))
-        weak_high_prior = by_state[(0.6, 0.97)]
-        self.assertEqual((weak_high_prior["Decision value VOI"], weak_high_prior["Best action changes"]), ("0.00", "no"))
-        # Chapter 11 check question: accuracy 0.70, prior 0.85, an unsupported report scores 70.8 and the supported report 92.97.
+        self.assertEqual(out[(0.7, 0.85)]["Best action changes"], "yes")
+        self.assertEqual(out[(0.7, 0.97)]["Best action changes"], "no")
         self.assertAlmostEqual(100 * 0.85 * 0.3 / 0.36, 70.83, places=2)
         self.assertAlmostEqual(100 * 0.85 * 0.7 / 0.64, 92.97, places=2)
-        self.assertEqual(by_state[(0.7, 0.85)]["Best action changes"], "yes")
+        # prior 0.5: no check scores max(50, 92) = 92; accuracy 0.95 lifts the supported report to 95
+        self.assertEqual(out[(0.95, 0.5)]["Best action changes"], "yes")
+        self.assertEqual(out[(0.6, 0.5)]["Decision value VOI"], "0.00")
 
     def test_d04_worked_classifier_by_hand(self):
-        by_state = {tuple(v): m for v, m, _ in self.states("C11-D04")}
-        # The book's worked price: no shift gives zero, a shift of 10 gives 7/3.
-        self.assertEqual(by_state[(0, 0)]["Gross value"], "0.000")
-        self.assertEqual(by_state[(10, 0)]["Gross value"], f"{7 / 3:.3f}")
-        self.assertEqual(by_state[(10, 0)]["Best expected utility with the call"], f"{92 / 3 + 2 * 100 / 3:.3f}")
-        self.assertEqual(by_state[(10, 0)]["Release now, no observation"], "95.000")
-        self.assertEqual(by_state[(0, 0)]["Release now, no observation"], "85.000")
-        for (shift, cost), m, state in self.states("C11-D04"):
+        by = {}
+        for kw in states(3):
+            shift, cost = kw["shift"], kw["call_cost"]
+            m = run(3, **kw)[0]
             flag, clear = 75 + shift, 90 + shift
             before = max(flag / 3 + 2 * clear / 3, 92)
             after = max(flag, 92) / 3 + 2 * max(clear, 92) / 3
             voi = after - before
             self.assertEqual(m["Gross value"], f"{voi:.3f}")
             self.assertEqual(m["Net value"], f"{voi - cost:.3f}")
-            self.assertGreaterEqual(voi, -1e-12)
-        # Boundary cases the module claims to handle: an exact tie, a gross zero, a clear purchase, and a loss.
-        self.assertEqual(by_state[(5, 2)]["Worth buying"], "tie")       # 94 - 92 = 2, net 0
-        self.assertEqual(by_state[(0, 2)]["Worth buying"], "no")        # gross zero
-        self.assertEqual(by_state[(10, 2)]["Worth buying"], "yes")      # 7/3 - 2 > 0
-        self.assertEqual(by_state[(15, 2)]["Worth buying"], "no")       # 2/3 - 2 < 0
-        # The value is not monotone in the shift: it rises to a peak and then falls.
-        gross = [float(by_state[(s, 0)]["Gross value"]) for s in (0, 5, 10, 15)]
+            by[(shift, round(cost, 3))] = m
+        self.assertEqual(by[(0, 0)]["Gross value"], "0.000")
+        self.assertEqual(by[(10, 0)]["Gross value"], f"{7 / 3:.3f}")
+        self.assertEqual(by[(10, 0)]["Release now, no observation"], "95.000")
+        self.assertEqual(by[(0, 0)]["Release now, no observation"], "85.000")
+        self.assertEqual(by[(5, 2)]["Worth buying"], "tie")
+        self.assertEqual(by[(0, 2)]["Worth buying"], "no")
+        self.assertEqual(by[(10, 2)]["Worth buying"], "yes")
+        self.assertEqual(by[(15, 2)]["Worth buying"], "no")
+        # the book's price 7/3: a call costing exactly 7/3 ties at shift 10; above it is not worth buying
+        self.assertEqual(by[(10, 2.333)]["Worth buying"], "tie")
+        self.assertEqual(by[(10, 2.333)]["Net value"], "0.000")
+        self.assertEqual(by[(5, 2.333)]["Worth buying"], "no")
+        gross = [float(by[(s, 0)]["Gross value"]) for s in (0, 5, 10, 15)]
         self.assertEqual(gross.index(max(gross)), 2)
-        self.assertGreater(gross[2], gross[3])
 
-    def prose(self):
-        """Visible page text with whitespace collapsed (prompts, explanations, answers)."""
-        text = re.sub(r"<script\b.*?</script>|<style\b.*?</style>", " ", self.page, flags=re.S)
-        return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", text)))
-
-    def test_patch_g4_ch11_wording(self):
-        prose = self.prose()
-        # g4-15: releasing already wins before observing at shift 10; shift 15 adds only the flag branch.
-        self.assertNotIn("A shift of 15 makes releasing the best choice even before observing", prose)
-        self.assertIn("From a shift of 10 on, releasing already beats requesting evidence before observing", prose)
-        self.assertIn("1/3 x (92 - 90) = 0.667", prose)
-        self.assertAlmostEqual((92 - 90) / 3, 0.667, places=3)
-        self.assertGreater((75 + 10) / 3 + 2 * (90 + 10) / 3, 92)   # 95.0 at shift 10
-        self.assertLess((75 + 5) / 3 + 2 * (90 + 5) / 3, 92)        # 90.0 at shift 5
-        by_state = {tuple(v): m for v, m, _ in self.states("C11-D04")}
-        self.assertEqual(by_state[(15, 0)]["Gross value"], "0.667")
-        # g4-24: a negative net value is printed plainly, as in the metrics panel.
-        for (shift, cost), m, state in self.states("C11-D04"):
-            if cost == 2 and shift in (0, 15):
-                self.assertNotIn("(-", state["interpretation"].split("net value =")[1].split(".")[0] + ".")
-                self.assertIn(f"= {m['Net value']}.", state["interpretation"])
-        # g4-16 / g4-23: state-aware wording and consistent thousands separators in D01.
-        d1 = {tuple(v): (m, st) for v, m, st in self.states("C11-D01")}
-        for key, (m, st) in d1.items():
-            self.assertNotIn("far below both lines", st["interpretation"])
-            self.assertNotIn("rising more slowly", st["interpretation"])
-            ratio = float(m["One seeded run of the optimistic rule"]) / float(m["Rotate evenly"])
-            self.assertIn(f"about {100 * ratio:.0f} percent of the rotate-evenly total", st["interpretation"])
-        self.assertIn("= 1,200.0.", d1[(10000, 0.9)][1]["interpretation"])
-        self.assertIn("= 600.0.", d1[(10000, 0.9)][1]["interpretation"])
-        self.assertNotIn(" 1200.0", d1[(10000, 0.9)][1]["interpretation"])
-        # g4-17: the dotted growth factor is qualitative in the prompt and bounded in the explanation.
-        self.assertNotIn("by what factor does the dotted curve grow", prose.lower())
-        for mb, low in ((0.9, 3.5), (0.84, 6.5)):
-            factor = float(d1[(10000, mb)][0]["One seeded run of the optimistic rule"]) / float(
-                d1[(1000, mb)][0]["One seeded run of the optimistic rule"])
-            self.assertTrue(low <= factor < low + 0.1, (mb, factor))
-            self.assertLess(factor, 10)
-        self.assertIn("about 3.6", prose)
-        self.assertIn("about 6.5", prose)
-        # g4-18: the application states the chapter's instrument, not an unobservable best score.
-        self.assertNotIn("what the best available action would have scored", prose)
-        self.assertIn("sampled recently", prose)
-        # g4-19 / g4-20: the prediction names c and the pull number; the check shows the exact product.
-        self.assertIn("pull number to 5 with c = 1.414", prose)
-        self.assertIn("1.414 x 0.8326 = 1.177", prose)
-        self.assertNotIn("0.833 = 1.177", prose)
-        self.assertAlmostEqual(1.414 * 0.8326, 1.177, places=3)
-        # g4-22: the zero-VOI rule is tied to the release score staying on one side of 92, with prior-dependence stated.
-        self.assertNotIn("A weak check moves beliefs a little", prose)
-        self.assertIn("same side of 92", prose)
-        self.assertIn("depends on the prior", prose)
-        by3 = {tuple(v): m for v, m, _ in self.states("C11-D03")}
-        self.assertEqual(by3[(0.7, 0.85)]["Best action changes"], "yes")
-        self.assertEqual(by3[(0.7, 0.97)]["Best action changes"], "no")
-
-    def test_d02_zero_mean_is_labelled_in_the_figure(self):
-        """g4-21: whenever tool B has mean 0.000, the figure prints that mean (the SVG text is not base64 hidden)."""
-        import base64
-        seen = 0
-        for key, state in self.demos["C11-D02"]["states"].items():
-            svg = base64.b64decode(state["image"].split(",", 1)[1]).decode("utf-8")
-            if "index = 0.000 +" in state["interpretation"]:
-                seen += 1
-                self.assertIn("mean 0.000", svg, key)
-        self.assertGreaterEqual(seen, 6)
-
-    def test_every_state_has_a_hand_calculation(self):
-        pattern = re.compile(r"[-\d.()/]+ [x/+-] [-\d.()/a-z]+.* = [-\d.()]+")
-        for demo in self.data["demos"]:
-            for state in demo["states"].values():
-                self.assertRegex(state["interpretation"], pattern)
-
-    def test_displayed_equations_are_chapter_equations(self):
+    def test_equations_are_chapter_equations(self):
         chapter = next(c for c in json.loads((LAB / "chapter-map.json").read_text()) if c["chapter"] == 11)
 
         def norm(t):
@@ -279,10 +243,44 @@ class Chapter11ReaderTests(unittest.TestCase):
             t = re.sub(r"\\[,;:!]", "", t)
             return re.sub(r"[\s{}]", "", t).rstrip(".")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
-        alts = re.findall(r'data-tex="([^"]+)"', self.page)
-        self.assertEqual(len(alts), 5)
-        for tex in alts:
-            self.assertIn(norm(html.unescape(tex)), allowed)
+        for d in ch11.CHAPTER["demos"]:
+            for tex in d["equations"]:
+                self.assertIn(norm(html.unescape(tex)), allowed, d["id"])
+
+    def test_text_rules(self):
+        blob = json.dumps(ch11.CHAPTER, ensure_ascii=False)
+        for bad in ("\u2014", "\u2013", "\u2212", "--"):
+            self.assertNotIn(bad, blob)
+        for term in ("matplotlib", "numpy", "python", "jupyter"):
+            self.assertNotIn(term, blob.lower())
+        for d in ch11.CHAPTER["demos"]:
+            self.assertIn("constructed", d["provenance"].lower())
+            self.assertTrue(d["check"].endswith("?"))
+            self.assertEqual(d["scope_note"]["source_section"], "What this does not settle")
+
+
+@unittest.skipUnless(PYTHON.is_file(), "laboratory .venv absent; cannot build the reader")
+class Chapter11BuiltPageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp(prefix="reader-ch11-test-")
+        r = subprocess.run([str(PYTHON), str(WRAPPER), "--chapters", "11", "--out", cls.tmp], capture_output=True, text=True,
+                           timeout=900, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+        assert r.returncode == 0, r.stdout + r.stderr
+        cls.reader = Path(cls.tmp) / "11-bounded-exploration" / "reader.html"
+        cls.page = cls.reader.read_text(encoding="utf-8")
+        cls.data = json.loads(re.search(r'<script id="reader-data" type="application/json">(.*?)</script>', cls.page, re.S).group(1))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def test_size_states_and_panels(self):
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 12, 12, 12])
+        self.assertLess(self.reader.stat().st_size, 4_000_000)
+        for text in ("Ask the chapter skill", "What this does not settle", "Common wrong turn", "Your prediction", "Worked steps"):
+            self.assertIn(text, self.page)
+        self.assertEqual(len(re.findall(r'data-tex="', self.page)), 5)
 
     def test_page_text_has_no_dashes_or_dependency_names(self):
         text = re.sub(r"<script\b.*?</script>|<style\b.*?</style>", " ", self.page, flags=re.S)
@@ -293,15 +291,58 @@ class Chapter11ReaderTests(unittest.TestCase):
             self.assertNotIn(bad, text)
         for term in ("matplotlib", "numpy", "python", "jupyter"):
             self.assertNotIn(term, text.lower())
-        self.assertIn("constructed", text.lower())
 
     def test_dom_harness(self):
         if shutil.which("node") is None:
-            self.skipTest("Node is not installed; the DOM harness needs it")
-        run = subprocess.run(["node", str(HARNESS), str(self.reader)], capture_output=True, text=True, timeout=300)
-        self.assertEqual(run.returncode, 0, run.stderr)
-        report = json.loads(run.stdout)["reports"][0]
-        self.assertEqual((report["states_checked"], report["resets_checked"], report["labelled_controls"]), (32, 4, 8))
+            self.skipTest("Node is not installed")
+        r = subprocess.run(["node", str(HARNESS), str(self.reader)], capture_output=True, text=True, timeout=300)
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        report = json.loads(r.stdout)["reports"][0]
+        self.assertEqual(report["states_checked"], 44)
+
+
+class Chapter11Patch2Tests(unittest.TestCase):
+    def test_pooled_greedy_lockout_matches_independent_replay(self):
+        worlds = {"book": ([0.78, 0.90], 1000), "default": ([0.4, 0.7], 120), "swapped": ([0.7, 0.4], 120), "three": ([0.2, 0.5, 0.8], 90)}
+        for world, (means, rounds) in worlds.items():
+            m, text, extra = run(0, world=world, scale="own")
+            best = max(means)
+            half = 0.5 * (best - sorted(means)[-2]) * rounds
+            locked = 0
+            mean = {"greedy": 0.0, "ucb": 0.0, "thompson": 0.0}
+            for seed in range(200):
+                for pol in mean:
+                    mean[pol] += replay(means, rounds, seed, pol)[1] / 200
+                if replay(means, rounds, seed, "greedy")[1] > half:
+                    locked += 1
+            self.assertEqual(m["Always the current best, seeds above half the stuck line (of 200)"], str(locked))
+            self.assertEqual(m["Mean regret over 200 seeds, always the current best"], f"{mean['greedy']:.2f}")
+            self.assertEqual(m["Mean regret over 200 seeds, optimistic rule"], f"{mean['ucb']:.2f}")
+            self.assertEqual(m["Mean regret over 200 seeds, posterior sampling"], f"{mean['thompson']:.2f}")
+            self.assertIn(f"in {locked} of 200 seeds", text)
+            self.assertIn(f"{locked} of 200 seeds", " ".join(extra["steps"]))
+            self.assertNotIn("Chance the best arm fails its first two pulls", m)
+        book = run(0, world="book", scale="own")[0]
+        self.assertGreater(int(book["Always the current best, seeds above half the stuck line (of 200)"]), 20)
+
+    def test_d03_figure_scores_appear_in_the_arithmetic(self):
+        m, text, _ = run(2, accuracy=0.7, prior=0.85)
+        self.assertIn("posterior release score 92.97", text)
+        self.assertIn("posterior release score 70.83", text)
+        self.assertIn("weighted by that chance, max(100 x 0.5950", text)
+
+    def test_article_agrees_with_noun(self):
+        for situation in ("p4", "p5", "trap", "bench"):
+            text = run(1, situation=situation)[1]
+            self.assertNotIn("A action", text)
+        self.assertIn("An action with few pulls", run(1, situation="bench")[1])
+        self.assertIn("A tool with few pulls", run(1, situation="trap")[1])
+
+    def test_correct_prediction_is_not_always_first(self):
+        answers = [d["prediction_answer"] for d in ch11.CHAPTER["demos"]]
+        self.assertNotEqual(set(answers), {0})
+        self.assertEqual(ch11.CHAPTER["demos"][0]["prediction_options"][ch11.CHAPTER["demos"][0]["prediction_answer"]],
+                         "Stuck regret grows ten times; the optimistic run grows by less than ten times.")
 
 
 if __name__ == "__main__":

@@ -63,113 +63,126 @@ class Chapter25ReaderTests(unittest.TestCase):
 
     def test_structure_and_budget(self):
         self.assertEqual(list(self.demos), ["C25-D01", "C25-D02", "C25-D03", "C25-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 8, 8, 8])
-        self.assertLess(self.reader.stat().st_size, 2_500_000)
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [12, 12, 12, 12])
+        self.assertLess(self.reader.stat().st_size, 4_000_000)
 
-    def test_d01_family_counts(self):
-        for (parts, variants), m, state in self.states("C25-D01"):
-            parts, variants = int(parts), int(variants)
-            # enumerate: each part left alone or set to one alternative; exclude the all-unchanged choice
-            combos = sum(1 for c in itertools.product(range(variants + 1), repeat=parts) if any(c))
-            single = sum(1 for c in itertools.product(range(variants + 1), repeat=parts) if sum(1 for x in c if x) == 1)
-            self.assertEqual(m["Versions, any combination of edits"], str(combos))
-            self.assertEqual(m["Versions, one edit at a time"], str(single))
-            self.assertEqual(single, parts * variants)
-        m = next(m for v, m, s in self.states("C25-D01") if v == [5, 3])
-        self.assertEqual(m["Versions, any combination of edits"], "1023")
-        # boundary: one part, the two descriptions coincide
-        m = next(m for v, m, s in self.states("C25-D01") if v == [1, 2])
-        self.assertEqual(m["Versions, one edit at a time"], m["Versions, any combination of edits"])
-        self.assertIn("theta", m["Model parameters changed"])
+    def test_new_fields_are_rendered(self):
+        for text in ("Ask the chapter skill", "Common wrong turn", "What this does not settle", "Your prediction", "Worked steps"):
+            self.assertIn(text, self.page)
+        for demo in self.data["demos"]:
+            for state in demo["states"].values():
+                self.assertGreaterEqual(len(state["steps"]), 2)
 
-    def test_d01_wording_follows_the_state(self):
-        interp = {tuple(v): s["interpretation"] for v, m, s in self.states("C25-D01")}
-        one = interp[(1, 2)]
-        self.assertIn("1 part x 2 alternatives = 2", one)
-        self.assertNotIn("1 parts", one)
-        self.assertNotIn("grows too fast", one)
-        self.assertIn("same number", one)
-        self.assertNotIn("1.0 times", one)
-        many = interp[(5, 3)]
-        self.assertIn("5 parts x 3 alternatives = 15", many)
-        self.assertIn("multiplicatively", many)
-        for text in interp.values():
-            self.assertNotIn("grows too fast", text)
-        self.assertNotIn("nothing a reviewer can list", self.page)
-        self.assertNotIn("Shaded rows may be changed", self.page)
-        self.assertNotIn("the five parts are the chapter", self.page)
-
-    def test_d02_names_and_defaults_are_defined(self):
-        self.assertIn("named flashy and steady", self.page)
-        self.assertNotIn("book's default case", self.page)
-        self.assertNotIn("Book default", self.page)
-        self.assertNotIn("mostly luck of the draw", self.page)
-        self.assertIn("multiple of 0.25", self.page)
-
-    def test_d03_d04_terms_are_defined(self):
-        self.assertIn("The threshold tau is 0.25", self.page)
-        self.assertIn("a canary is a small monitored release", self.page)
-        self.assertNotIn("1 decisions", self.page)
-        keys = {k for v, m, s in self.states("C25-D03") for k in m}
-        self.assertIn("Bound, 1 decision", keys)
-        self.assertNotIn("Bound, 1 decisions", keys)
+    def test_d01_canary_by_hand(self):
+        traces = {"steady": [0.80, 0.82, 0.81, 0.83, 0.82, 0.84, 0.83, 0.82],
+                  "creeping": [0.80, 0.83, 0.86, 0.89, 0.92, 0.95, 0.98, 1.01],
+                  "spike": [0.80, 0.81, 0.95, 0.82, 0.81, 0.80, 0.82, 0.81]}
+        names = list(traces)
+        demo = self.demos["C25-D01"]
+        for k, state in demo["states"].items():
+            i, j, f = (int(x) for x in k.split(","))
+            costs = traces[names[i]]
+            boundary = 1.00 - 0.10 if j == 0 else 1.00
+            hit = [p + 1 for p, c in enumerate(costs) if round(c - boundary, 6) > 0]
+            m = dict(state["metrics"])
+            expect = f"period {hit[0]}" if hit else "none"
+            self.assertEqual(m["Alert under the boundary used"], expect, k)
+            self.assertEqual(m["Periods under phi'"], f"{hit[0] if hit else 8} of 8", k)
+            self.assertEqual(m["Alert under the declared 0.90"], f"period {[p + 1 for p, c in enumerate(costs) if c > 0.9][0]}" if any(c > 0.9 for c in costs) else "none")
+            self.assertIn("0 (theta", m["Model parameters changed"])
+        # creeping, declared: 0.89 is not above 0.90, 0.92 is; moved boundary 1.00 waits for 1.01
+        self.assertEqual(dict(demo["states"]["1,0,0"]["metrics"])["Alert under the boundary used"], "period 5")
+        self.assertEqual(dict(demo["states"]["1,1,0"]["metrics"])["Alert under the boundary used"], "period 8")
+        self.assertEqual(dict(demo["states"]["2,1,0"]["metrics"])["Alert under the boundary used"], "none")
+        self.assertIn("1.00 - 0.10 = 0.90", demo["states"]["1,0,0"]["interpretation"])
+        # check question: 1.20 - 0.15 = 1.05, first cost above is 1.08 in period 3
+        self.assertAlmostEqual(1.20 - 0.15, 1.05)
+        self.assertEqual([p + 1 for p, c in enumerate([1.00, 1.05, 1.08, 1.12]) if c > 1.05 + 1e-9][0], 3)
 
     def test_d02_gate_by_hand(self):
-        base = [1, 0, 1, 0]
-        dev = {"flashy": [1, 1, 1, 1], "steady": [1, 1, 1, 0]}
+        base = {"default": [1, 0, 1, 0], "changed": [1, 0, 1, 0], "transfer": [0, 1]}
+        # the transfer case is read from the notebook data, not copied from the module
+        nb = json.loads((LAB / "data" / "examples" / "ch25.json").read_text())
+        self.assertEqual([int(x) for x in nb["baseline_guard"]], base["transfer"])
+        self.assertEqual(nb["minimum_guard_gain"], 0.1)
+        self.assertTrue(nb["guard_reused"])
         guard = {"default": {"flashy": [1, 0, 1, 0], "steady": [1, 1, 1, 0]},
-                 "changed": {"flashy": [1, 1, 1, 0], "steady": [1, 1, 1, 0]}}
+                 "changed": {"flashy": [1, 1, 1, 0], "steady": [1, 1, 1, 0]},
+                 "transfer": {"proposal": [1, 1]}}
+        dev = {"default": {"flashy": 4 / 4, "steady": 3 / 4}, "changed": {"flashy": 1.0, "steady": 0.75}, "transfer": {"proposal": 1.0}}
+        thr = {"default": 0.2, "changed": 0.2, "transfer": 0.1}
+        wb = (LAB / "workbook" / "workbook.md").read_text()
+        self.assertIn("baseline_guard = [true, false, true, false]", wb)
+        self.assertIn("minimum_guard_gain = 0.1", wb)
+        cases = ["default", "changed", "transfer"]
         demo = self.demos["C25-D02"]
-        cases = ["default", "changed"]
         for k, state in demo["states"].items():
-            i, j, t = (int(x) for x in k.split(","))
-            case = cases[i]
-            reused = j == 1
-            thr = float(demo["controls"][2]["values"][t])
-            rates = {n: sum(v) / 4 for n, v in dev.items()}
-            winner = max(rates, key=rates.get)
-            gain = sum(g - b for g, b in zip(guard[case][winner], base)) / 4
+            i, j, c = (int(x) for x in k.split(","))
+            case, reused, by_guard = cases[i], j == 1, c == 1
+            gains = {n: sum(g - b for g, b in zip(v, base[case])) / len(base[case]) for n, v in guard[case].items()}
+            winner = max(dev[case], key=dev[case].get)
+            pick = winner
+            shaped = False
+            if by_guard and gains[winner] < max(gains.values()) - 1e-12:
+                pick = max(gains, key=gains.get)
+                shaped = True
             m = dict(state["metrics"])
-            self.assertEqual(m["Selected on development"], winner)
-            self.assertEqual(m["Guard gain of the selected"], f"{gain:.2f}")
-            expected = "rejected (guard reused)" if reused else ("accepted by this gate" if gain >= thr else "rejected (gain below threshold)")
-            self.assertEqual(m["Release decision"], expected)
-        # book numbers: default winner gain 0.00, changed winner gain 0.25
-        self.assertEqual(dict(demo["states"]["0,0,0"]["metrics"])["Guard gain of the selected"], "0.00")
-        self.assertEqual(dict(demo["states"]["1,0,0"]["metrics"])["Release decision"], "accepted by this gate")
-        self.assertEqual(dict(demo["states"]["1,0,1"]["metrics"])["Release decision"], "rejected (gain below threshold)")
-        self.assertEqual(dict(demo["states"]["1,1,0"]["metrics"])["Release decision"], "rejected (guard reused)")
+            self.assertEqual(m["Selected on development"], winner, k)
+            self.assertEqual(m["Candidate tested on the guard"], pick, k)
+            self.assertEqual(m["Guard gain of the tested candidate"], f"{gains[pick]:.2f}", k)
+            if reused:
+                expected = "rejected (guard reused)"
+            elif shaped:
+                expected = "rejected (guard picked the winner)"
+            else:
+                expected = "accepted by this gate" if gains[pick] >= thr[case] - 1e-12 else "rejected (gain below threshold)"
+            self.assertEqual(m["Release decision"], expected, k)
+        mk = lambda key, name: dict(demo["states"][key]["metrics"])[name]
+        self.assertEqual(mk("0,0,0", "Guard gain of the tested candidate"), "0.00")
+        self.assertEqual(mk("1,0,0", "Release decision"), "accepted by this gate")
+        self.assertEqual(mk("2,1,0", "Release decision"), "rejected (guard reused)")
+        self.assertEqual(mk("2,0,0", "Guard gain of the tested candidate"), "0.50")
+        self.assertEqual(mk("0,0,1", "Candidate tested on the guard"), "steady")
+        # check question: (2 x 1 + 1 x (-1) + 5 x 0) / 8
+        self.assertAlmostEqual((2 - 1) / 8, 0.125)
 
-    def test_d03_bound_and_exact_tail(self):
+    def test_d03_bound_ledger_and_exact_tail(self):
         def exact(m, tau=0.25):
-            # dynamic program over the sum of m fair +1/-1 steps, independent of the module's binomial sum
             dist = {0: 1.0}
             for _ in range(m):
                 nxt = {}
-                for s, p in dist.items():
-                    nxt[s + 1] = nxt.get(s + 1, 0) + p / 2
-                    nxt[s - 1] = nxt.get(s - 1, 0) + p / 2
+                for s_, p in dist.items():
+                    nxt[s_ + 1] = nxt.get(s_ + 1, 0) + p / 2
+                    nxt[s_ - 1] = nxt.get(s_ - 1, 0) + p / 2
                 dist = nxt
-            return sum(p for s, p in dist.items() if s / m >= tau - 1e-12)
+            return sum(p for s_, p in dist.items() if s_ / m >= tau - 1e-12)
         def sig3(x):
             return f"{x:.{max(0, 2 - int(math.floor(math.log10(x))))}f}"
-        for (m, q), met, state in self.states("C25-D03"):
+        demo = self.demos["C25-D03"]
+        for (m, q, r), met, state in self.states("C25-D03"):
             m, q = int(m), int(q)
+            idx = [int(x) for x in [k for k, s_ in demo["states"].items() if s_ is state][0].split(",")]
+            redesigned = idx[2] == 1
+            covered = 2 if redesigned else q
             bound = math.exp(-m * 0.25 ** 2 / 2)
             self.assertEqual(met["Bound, one decision"], sig3(bound))
             self.assertEqual(met["Exact tail, fair plus or minus 1 case"], sig3(exact(m)))
             self.assertLess(exact(m), bound)
-            union = met["Bound, 1 decision" if q == 1 else f"Bound, {q} decisions"]
-            if q * bound > 1:
-                self.assertIn("says nothing", union)
+            self.assertEqual(met["Decisions fixed before guard access"], f"{covered} of {q}")
+            self.assertEqual(met["Decisions needing a fresh guard"], str(q - covered))
+            total = met["Total bound over those decisions"]
+            if covered * bound > 1:
+                self.assertIn("says nothing", total)
             else:
-                self.assertTrue(union.startswith(sig3(q * bound)))
-        m = next(m for v, m, s in self.states("C25-D03") if v == [200, 10])
-        self.assertEqual(m["Bound, one decision"], "0.00193")
-        self.assertTrue(m["Bound, 10 decisions"].startswith("0.0193"))
-        m = next(m for v, m, s in self.states("C25-D03") if v == [50, 10])
-        self.assertIn("above 1", m["Bound, 10 decisions"])
-        # the check question: m = 300
+                self.assertTrue(total.startswith(sig3(covered * bound)))
+        mm = dict(demo["states"]["1,1,0"]["metrics"])
+        self.assertEqual(mm["Bound, one decision"], "0.00193")
+        self.assertTrue(mm["Total bound over those decisions"].startswith("0.0193"))
+        mm = dict(demo["states"]["1,1,1"]["metrics"])
+        self.assertTrue(mm["Total bound over those decisions"].startswith("0.00386"))
+        self.assertEqual(mm["Decisions needing a fresh guard"], "8")
+        # workbook VI.2 numbers: exp(-6.25) = 0.00193045 and ten times that
+        self.assertAlmostEqual(math.exp(-6.25), 0.00193045, places=8)
         self.assertAlmostEqual(math.exp(-300 * 0.0625 / 2), 0.0000848, places=7)
 
     def test_d04_all_four_conditions(self):
@@ -180,17 +193,17 @@ class Chapter25ReaderTests(unittest.TestCase):
             i, j = (int(x) for x in k.split(","))
             uplift = float(demo["controls"][0]["values"][i])
             cost, auth, roll = others[keys[j]]
-            flags = [uplift >= 0.25, cost <= 1.0 - 0.1 + 1e-12, bool(auth), bool(roll)]
+            flags = [uplift >= 0.25 - 1e-12, cost <= 1.0 - 0.1 + 1e-12, bool(auth), bool(roll)]
             m = dict(state["metrics"])
             self.assertEqual(m["Accept"].startswith("yes"), all(flags), k)
             for name, flag in zip(["1. Uplift condition", "2. Cost condition", "3. Authorized in scope", "4. Rollback path tested"], flags):
                 self.assertTrue(m[name].startswith("pass" if flag else "fail"), (k, name))
-        # a cost of 0.95 is under c = 1.00 yet still fails the margin; high uplift does not rescue it
-        m = dict(demo["states"]["1,1"]["metrics"])
-        self.assertTrue(m["2. Cost condition"].startswith("fail"))
-        self.assertEqual(m["Accept"], "no (0)")
-        self.assertEqual(dict(demo["states"]["1,0"]["metrics"])["Accept"], "yes (1)")
-        # check question: 0.92 > 0.90
+        # uplift exactly 0.25 passes ("at least"); cost 0.95 under c = 1.00 still fails the margin
+        self.assertTrue(dict(demo["states"]["1,0"]["metrics"])["1. Uplift condition"].startswith("pass"))
+        self.assertTrue(dict(demo["states"]["2,1"]["metrics"])["2. Cost condition"].startswith("fail"))
+        self.assertEqual(dict(demo["states"]["2,0"]["metrics"])["Accept"], "yes (1)")
+        # workbook VI.2 third candidate: uplift and cost pass, authority blocks
+        self.assertIn("authority still blocks", demo["states"]["2,2"]["interpretation"])
         self.assertGreater(0.92, 1.00 - 0.10)
 
     def test_equations_are_chapter_equations(self):
@@ -222,7 +235,7 @@ class Chapter25ReaderTests(unittest.TestCase):
         run = subprocess.run(["node", str(HARNESS), str(self.reader)], capture_output=True, text=True, timeout=120)
         self.assertEqual(run.returncode, 0, run.stderr)
         report = json.loads(run.stdout)["reports"][0]
-        self.assertEqual((report["states_checked"], report["resets_checked"]), (32, 4))
+        self.assertEqual((report["states_checked"], report["resets_checked"]), (48, 4))
 
 
 if __name__ == "__main__":

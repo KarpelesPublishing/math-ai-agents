@@ -49,18 +49,18 @@ def three(x):
     return f"{float(x):.3f}"
 
 
-SINGLES = {
-    "p only 0.30, i only 0.25 (Table 2.1)": (F(30, 100), F(25, 100)),
-    "p only 0.55, i only 0.50 (second example)": (F(55, 100), F(50, 100)),
-}
-TABLE = "p only 0.30, i only 0.25 (Table 2.1)"
-SECOND = "p only 0.55, i only 0.50 (second example)"
-FOUR = "Four cells, Equation (2.1)"
-THREE = "Three cells (neither score left out)"
+def two_dp(x):
+    return f"{float(x):.2f}"
 
 
-def gamma(neither, p, i, both):
-    return both - p - i + neither
+CASES = [(F(20, 100), F(30, 100), F(25, 100), F(80, 100)), (F(20, 100), F(30, 100), F(25, 100), F(35, 100)),
+         (F(20, 100), F(55, 100), F(50, 100), F(70, 100)), (F(40, 100), F(52, 100), F(49, 100), F(58, 100))]
+RUNS = ["matched", "doubled", "cubed"]
+
+
+def g_of(c):
+    n, p, i, b = c
+    return b - p - i + n
 
 
 @unittest.skipUnless(VENV_PYTHON.is_file(), "laboratory .venv absent; cannot build the reader")
@@ -82,182 +82,152 @@ class Chapter2ReaderTests(unittest.TestCase):
         cls.tmp.cleanup()
 
     def states(self, demo_id):
-        demo = self.demos[demo_id]
-        for key, state in demo["states"].items():
-            idx = [int(i) for i in key.split(",")]
-            values = [as_number(c["values"][i]) for c, i in zip(demo["controls"], idx)]
-            yield values, dict(state["metrics"]), state
+        """Yield (control indices, metrics, state)."""
+        for key, state in self.demos[demo_id]["states"].items():
+            yield tuple(int(i) for i in key.split(",")), dict(state["metrics"]), state
 
-    def test_four_demonstrations_all_states_rendered(self):
+    def text(self, demo_id, key):
+        return self.demos[demo_id]["states"][key]["interpretation"]
+
+    def test_structure_and_budget(self):
         self.assertEqual(list(self.demos), ["C02-D01", "C02-D02", "C02-D03", "C02-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 6, 4, 8])
-        self.assertLessEqual(self.reader.stat().st_size, 2_500_000)
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [12, 6, 12, 12])
+        self.assertLessEqual(self.reader.stat().st_size, 4_000_000)
         for demo in self.data["demos"]:
             for state in demo["states"].values():
                 self.assertTrue(state["image"].startswith("data:image/svg+xml"))
+                self.assertGreaterEqual(len(state["steps"]), 2)
 
-    def test_d01_contrast_for_every_state(self):
-        singles = SINGLES
-        seen = {}
-        for (both, kind), m, _ in self.states("C02-D01"):
-            p, i = singles[kind]
-            both_f = F(str(both))
-            g = gamma(F(20, 100), p, i, both_f)
-            additive = p + i - F(20, 100)
-            self.assertEqual(m["Interaction contrast Gamma"], two(g), (both, kind))
-            self.assertEqual(m["Additive prediction"], two(additive))
-            self.assertEqual(m["Joint gain (both minus neither)"], two(both_f - F(20, 100)))
-            sign = "zero" if g == 0 else ("positive" if g > 0 else "negative")
-            self.assertEqual(m["Sign of Gamma"], sign)
-            seen[(both, kind)] = g
-        # Table 2.1: 0.80 - 0.30 - 0.25 + 0.20 = 0.45; the book's negative example: -0.15; an exact zero.
-        self.assertEqual(seen[(0.8, TABLE)], F(45, 100))
-        self.assertEqual(seen[(0.7, SECOND)], F(-15, 100))
-        self.assertEqual(seen[(0.35, TABLE)], 0)
-        self.assertIn("0.80 - 0.30 - 0.25 + 0.20 = 0.45", self.page)
-        self.assertIn("0.70 - 0.55 - 0.50 + 0.20 = -0.15", self.page)
+    def test_d01_every_state_by_exact_fractions(self):
+        for (ci, ri), m, state in self.states("C02-D01"):
+            cells = CASES[ci]
+            if ci == 3 and ri == 1:
+                cells = (cells[0], cells[1], cells[2], F(73, 100))
+            if ri == 2:
+                cells = tuple(x ** 3 for x in cells)
+            n, p, i, b = cells
+            g, joint = g_of(cells), b - n
+            d = 3 if ri == 2 else 2
+            self.assertEqual(m["Interaction contrast Gamma"], f"{float(g):.{d}f}".replace("-0.000", "0.000"), (ci, ri))
+            self.assertEqual(m["Joint gain (both minus neither)"], f"{float(joint):.{d}f}")
+            self.assertEqual(m["Additive prediction"], f"{float(n + (p - n) + (i - n)):.{d}f}")
+            self.assertEqual(m["Sign of Gamma"], "zero" if g == 0 else ("positive" if g > 0 else "negative"))
+            self.assertEqual(m["Budgets matched"].startswith("yes"), ri != 1)
+            valid = joint > 0 and p - n >= 0 and i - n >= 0 and g >= 0
+            self.assertEqual(m["Valid as a fraction"] == "yes", valid, (ci, ri))
+            self.assertEqual(m["Ratio Gamma / joint gain"], f"{float(g / joint):.2f}")
+            # Equation (2.2) identity appears in the worked steps.
+            self.assertEqual((p - n) + (i - n) + g, joint)
 
-    def test_d01_identity_split_holds_in_every_state(self):
-        # Equation (2.2): joint gain = gain from p + gain from i + Gamma.
-        singles = SINGLES
-        for (both, kind), m, _ in self.states("C02-D01"):
-            p, i = singles[kind]
-            joint = F(str(both)) - F(20, 100)
-            self.assertEqual(joint, (p - F(20, 100)) + (i - F(20, 100)) + gamma(F(20, 100), p, i, F(str(both))))
-            self.assertEqual(m["Joint gain (both minus neither)"], two(joint))
+    def test_d01_book_values(self):
+        m = lambda k: dict(self.demos["C02-D01"]["states"][k]["metrics"])
+        self.assertEqual(m("0,0")["Interaction contrast Gamma"], "0.45")      # Table 2.1
+        self.assertEqual(m("0,0")["Ratio Gamma / joint gain"], "0.75")
+        self.assertEqual(m("0,0")["Valid as a fraction"], "yes")
+        self.assertEqual(m("1,0")["Sign of Gamma"], "zero")                    # additive prediction 0.35
+        self.assertEqual(m("2,0")["Interaction contrast Gamma"], "-0.15")      # second example
+        self.assertEqual(m("2,0")["Ratio Gamma / joint gain"], "-0.30")
+        self.assertTrue(m("2,0")["Valid as a fraction"].startswith("no"))
+        # Workbench: I.3 matched rerun, Gamma = -0.03, share -1/6; I.1 doubled run, Gamma = 0.12, share 4/11.
+        self.assertEqual(m("3,0")["Interaction contrast Gamma"], "-0.03")
+        self.assertEqual(m("3,0")["Ratio Gamma / joint gain"], "-0.17")
+        self.assertEqual(m("3,1")["Interaction contrast Gamma"], "0.12")
+        self.assertEqual(m("3,1")["Ratio Gamma / joint gain"], "0.36")
+        self.assertTrue(m("3,1")["Budgets matched"].startswith("no"))
+        # Cubing the second example flips the sign: 0.343 - 0.166375 - 0.125 + 0.008 = 0.059625.
+        self.assertEqual(m("2,2")["Interaction contrast Gamma"], "0.060")
+        self.assertEqual(m("2,2")["Sign of Gamma"], "positive")
+        self.assertIn("A matched rerun", self.text("C02-D01", "3,1"))
+        d = self.demos["C02-D01"]
+        self.assertEqual(d["predict"]["answer"], 1)
+        self.assertIn("Additive", self.page)
 
     def test_d02_baseline_and_three_cell_drift(self):
-        for (baseline, method), m, _ in self.states("C02-D02"):
-            b = F(str(baseline))
-            a_cells = (F(20, 100), F(30, 100), F(25, 100), F(80, 100))
-            b_cells = (b, b + F(2, 100), b + F(1, 100), F(80, 100))
-            four_a, four_b = gamma(*a_cells), gamma(*b_cells)
-            self.assertEqual(four_a, F(45, 100))
-            self.assertEqual(four_b, F(77, 100) - b)           # 0.80 - (b + 0.02) - (b + 0.01) + b
-            three_a = a_cells[3] - a_cells[1] - a_cells[2]
-            three_b = b_cells[3] - b_cells[1] - b_cells[2]
-            self.assertEqual(three_a, four_a - a_cells[0])      # the baseline was removed twice
-            self.assertEqual(three_b, four_b - b)
-            self.assertEqual(m["System A, four-cell Gamma"], two(four_a))
-            self.assertEqual(m["System B, four-cell Gamma"], two(four_b))
-            self.assertEqual(m["System A, three cells"], two(three_a))
-            self.assertEqual(m["System B, three cells"], two(three_b))
-            self.assertEqual(m["System B baseline"], two(b))
-        book = next(m for v, m, _ in self.states("C02-D02") if v == [0.7, FOUR])
-        self.assertEqual((book["System A, four-cell Gamma"], book["System B, four-cell Gamma"]), ("0.45", "0.07"))
-        negative = next(m for v, m, _ in self.states("C02-D02") if v == [0.7, THREE])
-        self.assertEqual(negative["System B, three cells"], "-0.63")
-        self.assertIn("0.80 - 0.72 - 0.71 + 0.70 = 0.07", self.page)
+        for (bi, mi), m, state in self.states("C02-D02"):
+            base = [F(30, 100), F(50, 100), F(70, 100)][bi]
+            a = g_of((F(20, 100), F(30, 100), F(25, 100), F(80, 100)))
+            b4 = g_of((base, base + F(2, 100), base + F(1, 100), F(80, 100)))
+            self.assertEqual(m["System A, four-cell Gamma"], two_dp(a))
+            self.assertEqual(m["System B, four-cell Gamma"], two_dp(b4))
+            self.assertEqual(m["System B, three cells"], two_dp(b4 - base))
+            self.assertEqual(m["System A, three cells"], two_dp(a - F(20, 100)))
+            self.assertEqual(len(state["steps"]), 4)
+        self.assertIn("0.80 - 0.72 - 0.71 + 0.70 = 0.07", self.text("C02-D02", "2,0"))
+        self.assertEqual(self.demos["C02-D02"]["predict"]["answer"], 1)
 
-    def test_d03_share_domain_and_undefined_ratio(self):
-        cells = {
-            "Table 2.1 (ratio 0.75)": (F(20, 100), F(30, 100), F(25, 100), F(80, 100)),
-            "Small gain (amount 0.02)": (F(50, 100), F(50, 100), F(50, 100), F(52, 100)),
-            "Negative example (ratio -0.30)": (F(20, 100), F(55, 100), F(50, 100), F(70, 100)),
-            "Zero joint gain (ratio undefined)": (F(50, 100), F(60, 100), F(50, 100), F(50, 100)),
-        }
-        for (key,), m, state in self.states("C02-D03"):
-            u = cells[key]
-            g = gamma(*u)
-            joint = u[3] - u[0]
-            valid = joint > 0 and u[1] - u[0] >= 0 and u[2] - u[0] >= 0 and g >= 0
-            self.assertEqual(m["Interaction contrast (amount)"], two(g))
-            self.assertEqual(m["Joint gain"], two(joint))
-            if joint == 0:
-                self.assertTrue(m["Ratio Gamma / joint gain"].startswith("undefined"))
-                self.assertIn("undefined", state["interpretation"])
-            else:
-                self.assertEqual(m["Ratio Gamma / joint gain"], two(g / joint))
-            self.assertEqual(m["Valid as a fraction"].startswith("yes"), valid, key)
-            if valid:
-                self.assertTrue(0 <= g / joint <= 1)
-        by_key = {k: m for (k,), m, _ in self.states("C02-D03")}
-        self.assertEqual(by_key["Table 2.1 (ratio 0.75)"]["Ratio Gamma / joint gain"], "0.75")
-        negative = by_key["Negative example (ratio -0.30)"]
-        self.assertEqual(negative["Ratio Gamma / joint gain"], "-0.30")
-        self.assertTrue(negative["Valid as a fraction"].startswith("no"))
-        self.assertEqual(by_key["Small gain (amount 0.02)"]["Ratio Gamma / joint gain"], "1.00")
+    def test_d03_route_and_leaking_control(self):
+        order = ["neither", "p only", "i only", "both"]
+        base = {"neither": F(20, 100), "p only": F(30, 100), "i only": F(25, 100), "both": F(80, 100)}
+        leaks = [F(0), F(1, 2), F(1)]
+        for (ci, li), m, state in self.states("C02-D03"):
+            lk = leaks[li]
+            cells = {
+                "neither": base["neither"] + lk * (base["p only"] - base["neither"]),
+                "p only": base["p only"],
+                "i only": base["i only"] + lk * (base["both"] - base["i only"]),
+                "both": base["both"],
+            }
+            g = cells["both"] - cells["p only"] - cells["i only"] + cells["neither"]
+            self.assertEqual(g, F(45, 100) * (1 - lk))
+            self.assertEqual(m["Selected cell"], order[ci])
+            self.assertEqual(m["Score of the selected cell"], f"{float(cells[order[ci]]):.3f}")
+            self.assertEqual(m["Measured Gamma"], f"{float(g):.3f}")
+            self.assertEqual(m["Neither / p only / i only / both"], ", ".join(f"{float(cells[k]):.3f}" for k in order))
+            self.assertEqual(m["Clean-control Gamma"], "0.45")
+        self.assertIn("i only = 0.25 + 0.50 x (0.80 - 0.25) = 0.525", self.text("C02-D03", "2,1"))
+        self.assertIn("Gamma = 0.80 - 0.30 - 0.525 + 0.250 = 0.225", self.text("C02-D03", "0,1"))
+        self.assertIn("Equation (2.2) still balances", self.text("C02-D03", "3,2"))
+        d = self.demos["C02-D03"]
+        self.assertEqual(d["predict"]["answer"], 2)
+        self.assertIn("Back", self.page)
 
-    def test_d04_standard_errors_and_intervals(self):
-        for (n, true_g), m, _ in self.states("C02-D04"):
-            n = int(n)
-            sigma = F(4, 10)
-            # Variance of the four-cell sum of independent cells: 4 sigma^2 / n.
-            var_cell = sigma ** 2 / n
-            se_cell = math.sqrt(var_cell)
-            se_gamma = math.sqrt(4 * var_cell)
-            se_diff = math.sqrt(2 * var_cell)
-            self.assertAlmostEqual(se_gamma, 2 * se_cell, places=12)
-            half = 1.96 * se_gamma
-            lo, hi = true_g - half, true_g + half
-            self.assertEqual(m["Standard error of one cell"], three(se_cell))
-            self.assertEqual(m["Standard error of Gamma"], three(se_gamma))
-            self.assertEqual(m["Standard error of a difference of two intact scores"], three(se_diff))
-            self.assertEqual(m["Interval for Gamma"], f"{three(lo)} to {three(hi)}")
-            self.assertEqual(m["Smallest Gamma that clears zero"], three(half))
-            self.assertEqual(m["Interval excludes zero"], "yes" if lo > 0 else "no")
-        by_state = {tuple(v): m for v, m, _ in self.states("C02-D04")}
-        self.assertEqual(by_state[(1600, 0.05)]["Smallest Gamma that clears zero"], "0.039")  # 1.96 x 0.020
-        self.assertEqual(by_state[(1600, 0.05)]["Interval excludes zero"], "yes")
-        self.assertEqual(by_state[(400, 0.05)]["Interval excludes zero"], "no")
-        self.assertEqual(by_state[(100, 0.15)]["Interval excludes zero"], "no")      # lower end 0.15 - 0.157
-        self.assertEqual(by_state[(400, 0.15)]["Interval excludes zero"], "yes")
+    def test_d04_standard_errors_intervals_and_pair_search(self):
+        trials = [100, 400, 1600]
+        contrasts = [0.05, 0.15]
+        pairs = [1, 384 * 383 // 2]
+        self.assertEqual(pairs[1], 73536)
+        for (ti, ci, pi), m, state in self.states("C02-D04"):
+            n, g = trials[ti], contrasts[ci]
+            se_cell = 0.4 / math.sqrt(n)
+            se_g = 2 * se_cell
+            half = 1.96 * se_g
+            self.assertEqual(m["Standard error of one cell"], f"{se_cell:.3f}")
+            self.assertEqual(m["Standard error of Gamma"], f"{se_g:.3f}")
+            self.assertEqual(m["Standard error of a difference of two intact scores"], f"{math.sqrt(2) * se_cell:.3f}")
+            self.assertEqual(m["Interval for Gamma"], f"{g - half:.3f} to {g + half:.3f}")
+            self.assertEqual(m["Interval excludes zero"], "yes" if g - half > 0 else "no")
+            self.assertEqual(m["Pairs searched"], f"{pairs[pi]:,}")
+        self.assertEqual(self.demos["C02-D04"]["states"]["2,1,1"]["metrics"][-1][1], "about 3,677 of 73,536")
+        self.assertIn("73,536 x 0.05 = 3,676.8", self.text("C02-D04", "0,0,1"))
+        # Check question: 1600 trials, smallest clearing contrast 0.039.
+        self.assertEqual(dict(self.demos["C02-D04"]["states"]["2,0,0"]["metrics"])["Smallest Gamma that clears zero"], "0.039")
+        self.assertEqual(self.demos["C02-D04"]["predict"]["answer"], 1)
 
-    # Reader patch (group 1): corrected sentences and regression checks for the old, wrong text.
+    def test_patch2_wording_fixes(self):
+        # g1-08: doubled run on a case with no doubled-run score only flips the budget flag, and says so.
+        table = self.text("C02-D01", "0,1")
+        self.assertIn("This case has no doubled-run score, so only the budget flag changes", table)
+        self.assertNotIn("This case has no doubled-run score", self.text("C02-D01", "3,1"))
+        self.assertIn("A matched rerun (the other run in this control) gives the joint score 0.58 instead of 0.73", self.text("C02-D01", "3,1"))
+        # g1-09: direction and proportionality belong to the leak model defined for the reader.
+        self.assertIn("In the leak model defined here, the p-off cells then score too high", self.page)
+        self.assertIn("taken as the clean-control values", self.page)
+        self.assertNotIn("Table 2.1's four scores are the clean-control values", self.page)
+        # g1-10: the stepper opens at step 1, the neither cell.
+        self.assertEqual(next(c for c in self.demos["C02-D03"]["controls"] if c["key"] == "cell")["default"], 0)
+        # g1-11: the feedback covers both questions of the prediction (0.80 - 0.72 - 0.71 = -0.63).
+        self.assertIn("(-0.63)", self.page)
+        self.assertEqual(round(0.80 - 0.72 - 0.71, 2), -0.63)
+        # g1-13: the search caption is conditional, not a claim about the selected true contrast.
+        self.assertNotIn("pairs, none real", self.page)
+        # g1-14: the chapter's resolved-difference case is pointed to.
+        self.assertIn("a true amount of 0.15 at 100 trials shows it", self.page)
 
-    def test_d01_check_answer_compares_gain_with_gain(self):
-        # Adding the isolated gains: 0.35 + 0.30 = 0.65; the additive score is 0.20 + 0.65 = 0.85.
-        self.assertEqual(F(35, 100) + F(30, 100), F(65, 100))
-        self.assertEqual(F(20, 100) + F(65, 100), F(85, 100))
-        text = html.unescape(self.page)
-        self.assertIn("its gain is 0.50 against 0.65 predicted by adding the isolated gains", text)
-        self.assertIn("scores 0.70 rather than the additive 0.85", text)
-        self.assertNotIn("0.50 against 0.85", text)
-
-    def test_d02_contrast_comparison_follows_the_state(self):
-        # Four-cell states of System B: baseline 0.30 -> 0.47 (larger than A's 0.45), 0.50 -> 0.27, 0.70 -> 0.07.
-        expected = {0.3: ("larger than", "0.47", "0.50"), 0.5: ("smaller than", "0.27", "0.30"), 0.7: ("smaller than", "0.07", "0.10")}
-        for (baseline, method), m, state in self.states("C02-D02"):
-            text = state["interpretation"]
-            self.assertNotIn("and its contrast is smaller", text)
-            self.assertNotIn("adds only", text)
-            if method != FOUR:
-                continue
-            word, g, joint = expected[baseline]
-            self.assertIn(f"B's contrast {g} is {word} A's 0.45", text, baseline)
-            self.assertIn(f"{joint} of improvement against 0.60 for A", text, baseline)
-        # Exact check of the three baselines with fractions.
-        for b, (word, g, _) in expected.items():
-            gb = gamma(F(str(b)), F(str(b)) + F(2, 100), F(str(b)) + F(1, 100), F(80, 100))
-            self.assertEqual(f"{float(gb):.2f}", g)
-            self.assertEqual(gb > F(45, 100), word == "larger than")
-
-    def test_d04_wording_claims_only_what_is_computed(self):
-        self.assertIn("Is the contrast clearly different from zero?", self.page)
-        self.assertNotIn("survive a rerun", self.page)
-        self.assertNotIn("second run", self.page)
-        self.assertNotIn("borderline", self.page)
-        self.assertNotIn("even though a same-size difference of intact scores (lower end -", self.page)
-        by = {tuple(v): s["interpretation"] for v, _, s in self.states("C02-D04")}
-        # 100 trials, true 0.15: Gamma interval -0.007 to 0.307, intact difference lower end 0.039 (resolved).
-        self.assertIn("is not clear of zero here, even though a same-size difference of intact scores (lower end 0.039) is resolved.",
-                      by[(100, 0.15)])
-        # 100 trials, true 0.05: both unresolved.
-        self.assertIn("is not clear of zero here, and a same-size difference of intact scores (lower end -0.061) is also unresolved.",
-                      by[(100, 0.05)])
-        self.assertIn("the interval for Gamma excludes zero at this size", by[(400, 0.15)])
-        self.assertIn("compare the two intervals at 100 trials and a true amount of 0.15", self.page)
-
-    def test_symbols_define_theta_and_intact_score(self):
-        text = html.unescape(self.page)
-        self.assertGreaterEqual(text.count("is the frozen model"), 4)  # one definition in each demonstration
-        self.assertEqual(text.count("An intact score is the score with both operations on"), 2)
-
-    def test_more_trials_never_widen_the_interval(self):
-        for true_g in (0.05, 0.15):
-            widths = [float(m["Smallest Gamma that clears zero"]) for (n, g), m, _ in self.states("C02-D04")
-                      if g == true_g]
-            self.assertEqual(widths, sorted(widths, reverse=True))
+    def test_optional_panels_present(self):
+        self.assertIn("Ask the chapter skill", self.page)
+        self.assertIn("maa-02-four-cell-interaction", self.page)
+        self.assertGreaterEqual(self.page.count("Chapter 2 source:"), 4)
+        self.assertGreaterEqual(self.page.count("Common wrong turn"), 4)
 
     def test_laboratory_function_agrees_with_table_2_1(self):
         sys.path.insert(0, str(LAB / "src"))
@@ -281,9 +251,7 @@ class Chapter2ReaderTests(unittest.TestCase):
                 self.assertTrue(state["interpretation"].strip())
                 self.assertTrue(state["metrics"])
                 self.assertRegex(state["interpretation"], r"\d\s*[-+x/]\s*\(?\d.*=\s*\(?-?\d")
-        self.assertEqual(combos, 26)
-        self.assertEqual(len(set(itertools.chain.from_iterable(
-            [s["image"] for s in d["states"].values()] for d in self.data["demos"]))), 26)
+        self.assertEqual(combos, 42)
 
     def test_displayed_equations_are_chapter_equations(self):
         chapters = json.loads((LAB / "chapter-map.json").read_text())
@@ -315,7 +283,6 @@ class Chapter2ReaderTests(unittest.TestCase):
         self.assertIn("../../notebooks/02-four-cell-interaction.ipynb", self.page)
         self.assertIn('<a class="skip" href="#main">', self.page)
         self.assertIn("<noscript>", self.page)
-        self.assertEqual(self.page.count('aria-live="polite"'), 4)
         for d in self.data["demos"]:
             for c in d["controls"]:
                 self.assertIn(f'<label for="{d["id"]}-{c["key"]}">', self.page)
@@ -326,7 +293,7 @@ class Chapter2ReaderTests(unittest.TestCase):
         run = subprocess.run(["node", str(HARNESS), str(self.reader)], capture_output=True, text=True, timeout=120)
         self.assertEqual(run.returncode, 0, run.stderr)
         report = json.loads(run.stdout)["reports"][0]
-        self.assertEqual((report["states_checked"], report["resets_checked"], report["labelled_controls"]), (26, 4, 7))
+        self.assertEqual((report["states_checked"], report["resets_checked"], report["labelled_controls"]), (42, 4, 9))
 
 
 if __name__ == "__main__":

@@ -7,6 +7,9 @@
 <meta name="generator" content="illustrated reader engine {{ engine_version }}">
 <title>{{ b.series_line }}</title>
 <style>{{ css|safe }}</style>
+{% if theme_css %}
+<style id="book-theme">{{ theme_css|safe }}</style>
+{% endif %}
 </head>
 <body>
 <a class="skip" href="#library">Skip to the chapter list</a>

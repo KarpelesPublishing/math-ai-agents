@@ -8,14 +8,26 @@ embeds every state in one self-contained HTML page. A short script swaps the
 precomputed state when a reader changes a control. Reading needs no network
 and no Python.
 
-Usage
-  python build_readers.py --config reader.config.json --chapters 6 --check
-  python build_readers.py --config reader.config.json --chapters all
-  python build_readers.py --config reader.config.json --chapters 1 2 --out /tmp/readers
+Usage (the engine folder is scripts/readers in Book Forge, or any copy of it)
+  python3 build_readers.py --config reader.config.json --chapters 6 --check
+  python3 build_readers.py --config reader.config.json --chapters all
+  python3 build_readers.py --config reader.config.json --chapters 1 2 --out /tmp/readers
+  python3 build_readers.py --version
 
 --check runs every figure function for every state and validates the
 contract, but writes nothing. Without --check, readers and the index are
 written to the configured output directory (or --out).
+
+Look and structure are separate. The engine's own stylesheet
+(static/reader.css) is a neutral base; a project may add its own look with
+theme_css (a stylesheet, path relative to the configuration file) whose text is
+inlined after the base style in every chapter page and the index page. With
+"pager": true each chapter page ends with previous and next chapter links.
+
+ENGINE_VERSION is printed by --version and written into every reader page and
+the index as <meta name="generator" content="illustrated reader engine X.Y.Z">,
+so a project can tell which engine built a reader. Change it whenever a change
+to this folder can change the bytes of a built reader.
 """
 from __future__ import annotations
 
@@ -35,7 +47,7 @@ import tempfile
 from pathlib import Path
 
 ENGINE = Path(__file__).resolve().parent
-ENGINE_VERSION = "1.1.0"
+ENGINE_VERSION = "1.4.0"
 DEPENDENCIES = ("numpy", "matplotlib", "jinja2")
 sys.dont_write_bytecode = True
 
@@ -45,14 +57,26 @@ REQUIRED_DEMO_FIELDS = (
     "application", "assumptions", "check", "answer", "provenance", "source_section",
     "source_anchor", "controls", "function",
 )
+OPTIONAL_CHAPTER_FIELDS = ("ask_skill",)
+OPTIONAL_DEMO_FIELDS = (
+    "misconception", "scope_note", "prediction_options", "prediction_answer", "prediction_feedback", "stepper",
+)
 DEFAULT_BUDGETS = {
     "demos_per_chapter": 4,
-    "max_states_per_demo": 8,
+    "max_states_per_demo": 12,
     "min_values_per_control": 2,
     "max_values_per_control": 4,
-    "max_reader_bytes": 2_500_000,
-    "max_total_bytes": 45_000_000,
+    "max_reader_bytes": 4_000_000,
+    "max_total_bytes": 55_000_000,
     "min_font_points": 9.5,
+    "min_prediction_options": 2,
+    "max_prediction_options": 4,
+    "min_steps": 2,
+    "max_steps": 8,
+    "max_step_chars": 240,
+    "min_scope_phrase_words": 4,
+    "min_rendered_text_px": 9,
+    "min_equation_scale": 0.6,
 }
 DEFAULT_FORBIDDEN_TERMS = [
     "matplotlib", "numpy", "scipy", "jinja", "pandas", "jupyter", "pip install",
@@ -170,8 +194,13 @@ def svg_data_uri(svg_text):
     return "data:image/svg+xml;base64," + base64.b64encode(svg_text.encode("utf-8")).decode("ascii")
 
 
-def clean_svg(raw):
-    """Drop prolog, comments and metadata, round coordinates, collapse whitespace."""
+def clean_svg(raw, round_numbers=True):
+    """Drop prolog, comments and metadata, round coordinates, collapse whitespace.
+
+    round_numbers=False keeps every number exactly: typeset glyphs are scaled
+    by small factors such as scale(0.015625), which two-decimal rounding would
+    distort into overlapping letters.
+    """
     s = re.sub(r"<\?xml[^>]*\?>", "", raw)
     s = re.sub(r"<!DOCTYPE[^>]*>", "", s)
     s = re.sub(r"<!--.*?-->", "", s, flags=re.S)
@@ -182,7 +211,8 @@ def clean_svg(raw):
         return "0" if text in ("-0", "") else text
 
     # Round numbers inside tags only (coordinates, path data); never touch text content.
-    s = re.sub(r"<[^>]+>", lambda tag: re.sub(r"-?\d+\.\d{3,}", rounded, tag.group(0)), s)
+    if round_numbers:
+        s = re.sub(r"<[^>]+>", lambda tag: re.sub(r"-?\d+\.\d{3,}", rounded, tag.group(0)), s)
     s = re.sub(r">\s+<", "><", s)
     s = re.sub(r"\s*\n\s*", " ", s)
     return s.strip()
@@ -219,6 +249,10 @@ class Project:
         self.links = self.cfg.get("links", {})
         self.math = self.cfg.get("math", {})
         self.style = self.cfg.get("style", {})
+        self.theme_path, self.theme_css = load_theme(self.config_path, self.cfg.get("theme_css"))
+        self.pager = self.cfg.get("pager", False)
+        if not isinstance(self.pager, bool):
+            raise SystemExit("Configuration pager must be true or false")
         self.chapters = self._load_chapters()
 
     def path(self, value):
@@ -237,6 +271,7 @@ class Project:
             items = data[spec["items_key"]] if spec.get("items_key") else data
             fields = {"number": "number", "title": "title", "slug": "slug", **spec.get("fields", {})}
             slug_mode, eq_spec = spec.get("slug_mode", "value"), spec.get("equations")
+        skill_key = spec.get("fields", {}).get("skill", "skill")
         chapters = {}
         for raw in items:
             number = int(raw[fields["number"]])
@@ -253,7 +288,9 @@ class Project:
                     equations.append({"tex": tex, "asset": self.path(asset) if asset else None,
                                       "number": str(label) if label is not None else None,
                                       "alt": spoken if isinstance(spoken, str) and spoken.strip() else None})
-            chapters[number] = {"number": number, "title": raw[fields["title"]], "slug": slug, "raw": raw, "equations": equations}
+            skill = raw.get(skill_key)
+            chapters[number] = {"number": number, "title": raw[fields["title"]], "slug": slug, "raw": raw, "equations": equations,
+                                "skill": str(skill) if isinstance(skill, (str, int)) and str(skill).strip() else None}
         return dict(sorted(chapters.items()))
 
     def module_path(self, number):
@@ -297,6 +334,22 @@ class Project:
             return None, f"canonical chapter text not available ({origin}: {relative}); section headings not checked"
         return path, f"{origin}: {relative}"
 
+    def pager_links(self, number):
+        """Previous and next authored chapters in chapter list order, or None when the pager is off."""
+        if not self.pager:
+            return None
+        order = self.authored_numbers()
+        if number not in order:
+            return None
+        k = order.index(number)
+
+        def link(n):
+            c = self.chapters[n]
+            return {"number": n, "title": c["title"], "href": f"../{c['slug']}/reader.html"}
+
+        view = {"prev": link(order[k - 1]) if k > 0 else None, "next": link(order[k + 1]) if k + 1 < len(order) else None}
+        return view if view["prev"] or view["next"] else None
+
     def link_targets(self, number):
         """Links from a reader, as (key, label, href). Omitted when unset or the target is missing."""
         chapter = self.chapters[number]
@@ -318,6 +371,46 @@ class Project:
                 continue
             out.append((key, spec.get("label", key.title()), href))
         return out, notes
+
+
+# Section: theme
+
+THEME_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+THEME_URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)", re.I | re.S)
+
+
+def theme_problems(css):
+    """Reasons a theme stylesheet cannot be inlined into an offline reader (empty list when it can)."""
+    problems = []
+    if re.search(r"</style", css, re.I):
+        problems.append("contains '</style', which would end the inlined style element")
+    body = THEME_COMMENT.sub(" ", css)
+    if re.search(r"@import", body, re.I):
+        problems.append("uses @import; a theme must be one self-contained stylesheet")
+    for m in THEME_URL.finditer(body):
+        if not m.group(2).strip().lower().startswith("data:"):
+            problems.append(f"loads url({m.group(2).strip()[:60]}); only data: URIs are allowed, readers work offline")
+    rest = THEME_URL.sub(" ", body)
+    if re.search(r"(?:https?:|ftp:)?//[a-z0-9.-]+\.[a-z]{2,}", rest, re.I):
+        problems.append("names a network address; readers work offline")
+    return problems
+
+
+def load_theme(config_path, value):
+    """Return (path, css text) for the optional theme_css setting, or (None, None)."""
+    if value in (None, ""):
+        return None, None
+    if not isinstance(value, str):
+        raise SystemExit("Configuration theme_css must be a path (relative to the configuration file) to a .css file")
+    path = Path(value)
+    path = path if path.is_absolute() else (Path(config_path).parent / path).resolve()
+    if not path.is_file():
+        raise SystemExit(f"Theme stylesheet not found (theme_css): {path}")
+    css = path.read_text(encoding="utf-8")
+    problems = theme_problems(css)
+    if problems:
+        raise SystemExit(f"Theme stylesheet {path} cannot be used: " + "; ".join(problems))
+    return path, css
 
 
 # Section: loading and validation
@@ -368,6 +461,9 @@ def validate_chapter_static(project, number, module):
         errors.append(f"CHAPTER has {len(demos)} demonstrations; exactly {b['demos_per_chapter']} are required")
     for path, text in iter_strings({k: v for k, v in chapter.items() if k != "demos"}):
         check_text(project, path, text, errors)
+    for key in sorted(set(chapter) - set(REQUIRED_CHAPTER_FIELDS) - set(OPTIONAL_CHAPTER_FIELDS)):
+        errors.append(f"CHAPTER has an unknown field '{key}'")
+    validate_ask_skill(project, number, chapter, errors)
 
     text_path, note = project.canonical_text(number)
     notes.append("canonical text: " + (str(text_path) if text_path else note))
@@ -395,6 +491,9 @@ def validate_chapter_static(project, number, module):
                 errors.append(f"{where}: field '{field}' is missing or empty")
         for path, text in iter_strings({k: v for k, v in demo.items() if k not in ("function", "equations", "controls")}, did):
             check_text(project, path, text, errors)
+        for key in sorted(set(demo) - set(REQUIRED_DEMO_FIELDS) - set(OPTIONAL_DEMO_FIELDS)):
+            errors.append(f"{where}: unknown field '{key}'")
+        validate_demo_options(project, demo, where, source, headings, text_path, errors)
         for c_i, control in enumerate(demo.get("controls", [])):
             for path, text in iter_strings({k: v for k, v in control.items() if k in ("label", "value_labels")}, f"{did}.controls[{c_i}]"):
                 check_text(project, path, text, errors)
@@ -449,6 +548,87 @@ def validate_chapter_static(project, number, module):
                 if key not in params:
                     errors.append(f"{where}: function {fn} has no parameter '{key}'")
     return errors, notes
+
+
+def nonempty_str(value):
+    return isinstance(value, str) and bool(value.strip())
+
+
+def phrase_form(text):
+    """Text compared for a phrase match: emphasis marks dropped, whitespace collapsed, lower case."""
+    return re.sub(r"\s+", " ", re.sub(r"[*_`]", "", html.unescape(text))).strip().lower()
+
+
+def validate_ask_skill(project, number, chapter, errors):
+    """Optional CHAPTER.ask_skill = {"prompt": str}; needs the chapter's skill name in the chapter list."""
+    if "ask_skill" not in chapter:
+        return
+    ask = chapter["ask_skill"]
+    if not isinstance(ask, dict) or set(ask) != {"prompt"} or not nonempty_str(ask.get("prompt")):
+        errors.append('CHAPTER.ask_skill must be {"prompt": non-empty str} and nothing else')
+    if not project.chapters.get(number, {}).get("skill"):
+        errors.append("CHAPTER.ask_skill needs the chapter's skill name in the chapter list (field 'skill', "
+                      "or the name given by chapter_list.fields.skill)")
+
+
+def validate_demo_options(project, demo, where, source, headings, text_path, errors):
+    """Optional demo fields: misconception, scope_note, prediction options and feedback, stepper."""
+    b = project.budgets
+    if "misconception" in demo:
+        m = demo["misconception"]
+        if not isinstance(m, dict) or set(m) != {"title", "text"} or not all(nonempty_str(m.get(k)) for k in ("title", "text")):
+            errors.append(f'{where}: misconception must be {{"title": str, "text": str}}, both non-empty')
+    if "scope_note" in demo:
+        n = demo["scope_note"]
+        if not isinstance(n, dict) or set(n) != {"text", "source_section"} or not all(nonempty_str(n.get(k)) for k in ("text", "source_section")):
+            errors.append(f'{where}: scope_note must be {{"text": str, "source_section": str}}, both non-empty')
+        elif not source:
+            errors.append(f"{where}: scope_note needs the canonical chapter text to confirm its source_section; none is available")
+        else:
+            label = clean_heading(n["source_section"])
+            words = len(phrase_form(label).split())
+            if label not in headings:
+                if words < b["min_scope_phrase_words"]:
+                    errors.append(f"{where}: scope_note source_section '{label}' is not a heading in {text_path.name}, "
+                                  f"and a phrase must have at least {b['min_scope_phrase_words']} words")
+                elif phrase_form(label) not in phrase_form(source):
+                    errors.append(f"{where}: scope_note source_section '{label}' is neither a heading nor a phrase in {text_path.name}")
+    keys = ("prediction_options", "prediction_answer", "prediction_feedback")
+    present = [k for k in keys if k in demo]
+    if present and len(present) != len(keys):
+        errors.append(f"{where}: prediction_options, prediction_answer and prediction_feedback go together; missing "
+                      + ", ".join(k for k in keys if k not in demo))
+    elif present:
+        options, answer, feedback = (demo[k] for k in keys)
+        lo, hi = b["min_prediction_options"], b["max_prediction_options"]
+        if not isinstance(options, list) or not lo <= len(options) <= hi or not all(nonempty_str(o) for o in options):
+            errors.append(f"{where}: prediction_options must be a list of {lo} to {hi} non-empty strings")
+        elif len({o.strip() for o in options}) != len(options):
+            errors.append(f"{where}: prediction_options repeat an option")
+        elif isinstance(answer, bool) or not isinstance(answer, int) or not 0 <= answer < len(options):
+            errors.append(f"{where}: prediction_answer must be the index (0 to {len(options) - 1}) of the correct option")
+        if not isinstance(feedback, dict) or set(feedback) != {"correct", "incorrect"} or not all(nonempty_str(feedback.get(k)) for k in ("correct", "incorrect")):
+            errors.append(f'{where}: prediction_feedback must be {{"correct": str, "incorrect": str}}, both non-empty')
+    if "stepper" in demo:
+        keys_here = [c.get("key") for c in demo.get("controls", []) if isinstance(c, dict)]
+        if demo["stepper"] not in keys_here:
+            errors.append(f"{where}: stepper must name one of the demonstration's control keys ({', '.join(map(str, keys_here))})")
+
+
+def check_steps(project, where, steps, errors):
+    """Optional per-state worked steps: 2 to 8 short strings."""
+    b = project.budgets
+    if not isinstance(steps, (list, tuple)) or not b["min_steps"] <= len(steps) <= b["max_steps"] or not all(nonempty_str(t) for t in steps):
+        errors.append(f"{where}: steps must be a list of {b['min_steps']} to {b['max_steps']} non-empty strings")
+        return None
+    out = []
+    for i, text in enumerate(steps, 1):
+        text = text.strip()
+        if len(text) > b["max_step_chars"]:
+            errors.append(f"{where}: step {i} has {len(text)} characters; keep each step to {b['max_step_chars']}")
+        check_text(project, f"{where} step {i}", text, errors, computed=True)
+        out.append(text)
+    return out
 
 
 def apply_style(project):
@@ -546,6 +726,29 @@ def figure_svg(fig):
     return clean_svg(buffer.getvalue())
 
 
+SVG_FONT_PX = re.compile(r"font(?:-size)?:[^;\"]*?([\d.]+)px")
+
+
+def figure_min_width(svg, project):
+    """Smallest CSS width (px) at which the figure's body text renders at min_rendered_text_px.
+
+    The SVG viewBox is in points and its text sizes are in the same units, so
+    text renders at size x (rendered width / viewBox width) CSS pixels. The
+    body size is the smallest declared size at or above min_font_points
+    (sub- and superscripts are smaller by design); the result never exceeds
+    the drawing's natural width (viewBox width x 4/3 px).
+    """
+    box = re.search(r'viewBox="[-\d.]+ [-\d.]+ ([\d.]+) [\d.]+"', svg)
+    if not box:
+        return None
+    width = float(box.group(1))
+    floor = float(project.budgets["min_font_points"])
+    sizes = [float(x) for x in SVG_FONT_PX.findall(svg)]
+    body = min([x for x in sizes if x >= floor - 1e-6] or [floor])
+    target = float(project.budgets["min_rendered_text_px"])
+    return int(math.ceil(min(width * target / body, width * 4 / 3)))
+
+
 def state_key(indices):
     return ",".join(str(i) for i in indices)
 
@@ -582,11 +785,31 @@ def render_demo(project, module, demo, errors):
             plt.close("all")
             continue
         if not (isinstance(result, tuple) and len(result) in (3, 4)):
-            errors.append(f"{where}: function must return (figure, metrics, interpretation) or (figure, metrics, interpretation, alt)")
+            errors.append(f"{where}: function must return (figure, metrics, interpretation) or (figure, metrics, interpretation, extra)"
+                          " where extra is the alt text or a dict with 'alt' and/or 'steps'")
             plt.close("all")
             continue
         fig, metrics, interpretation = result[:3]
         given_alt = result[3] if len(result) == 4 else None
+        given_steps = None
+        if isinstance(given_alt, dict):
+            extra = given_alt
+            unknown = sorted(set(extra) - {"alt", "steps"})
+            if unknown or not extra:
+                errors.append(f"{where}: the optional fourth return value, when a dict, takes only 'alt' and 'steps' (got {', '.join(unknown) or 'nothing'})")
+                plt.close("all")
+                continue
+            if "alt" in extra and not nonempty_str(extra["alt"]):
+                errors.append(f"{where}: the fourth return value's 'alt' must be a non-empty str")
+                plt.close("all")
+                continue
+            given_alt = extra.get("alt")
+            if "steps" in extra:
+                given_steps = check_steps(project, where, extra["steps"], errors)
+                if given_steps is None:
+                    plt.close("all")
+                    continue
+            result = result[:3] if given_alt is None else (*result[:3], given_alt)
         if not hasattr(fig, "savefig") or not isinstance(metrics, dict) or not metrics or not isinstance(interpretation, str) or not interpretation.strip():
             errors.append(f"{where}: return (matplotlib Figure, non-empty dict, non-empty str)")
             plt.close("all")
@@ -617,6 +840,14 @@ def render_demo(project, module, demo, errors):
             "image": svg_data_uri(svg), "alt": alt, "metrics": shown,
             "interpretation": interpretation.strip(), "selected": selected,
         }
+        min_width = figure_min_width(svg, project)
+        if min_width:
+            states[state_key(indices)]["min_width"] = min_width
+        if given_steps is not None:
+            states[state_key(indices)]["steps"] = given_steps
+    with_steps = sum(1 for st in states.values() if "steps" in st)
+    if with_steps and with_steps != len(states):
+        errors.append(f"{demo['id']}: {with_steps} of {len(states)} states return steps; give steps for every state or for none")
     return states
 
 
@@ -637,22 +868,106 @@ def equation_alt(tex, number=None, alt=None):
     return f"{label}, written in LaTeX: {alt_tex(tex)}"
 
 
+TEX_FONT_POINTS = 16
+MATHTEXT_SUBSTITUTIONS = (
+    (r"\\tag\*?\{[^{}]*\}", ""), (r"\\(?:left|right)(?![A-Za-z])", ""), (r"\\[bB]igg?[lr]?(?![A-Za-z])", ""),
+    (r"\\le(?![A-Za-z])", r"\\leq"), (r"\\ge(?![A-Za-z])", r"\\geq"), (r"\\ne(?![A-Za-z])", r"\\neq"),
+    (r"\\[dt]frac(?![A-Za-z])", r"\\frac"), (r"\\(?:text|textrm|mathrm)\{", r"\\mathrm{"),
+    (r"\\operatorname\*", r"\\operatorname"), (r"\\[lr]vert(?![A-Za-z])", "|"), (r"\\!", ""),
+)
+PLAIN_SYMBOLS = {
+    "alpha": "\u03b1", "beta": "\u03b2", "gamma": "\u03b3", "delta": "\u03b4", "epsilon": "\u03b5", "varepsilon": "\u03b5",
+    "zeta": "\u03b6", "eta": "\u03b7", "theta": "\u03b8", "kappa": "\u03ba", "lambda": "\u03bb", "mu": "\u03bc",
+    "nu": "\u03bd", "xi": "\u03be", "pi": "\u03c0", "rho": "\u03c1", "sigma": "\u03c3", "tau": "\u03c4",
+    "phi": "\u03c6", "varphi": "\u03c6", "chi": "\u03c7", "psi": "\u03c8", "omega": "\u03c9",
+    "Gamma": "\u0393", "Delta": "\u0394", "Theta": "\u0398", "Lambda": "\u039b", "Pi": "\u03a0", "Sigma": "\u03a3",
+    "Phi": "\u03a6", "Psi": "\u03a8", "Omega": "\u03a9",
+    "le": "\u2264", "leq": "\u2264", "ge": "\u2265", "geq": "\u2265", "ne": "\u2260", "neq": "\u2260",
+    "times": "\u00d7", "cdot": "\u00b7", "approx": "\u2248", "in": "\u2208", "infty": "\u221e", "sum": "\u03a3",
+    "prod": "\u03a0", "nabla": "\u2207", "mid": "|", "to": "\u2192", "rightarrow": "\u2192", "partial": "\u2202",
+}
+
+
+def tex_plain(tex):
+    """A clean readable text form of a TeX string, for when it cannot be typeset."""
+    t = alt_tex(tex)
+    for _ in range(4):
+        t = re.sub(r"\\frac\{([^{}]*)\}\{([^{}]*)\}", r"(\1)/(\2)", t)
+        t = re.sub(r"\\(?:mathrm|mathbf|mathit|mathcal|operatorname|text|textrm|hat|bar|tilde)\{([^{}]*)\}", r"\1", t)
+        t = re.sub(r"([\^_])\{([^{}]*)\}", lambda m: m.group(1) + (m.group(2) if len(m.group(2)) == 1 else f"({m.group(2)})"), t)
+    t = re.sub(r"\\([A-Za-z]+)", lambda m: PLAIN_SYMBOLS.get(m.group(1), m.group(1)), t)
+    t = t.replace("{", "").replace("}", "").replace("\\", "")
+    t = re.sub(r"\s*([=<>+\u2264\u2265\u2260\u00d7])\s*", r" \1 ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def tex_svg(tex):
+    """Typeset TeX as an SVG with glyphs drawn as paths (no fonts, no script, no network).
+
+    Returns (svg, width_em, height_em), or None when the TeX is outside the
+    supported subset or Matplotlib is not installed (a template-only render).
+    One em is the equation's font size.
+    """
+    try:
+        from matplotlib import rc_context
+        from matplotlib.figure import Figure
+        from matplotlib.mathtext import MathTextParser
+    except ImportError:
+        return None
+
+    source = tex
+    for pattern, replacement in MATHTEXT_SUBSTITUTIONS:
+        source = re.sub(pattern, replacement, source)
+    source = "$" + source.strip() + "$"
+    try:
+        MathTextParser("path").parse(source)
+    except Exception:  # unsupported command: the caller falls back to plain text
+        return None
+    with rc_context({"svg.fonttype": "path", "mathtext.fontset": "cm", "svg.hashsalt": "illustrated-reader-equation",
+                     "text.color": "#14202b", "path.simplify": True}):
+        fig = Figure(figsize=(1, 1))
+        fig.text(0, 0, source, fontsize=TEX_FONT_POINTS)
+        buffer = io.StringIO()
+        try:
+            fig.savefig(buffer, format="svg", bbox_inches="tight", pad_inches=0.03, transparent=True,
+                        metadata={"Date": None, "Creator": None, "Format": None, "Type": None})
+        except Exception:
+            return None
+    svg = clean_svg(buffer.getvalue(), round_numbers=False)
+    size = re.search(r'width="([\d.]+)pt" height="([\d.]+)pt"', svg)
+    if not size:
+        return None
+    return svg, round(float(size.group(1)) / TEX_FONT_POINTS, 2), round(float(size.group(2)) / TEX_FONT_POINTS, 2)
+
+
 def equation_blocks(project, number, demo):
-    """Pre-rendered SVG for equations with a known asset, else TeX source for local MathJax."""
+    """Pre-rendered SVG for equations with a known asset, else an SVG typeset here, else readable text.
+
+    Every block works with no script and no network. Images carry width and
+    min_width in em: they shrink with the column down to min_equation_scale of
+    their natural width, then the equation scrolls sideways.
+    """
     known = {normalize_tex(e["tex"]): e for e in project.chapters.get(number, {}).get("equations", [])}
+    scale = float(project.budgets["min_equation_scale"])
     blocks = []
     for tex in demo["equations"]:
-        entry = known.get(normalize_tex(tex))
-        if entry and entry["asset"] and entry["asset"].is_file():
+        entry = known.get(normalize_tex(tex)) or {}
+        alt = equation_alt(tex, entry.get("number"), entry.get("alt"))
+        typeset = None
+        if entry.get("asset") and entry["asset"].is_file():
             svg = clean_svg(entry["asset"].read_text(encoding="utf-8"))
             match = re.search(r'height="([\d.]+)ex"', svg)
             height = round(float(match.group(1)) * 0.55, 2) if match else 1.6
             match = re.search(r'width="([\d.]+)ex"', svg)
             width = round(float(match.group(1)) * 0.55, 2) if match else None
-            blocks.append({"kind": "svg", "src": svg_data_uri(svg), "tex": tex, "height": height, "width": width,
-                           "alt": equation_alt(tex, entry.get("number"), entry.get("alt"))})
         else:
-            blocks.append({"kind": "tex", "tex": tex})
+            typeset = tex_svg(tex)
+            if typeset is None:
+                blocks.append({"kind": "text", "tex": tex, "text": tex_plain(tex)})
+                continue
+            svg, width, height = typeset
+        blocks.append({"kind": "svg", "src": svg_data_uri(svg), "tex": tex, "height": height, "width": width,
+                       "min_width": round(width * scale, 2) if width else None, "alt": alt, "typeset": typeset is not None})
     return blocks
 
 
@@ -687,7 +1002,8 @@ def build_chapter(project, number, check_only=False):
             {"index": i, "text": control_display(c, i), "selected": c["values"][i] == c["default"]}
             for i in range(len(c["values"]))]} for c in demo["controls"]]
         demos.append({**demo, "states": states, "default_key": defaults, "controls_view": view,
-                      "default_state": states.get(defaults), "equation_blocks": equation_blocks(project, number, demo)})
+                      "default_state": states.get(defaults), "equation_blocks": equation_blocks(project, number, demo),
+                      "stepper_view": stepper_view(demo)})
     if report["errors"]:
         return None, report
     links, link_notes = project.link_targets(number)
@@ -702,6 +1018,22 @@ def build_chapter(project, number, check_only=False):
     return (None if report["errors"] else page), report
 
 
+def stepper_status(control, index):
+    """Status line for a Back/Next stepper; reader.js writes the same text."""
+    return f"Step {index + 1} of {len(control['values'])}: {control['label']}: {control_display(control, index)}"
+
+
+def stepper_view(demo):
+    """Template data for the optional stepper, or None."""
+    key = demo.get("stepper")
+    control = next((c for c in demo.get("controls", []) if c.get("key") == key), None) if key else None
+    if control is None:
+        return None
+    index = control["values"].index(control["default"])
+    return {"key": key, "label": control["label"], "status": stepper_status(control, index),
+            "at_start": index == 0, "at_end": index == len(control["values"]) - 1}
+
+
 def jinja_env():
     from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -709,19 +1041,39 @@ def jinja_env():
                        trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True)
 
 
+def demo_payload(d):
+    """One demonstration's script data. Optional features add keys only when the demonstration uses them."""
+    entry = {"id": d["id"], "title": d["title"],
+             "controls": [{"key": c["key"], "label": c["label"], "default": c["values"].index(c["default"]),
+                           "values": [control_display(c, i) for i in range(len(c["values"]))]} for c in d["controls"]],
+             "states": d["states"]}
+    if d.get("prediction_options"):
+        entry["predict"] = {"answer": d["prediction_answer"], "correct": d["prediction_feedback"]["correct"].strip(),
+                            "incorrect": d["prediction_feedback"]["incorrect"].strip()}
+    if d.get("stepper"):
+        entry["stepper"] = d["stepper"]
+    return entry
+
+
+def ask_skill_view(project, number, chapter, links):
+    """Template data for the optional chapter-level 'Ask the chapter skill' callout, or None."""
+    ask = chapter.get("ask_skill")
+    if not ask:
+        return None
+    href = next((h for key, _label, h in links if key == "skill"), None)
+    return {"prompt": ask["prompt"].strip(), "skill": project.chapters[number].get("skill"), "href": href}
+
+
 def render_page(project, number, chapter, demos, links):
-    payload = {"engine": ENGINE_VERSION, "chapter": number, "demos": [
-        {"id": d["id"], "title": d["title"],
-         "controls": [{"key": c["key"], "label": c["label"], "default": c["values"].index(c["default"]),
-                       "values": [control_display(c, i) for i in range(len(c["values"]))]} for c in d["controls"]],
-         "states": d["states"]} for d in demos]}
+    payload = {"engine": ENGINE_VERSION, "chapter": number, "demos": [demo_payload(d) for d in demos]}
     payload_text = json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":"), sort_keys=True)
     payload_text = payload_text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
-    needs_mathjax = any(b["kind"] == "tex" for d in demos for b in d["equation_blocks"])
+    needs_mathjax = any(b["kind"] == "text" for d in demos for b in d["equation_blocks"])
     entry = project.chapters[number]
     return jinja_env().get_template("chapter.html.j2").render(
         b=project.branding, chapter=chapter, entry=entry, demos=demos, links=links,
-        payload=payload_text, css=(ENGINE / "static/reader.css").read_text(encoding="utf-8"),
+        ask_skill=ask_skill_view(project, number, chapter, links), pager=project.pager_links(number),
+        payload=payload_text, css=(ENGINE / "static/reader.css").read_text(encoding="utf-8"), theme_css=project.theme_css,
         javascript=(ENGINE / "static/reader.js").read_text(encoding="utf-8"),
         mathjax=project.math.get("mathjax_script") if needs_mathjax else None,
         index_href=project.links.get("index", {}).get("href", "../index.html"), engine_version=ENGINE_VERSION)
@@ -755,7 +1107,8 @@ def render_index(project, built):
         entries.append({"number": number, "title": chapter["title"], "href": f"{chapter['slug']}/reader.html" if available else None})
     page = jinja_env().get_template("index.html.j2").render(
         b=project.branding, entries=entries, available=sum(1 for e in entries if e["href"]),
-        css=(ENGINE / "static/reader.css").read_text(encoding="utf-8"), engine_version=ENGINE_VERSION)
+        css=(ENGINE / "static/reader.css").read_text(encoding="utf-8"), theme_css=project.theme_css,
+        engine_version=ENGINE_VERSION)
     return page
 
 
@@ -776,6 +1129,7 @@ def main(argv=None):
     parser.add_argument("--chapters", nargs="*", default=["all"], help="Chapter numbers, or 'all' for every authored module")
     parser.add_argument("--check", action="store_true", help="Validate and render in memory; write nothing")
     parser.add_argument("--out", help="Output directory (default: output_dir from the configuration)")
+    parser.add_argument("--version", action="version", version=f"illustrated reader engine {ENGINE_VERSION}")
     args = parser.parse_args(argv)
     require_dependencies()
     os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "illustrated-reader-mpl"))

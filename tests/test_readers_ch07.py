@@ -62,87 +62,159 @@ class Chapter7ReaderTests(unittest.TestCase):
 
     def test_structure_and_budget(self):
         self.assertEqual(list(self.demos), ["C07-D01", "C07-D02", "C07-D03", "C07-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 6, 8, 8])
-        self.assertLess(self.reader.stat().st_size, 2_500_000)
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [12, 12, 12, 12])
+        self.assertLess(self.reader.stat().st_size, 4_000_000)
+
+    def test_optional_fields_present(self):
+        text = html.unescape(self.page)
+        self.assertIn("Ask the chapter skill", text)
+        self.assertGreaterEqual(text.count("What this does not settle"), 4)
+        self.assertEqual(text.count("Common wrong turn"), 4)
+        for d in self.data["demos"]:
+            for s in d["states"].values():
+                self.assertTrue(s.get("steps"))
+        self.assertEqual(len(re.findall(r'type="radio"', text)), 12)
 
     def test_d01_discount_weights(self):
+        def small(x):
+            if x >= 1: return f"{x:.1f}"
+            if x >= 0.01: return f"{x:.2f}"
+            if x >= 0.0001: return f"{x:.4f}"
+            mant, ex = f"{x:.1e}".split("e")
+            return f"less than 0.0001 (about {mant} x 10^{int(ex)})"
+        seen = {}
         for (gamma, k), m, state in self.states("C07-D01"):
             worth = 100 * gamma ** k
             scale = 1 / (1 - gamma)
-            digits = 1 if worth >= 1 else (2 if worth >= 0.01 else 4)
-            self.assertEqual(m["Worth now"], f"{worth:.{digits}f}")
+            self.assertEqual(m["Worth now"], small(worth))
             self.assertEqual(m["Planning scale 1/(1 - gamma)"], f"{scale:.0f} steps")
             self.assertEqual(m["Worth at that scale"], f"{100 * gamma ** scale:.1f}")
-            # series check: summing 1 per step for 20000 steps approaches 1/(1-gamma)
             total = sum(gamma ** j for j in range(20000))
             self.assertAlmostEqual(total, scale, places=6)
-        book = {(0.9, 10): "34.9", (0.99, 50): "60.5", (0.95, 10): "59.9", (0.9, 50): "0.52"}
-        for (g, k), m, _ in self.states("C07-D01"):
-            if (g, k) in book:
-                self.assertEqual(m["Worth now"], book[(g, k)])
+            seen[(gamma, k)] = m["Worth now"]
+        # the chapter's own numbers: 0.99 gives 90, 61, 37; 0.95 gives 60, 8, under 1; 0.9 gives 35, under 1
+        self.assertEqual(seen[(0.99, 10)], "90.4")
+        self.assertEqual(seen[(0.99, 50)], "60.5")
+        self.assertEqual(seen[(0.99, 100)], "36.6")
+        self.assertEqual(seen[(0.95, 10)], "59.9")
+        self.assertEqual(seen[(0.95, 50)], "7.7")
+        self.assertEqual(seen[(0.95, 100)], "0.59")
+        self.assertEqual(seen[(0.9, 10)], "34.9")
+        self.assertEqual(seen[(0.9, 50)], "0.52")
+        self.assertEqual(seen[(0.5, 10)], "0.10")   # about one thousandth of 100 x 1 (0.5^10 = 0.000977)
 
     def test_d02_three_states(self):
-        for (cost, q), m, _ in self.states("C07-D02"):
-            verified = 100 * q
-            release, verify = 85.0, -cost + verified
-            self.assertEqual(m["Value of the verified state"], f"{verified:.1f}")
-            self.assertEqual(m["Start value, release at once"], f"{release:.1f}")
-            self.assertEqual(m["Start value, verify then release"], f"{verify:.1f}")
-            expected = "tie" if abs(verify - release) < 1e-9 else ("verify" if verify > release else "release")
-            self.assertEqual(m["Chosen at the start"], expected)
-        book = next(m for v, m, _ in self.states("C07-D02") if v == [5, 0.97])
-        self.assertEqual(book["Start value, verify then release"], "92.0")  # the chapter's 92 against 85
-        tie = next(m for v, m, _ in self.states("C07-D02") if v == [12, 0.97])
-        self.assertEqual(tie["Chosen at the start"], "tie")
+        sc = {"book": (85, 97, 5, 1.0), "tie": (85, 97, 12, 1.0), "wb1": (80, 95, 6, 0.9), "wb3": (80, 95, 6, 0.75)}
+        names = ["book", "tie", "wb1", "wb3"]
+        def nice(x):
+            t = f"{x:.2f}"
+            return t[:-1] if t.endswith("0") else t
+        for (name, stage), m, st in self.states("C07-D02"):
+            name = names[0] if isinstance(name, float) else name
+        by = {}
+        demo = self.demos["C07-D02"]
+        for key, st in demo["states"].items():
+            si, gi = [int(i) for i in key.split(",")]
+            by[(names[si], gi)] = (dict(st["metrics"]), st)
+        for (name, stage), (m, st) in by.items():
+            rel, ver, c, g = sc[name]
+            verify = -c + g * ver
+            self.assertEqual(m["Value of the terminal state"], "0.0")
+            if stage >= 1:
+                self.assertEqual(m["Value of the verified state"], nice(ver))
+            else:
+                self.assertEqual(m["Value of the verified state"], "not computed yet")
+            if stage == 2:
+                self.assertEqual(m["Start value, release at once"], nice(rel))
+                self.assertEqual(m["Start value, verify then release"], nice(verify))
+                exp = "tie" if abs(verify - rel) < 1e-9 else ("verify" if verify > rel else "release")
+                self.assertEqual(m["Chosen at the start"], exp)
+                self.assertEqual(len(st["steps"]), 6)
+            else:
+                self.assertEqual(m["Chosen at the start"], "not computed yet")
+        # chapter: 92 against 85, a gain of 7; break-even at cost 12 is a tie
+        self.assertEqual(by[("book", 2)][0]["Start value, verify then release"], "92.0")
+        self.assertEqual(by[("book", 2)][0]["Gain from verifying"], "7.0")
+        self.assertEqual(by[("tie", 2)][0]["Chosen at the start"], "tie")
+        # workbench II.1: 80 against -6 + 0.9 x 95 = 79.5; tie discount 86/95
+        self.assertEqual(by[("wb1", 2)][0]["Start value, verify then release"], "79.5")
+        self.assertIn(f"{86 / 95:.4f}", by[("wb1", 2)][1]["interpretation"])
+        # workbench II.3: -6 + 0.75 x 95 = 65.25, release wins by 14.75
+        self.assertEqual(by[("wb3", 2)][0]["Start value, verify then release"], "65.25")
+        self.assertIn("14.75 more", by[("wb3", 2)][1]["interpretation"])
 
     def test_d03_horizon_model(self):
-        # Brute force over all plans of length h in the cash/prepare/release model.
-        def best(h, g):
-            cash = 2.0
-            prepare = -1.0 + (g * 6.0 if h >= 2 else 0.0)
-            return cash, prepare
-        for (h, g), m, _ in self.states("C07-D03"):
-            cash, prepare = best(int(h), g)
-            self.assertEqual(m["Value of cash"], f"{cash:.2f}")
-            self.assertEqual(m["Value of prepare"], f"(-{-prepare:.2f})" if prepare < 0 else f"{prepare:.2f}")
-            self.assertEqual(m["Start value (the larger)"], f"{max(cash, prepare):.2f}")
-            expected = "tie" if abs(cash - prepare) < 1e-9 else ("cash" if cash > prepare else "prepare")
-            self.assertEqual(m["Chosen"], expected)
-        by = {tuple(v): m for v, m, _ in self.states("C07-D03")}
-        self.assertEqual(by[(2, 1.0)]["Chosen"], "prepare")   # -1 + 6 = 5 beats 2
-        self.assertEqual(by[(1, 1.0)]["Chosen"], "cash")
-        self.assertEqual(by[(2, 0.5)]["Chosen"], "tie")        # -1 + 3 = 2
-        self.assertTrue(by[(1, 0.5)]["Break-even discount"].startswith("undefined"))
+        models = ["prep", "wait"]
+        par = {"prep": (2.0, -1.0, 6.0), "wait": (1.0, 0.0, 4.0)}
+        names = {"prep": ("cash", "prepare"), "wait": ("now", "later")}
+        hs, gs = [1, 2, 3], [1.0, 0.5]
+        demo = self.demos["C07-D03"]
+        by = {}
+        for key, st in demo["states"].items():
+            mi, hi, gi = [int(i) for i in key.split(",")]
+            by[(models[mi], hs[hi], gs[gi])] = (dict(st["metrics"]), st)
+        # brute force over every plan: take the immediate action, or invest then collect if a decision is left
+        for (model, h, g), (m, st) in by.items():
+            a, c, big = par[model]
+            plans = {"imm": a, "inv": c + (g * big if h >= 2 else 0.0)}
+            self.assertEqual(m["Value of the immediate action"], f"{plans['imm']:.2f}")
+            inv = plans["inv"]
+            self.assertEqual(m["Value of the investing action"], f"(-{-inv:.2f})" if inv < 0 else f"{inv:.2f}")
+            self.assertEqual(m["Start value (the larger)"], f"{max(plans.values()):.2f}")
+            if abs(plans["imm"] - inv) < 1e-9:
+                exp = "tie"
+            else:
+                exp = names[model][0] if plans["imm"] > inv else names[model][1]
+            self.assertEqual(m["Chosen"], exp)
+        self.assertEqual(by[("prep", 2, 1.0)][0]["Chosen"], "prepare")
+        self.assertEqual(by[("prep", 1, 1.0)][0]["Chosen"], "cash")      # changed case
+        self.assertEqual(by[("prep", 3, 1.0)][0]["Start value (the larger)"], "5.00")  # horizon 3 adds nothing
+        self.assertEqual(by[("prep", 2, 0.5)][0]["Chosen"], "tie")
+        self.assertEqual(by[("wait", 2, 0.5)][0]["Chosen"], "later")     # transfer case: 0 + 0.5 x 4 = 2 against 1
+        self.assertEqual(by[("wait", 2, 0.5)][0]["Start value (the larger)"], "2.00")
+        self.assertEqual(by[("wait", 1, 0.5)][0]["Chosen"], "now")
+        self.assertTrue(by[("prep", 1, 1.0)][0]["Break-even discount"].startswith("undefined"))
+        self.assertEqual(by[("wait", 2, 1.0)][0]["Break-even discount"], "0.25")
 
     def test_d04_residual_bound(self):
-        candidates = {"All zeros": (0, 0, 0), "Best immediate reward in each state": (85, 97, 0)}
-        for (g, cand), m, _ in self.states("C07-D04"):
-            vu, vv, vt = candidates[cand]
-            # optimal values by direct recursion for this acyclic model (terminal value 0)
-            star_v, star_t = 97.0, 0.0
-            star_u = max(85.0, -5.0 + g * star_v)
-            tu = max(85 + g * vt, -5 + g * vv)
-            tv_, tt = 97 + g * vt, g * vt
-            residual = max(abs(tu - vu), abs(tv_ - vv), abs(tt - vt))
-            error = max(abs(vu - star_u), abs(vv - star_v), abs(vt - star_t))
+        gs = [0.9, 0.95, 0.99, 1.0]
+        demo = self.demos["C07-D04"]
+        def T(v, g):
+            return (max(85 + g * v[2], -5 + g * v[1]), 97 + g * v[2], g * v[2])
+        for key, st in demo["states"].items():
+            gi, stage = [int(i) for i in key.split(",")]
+            g = gs[gi]
+            m = dict(st["metrics"])
+            v = (0.0, 0.0, 0.0)
+            for _ in range(stage):
+                v = T(v, g)
+            star = T(T((0.0, 0.0, 0.0), g), g)
+            tv = T(v, g)
+            residual = max(abs(a - b) for a, b in zip(tv, v))
+            error = max(abs(a - b) for a, b in zip(v, star))
             self.assertEqual(m["Residual ||TV - V||"], f"{residual:.2f}")
             self.assertEqual(m["Actual error ||V - V*||"], f"{error:.2f}")
             if g < 1:
-                bound = residual / (1 - g)
-                self.assertEqual(m["Bound from Equation (7.5)"], f"{bound:.1f}")
-                self.assertLessEqual(error, bound + 1e-9)
+                self.assertEqual(m["Bound from Equation (7.5)"], f"{residual / (1 - g):.1f}")
+                self.assertLessEqual(error, residual / (1 - g) + 1e-9)
             else:
                 self.assertTrue(m["Bound from Equation (7.5)"].startswith("undefined"))
-        by = {tuple(v): m for v, m, _ in self.states("C07-D04")}
-        self.assertEqual(by[(0.95, "All zeros")]["Bound from Equation (7.5)"], "1940.0")
-        self.assertEqual(by[(0.9, "Best immediate reward in each state")]["Actual error ||V - V*||"], "0.00")
+        by = {tuple(int(i) for i in k.split(",")): dict(s["metrics"]) for k, s in demo["states"].items()}
+        self.assertEqual(by[(1, 0)]["Bound from Equation (7.5)"], "1940.0")      # 97 / 0.05
+        self.assertEqual(by[(2, 0)]["Bound from Equation (7.5)"], "9700.0")      # 97 / 0.01
+        self.assertEqual(by[(0, 0)]["Bound from Equation (7.5)"], "970.0")       # the chapter-style check
+        self.assertEqual(by[(0, 1)]["Actual error ||V - V*||"], "0.00")          # at 0.9 releasing is already optimal
+        self.assertEqual(by[(1, 1)]["Residual ||TV - V||"], "2.15")             # -5 + 0.95 x 97 - 85
+        self.assertEqual(by[(1, 2)]["Bound from Equation (7.5)"], "0.0")
 
     def svg(self, state):
         return base64.b64decode(state["image"].split(",", 1)[1]).decode("utf-8")
 
     def test_d04_figure_title_matches_bound(self):
-        # g3-01: at discount 1 no bound exists, so the title may not say the error never exceeds it.
-        for (g, cand), m, state in self.states("C07-D04"):
+        # at discount 1 no bound exists, so the title may not say the error never exceeds it.
+        for key, state in self.demos["C07-D04"]["states"].items():
+            gi, stage = [int(i) for i in key.split(",")]
+            g = [0.9, 0.95, 0.99, 1.0][gi]
             svg = self.svg(state)
             if g < 1:
                 self.assertIn(f"Discount {g:.2f}: error never exceeds the bound", svg)
@@ -150,43 +222,28 @@ class Chapter7ReaderTests(unittest.TestCase):
             else:
                 self.assertIn("Discount 1.00: no bound exists", svg)
                 self.assertNotIn("never exceeds", svg)
-                self.assertTrue(m["Bound from Equation (7.5)"].startswith("undefined"))
                 self.assertIn("this finite-horizon model (its terminal state loops with reward 0)", state["interpretation"])
-                self.assertNotIn("acyclic", state["interpretation"])
-            # g3-09: axis labels use words, since bar glyphs render as capital I
             self.assertIn("largest gap, V to V*", svg)
             self.assertIn("largest gap, TV to V", svg)
             self.assertNotIn("||V - V*||", svg)
 
     def test_d04_ratio_for_loose_bound(self):
-        by = {tuple(v): st for v, _, st in self.states("C07-D04")}
-        self.assertIn("(here 100.0 times the error)", by[(0.99, "All zeros")]["interpretation"])
-        self.assertNotIn("times the error", by[(0.9, "Best immediate reward in each state")]["interpretation"])
+        by = {k: st for k, st in self.demos["C07-D04"]["states"].items()}
+        self.assertIn("(here 100.0 times the error)", by["2,0"]["interpretation"])
+        self.assertNotIn("times the error", by["0,1"]["interpretation"])
+        self.assertIn("changed nothing here", by["0,2"]["interpretation"])
 
-    def test_wording_fixes(self):
+    def test_wording(self):
         text = html.unescape(self.page)
-        # g3-02: a tie at cost 12 means the prompt may not presuppose a winner
-        self.assertIn("how do the two start policies compare: is either one worth more?", text)
-        self.assertNotIn("which start policy is worth more?", text)
-        # g3-03: a finite horizon permits, not forces, gamma = 1
-        self.assertIn("here set to 1, which a finite horizon permits", text)
-        self.assertNotIn("here 1 because the horizon is finite", text)
-        # g3-04: the three-step policy fails only with one decision left (at discount 1)
-        self.assertIn("can be wrong once steps have been spent", text)
-        self.assertNotIn("is not valid once one step has been spent", text)
-        # g3-05: one counting convention (decisions left at the start)
-        self.assertIn("With one decision left at the start, preparing uses it and the ready state has none left", text)
-        self.assertNotIn("With one decision left the ready state has no decision to spend", text)
-        # g3-11: the horizon changes the answer only for some discounts
         self.assertIn("How many decisions are left can change the answer", text)
-        self.assertNotIn("How many decisions are left changes the answer", text)
+        self.assertIn("Workbench II.1", text)
 
     def test_d01_figure_names_the_other_curves(self):
-        for (g, k), m, state in self.states("C07-D01"):
-            svg = self.svg(state)
-            others = [x for x in (0.8, 0.9, 0.95, 0.99) if x != g]
-            self.assertIn("steepest first: " + ", ".join(f"{x:.2f}" for x in others), svg)
-            self.assertNotIn("the other three", svg)
+        for key, state in self.demos["C07-D01"]["states"].items():
+            gi, _ = [int(i) for i in key.split(",")]
+            g = [0.5, 0.9, 0.95, 0.99][gi]
+            others = [x for x in (0.5, 0.9, 0.95, 0.99) if x != g]
+            self.assertIn("steepest first: " + ", ".join(f"{x:.2f}" for x in others), self.svg(state))
 
     def test_equations_come_from_chapter(self):
         chapter = next(c for c in json.loads((LAB / "chapter-map.json").read_text()) if c["chapter"] == 7)
@@ -196,9 +253,48 @@ class Chapter7ReaderTests(unittest.TestCase):
             return re.sub(r"[\s{}]", "", t).rstrip(".")
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
         alts = re.findall(r'data-tex="([^"]+)"', self.page)
-        self.assertEqual(len(alts), 4)
+        self.assertEqual(len(alts), 6)
         for tex in alts:
             self.assertIn(norm(html.unescape(tex)), allowed)
+
+    def test_patch2_small_gamma_and_notation(self):
+        # g3-03: the rule of a third is only approximate at gamma 0.5 (25.0 is a quarter)
+        demo = self.demos["C07-D01"]
+        st = demo["states"]["0,0"]
+        self.assertIn("a quarter", st["interpretation"])
+        self.assertIn("only approximate for small gamma", st["interpretation"])
+        self.assertNotIn("about a third of 100", " ".join(st["steps"]))
+        st = demo["states"]["2,0"]
+        self.assertIn("roughly a third", st["interpretation"])
+        # g3-04: no raw scientific notation for tiny values
+        for key in ("0,1", "0,2"):
+            st = demo["states"][key]
+            blob = st["interpretation"] + " " + " ".join(f"{k} {v}" for k, v in st["metrics"]) + " " + " ".join(st["steps"])
+            self.assertNotRegex(blob, r"\de-\d")
+            self.assertIn("x 10^-", blob)
+            self.assertIn("less than 0.0001", blob)
+
+    def test_patch2_negative_break_even_explained(self):
+        # g3-05: at discount 0.75 even a free verification loses (0.75 x 95 = 71.25 < 80)
+        st = self.demos["C07-D02"]["states"]["3,2"]
+        text = st["interpretation"]
+        self.assertIn("Even a free verification would lose", text)
+        self.assertIn("0.75 x 95.0 = 71.25", text)
+        self.assertIn("no cost can rescue verification", text)
+        self.assertNotIn("this verification costs more than the later support it buys", text)
+        # the book controller keeps the cost-based wording
+        self.assertNotIn("Even a free verification", self.demos["C07-D02"]["states"]["0,2"]["interpretation"])
+
+    def test_patch2_provenance_prediction_alt(self):
+        # g3-06, g3-07, g3-08
+        text = html.unescape(self.page)
+        self.assertIn("derived from it as 97 - 85 and 90/97", text)
+        self.assertNotIn("Release at once (85)", text)
+        self.assertNotIn("Verify, then release (92)", text)
+        self.assertEqual(self.demos["C07-D02"]["controls"][1]["default"], 0)
+        alt = self.demos["C07-D03"]["states"]["0,0,0"]["alt"]
+        self.assertIn("with 1 decision left", alt)
+        self.assertNotIn("1 decisions", alt)
 
     def test_text_rules(self):
         text = re.sub(r"<script\b.*?</script>|<style\b.*?</style>", " ", self.page, flags=re.S)

@@ -68,10 +68,10 @@ class Chapter19ReaderTests(unittest.TestCase):
 
     # Raw control values, written here from the design (the page shows labels for text controls).
     RAW = {
-        "C19-D01": [["small2", "small3", "small4", "gathering"]],
-        "C19-D02": [[2, 4, 6, 12], ["A", "C"]],
-        "C19-D03": [["diagonal", "off", "ratio"]],
-        "C19-D04": [[0.1, 0.5, 0.56, 0.9]],
+        "C19-D01": [["small2", "small3", "small4", "gathering"], ["means", "fix"]],
+        "C19-D02": [[2, 4, 6, 12], ["A", "B", "C"]],
+        "C19-D03": [["base", "l3", "l5", "l10"], ["loss", "reduction", "step"]],
+        "C19-D04": [["two", "three"], ["target", "changed", "tie", "known"]],
     }
 
     def states(self, demo_id):
@@ -94,17 +94,19 @@ class Chapter19ReaderTests(unittest.TestCase):
 
     def test_four_demonstrations_all_combinations_render(self):
         self.assertEqual(list(self.demos), ["C19-D01", "C19-D02", "C19-D03", "C19-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [4, 8, 3, 4])
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 12, 12, 8])
         for d in self.data["demos"]:
-            self.assertLessEqual(len(d["states"]), 8)
-        self.assertLess(self.reader.stat().st_size, 2_500_000)
+            self.assertLessEqual(len(d["states"]), 12)
+        self.assertLess(self.reader.stat().st_size, 4_000_000)
 
     # D1: Equation (19.2) on the chapter's printed means
 
     def test_d01_losses_by_hand(self):
         means = {"small2": (30.44, 20.03), "small3": (23.06, 9.06), "small4": (20.15, 5.71), "gathering": (147.34, 146.89)}
         expected = {"small2": "0.342", "small3": "0.607", "small4": "0.717", "gathering": "0.003"}
-        for (task,), state in self.states("C19-D01"):
+        for (task, view), state in self.states("C19-D01"):
+            if view != "means":
+                continue
             diag, off = means[task]
             loss = (diag - off) / diag
             m = self.m(state)
@@ -114,21 +116,74 @@ class Chapter19ReaderTests(unittest.TestCase):
             self.assertTrue(shown.startswith(f"{loss:.3f}"), (task, shown))
             self.assertTrue(shown.startswith(expected[task]))
             self.assertIn(f"({diag:.2f} - {off:.2f}) / {diag:.2f}", state["interpretation"])
+            self.assertIn(f"Gap = {diag:.2f} - {off:.2f} = {diag - off:.2f}.", " ".join(state["steps"]))
 
     def test_d01_small3_printed_value_is_flagged_not_hidden(self):
         # The chapter prints 0.625 for small3 but its printed means give 14 / 23.06 = 0.607.
         self.assertAlmostEqual(14.0 / 23.06, 0.607, places=3)
-        small3 = next(s for (t,), s in self.states("C19-D01") if t == "small3")
+        small3 = next(s for (t, v), s in self.states("C19-D01") if t == "small3" and v == "means")
         self.assertEqual(self.m(small3)["Loss from Equation (19.2)"], "0.607 (chapter prints 0.625)")
         self.assertIn("0.625", small3["interpretation"])
-        for task, state in (("small2", None), ("small4", None), ("gathering", None)):
-            s = next(s for (t,), s in self.states("C19-D01") if t == task)
+        for task in ("small2", "small4", "gathering"):
+            s = next(s for (t, v), s in self.states("C19-D01") if t == task and v == "means")
             self.assertNotIn("chapter prints", self.m(s)["Loss from Equation (19.2)"])
 
     def test_d01_control_task_loss_is_small(self):
-        gathering = next(s for (t,), s in self.states("C19-D01") if t == "gathering")
+        gathering = next(s for (t, v), s in self.states("C19-D01") if t == "gathering" and v == "means")
         self.assertLess(float(self.m(gathering)["Loss from Equation (19.2)"]), 0.01)
         self.assertIn("does not prove", gathering["interpretation"])
+
+    def test_d01_figure_19_1_asymmetry_is_the_printed_pair(self):
+        # Chapter: the entry for run four's first party with run one's second party is 27.3, the reverse is 3.7.
+        self.assertEqual(f"{27.3 / 3.7:.1f}", "7.4")
+        small2 = next(s for (t, v), s in self.states("C19-D01") if t == "small2" and v == "means")
+        self.assertIn("27.3 / 3.7 = 7.4", small2["interpretation"])
+
+    def test_d01_fix_view_numbers_by_hand(self):
+        # Chapter: losses in percent. small2 34.2 -> 5.5 (full) and 14.7 (highest only); small3 62.5 -> 8.2 and 27.0;
+        # small4 71.7 -> highest only 11.8; full is the printed reduction 56.7 subtracted from 71.7 = 15.0.
+        want = {"small2": (34.2, 14.7, 5.5), "small3": (62.5, 27.0, 8.2), "small4": (71.7, 11.8, 71.7 - 56.7)}
+        for (task, view), state in self.states("C19-D01"):
+            if view != "fix" or task == "gathering":
+                continue
+            base, single, full = want[task]
+            m = self.m(state)
+            self.assertEqual(m["Loss, independent learners"], f"{base:.1f} percent")
+            self.assertEqual(m["Loss, highest-level policy only"], f"{single:.1f} percent")
+            self.assertTrue(m["Loss, full mixed strategy"].startswith(f"{full:.1f} percent"))
+            self.assertIn(f"{base:.1f} - {full:.1f} = {base - full:.1f}", state["interpretation"])
+            self.assertIn(f"{base:.1f} - {single:.1f} = {base - single:.1f}", state["interpretation"])
+        # reductions the chapter prints: 28.7, 54.3, 56.7 (full) and 19.5, 36.5, 59.9 (highest only)
+        self.assertAlmostEqual(34.2 - 5.5, 28.7)
+        self.assertAlmostEqual(62.5 - 8.2, 54.3)
+        self.assertAlmostEqual(71.7 - 15.0, 56.7)
+        self.assertAlmostEqual(34.2 - 14.7, 19.5)
+        self.assertAlmostEqual(71.7 - 11.8, 59.9)
+        self.assertAlmostEqual(62.5 - 27.0, 35.5)  # the chapter prints 36.5 and flags the difference
+        small3 = next(s for (t, v), s in self.states("C19-D01") if t == "small3" and v == "fix")
+        self.assertIn("prints 36.5", small3["interpretation"])
+        self.assertIn("35.5", small3["interpretation"])
+
+    def test_d01_fix_small2_tracks_three_numbers_in_different_directions(self):
+        small2 = next(s for (t, v), s in self.states("C19-D01") if t == "small2" and v == "fix")
+        self.assertAlmostEqual(28.20 - 30.44, -2.24)
+        self.assertAlmostEqual(26.63 - 20.03, 6.60)
+        self.assertAlmostEqual((28.20 - 26.63) / 28.20, 0.0557, places=4)
+        text = small2["interpretation"]
+        self.assertIn("28.20 - 30.44 = (-2.24)", text)
+        self.assertIn("26.63 - 20.03 = 6.60", text)
+        self.assertIn("(28.20 - 26.63) / 28.20 = 0.056", text)
+        self.assertIn("5.5 percent", text)
+
+    def test_d01_small4_fix_flags_the_unreconciled_figures(self):
+        small4 = next(s for (t, v), s in self.states("C19-D01") if t == "small4" and v == "fix")
+        self.assertIn("does not reconcile", small4["interpretation"])
+        self.assertTrue(self.m(small4)["Loss, full mixed strategy"].endswith("(derived)"))
+
+    def test_d01_gathering_fix_state_says_there_is_no_fix(self):
+        g = next(s for (t, v), s in self.states("C19-D01") if t == "gathering" and v == "fix")
+        self.assertEqual(self.m(g)["Fix reported by the chapter"], "none for this task")
+        self.assertIn("(147.34 - 146.89) / 147.34 = 0.003", g["interpretation"])
 
     # D2: the chapter's three-option cycle
 
@@ -168,28 +223,45 @@ class Chapter19ReaderTests(unittest.TestCase):
             self.assertEqual(m["Updates shown"], str(updates))
             self.assertEqual(m["Mean payoff to party one"], f"{sum(p1) / updates:.2f}")
             self.assertEqual(m["Mover's payoff after its own update"], "+1 every time")
+            self.assertEqual(m["Mover's average against A, B and C"], "0.00 every time")
             if updates >= 6:
                 self.assertEqual(back, 6)
                 self.assertEqual(m["Party two back at its start"], "after 6 updates")
             else:
                 self.assertIsNone(back)
                 self.assertTrue(m["Party two back at its start"].startswith("not yet"))
-            # first update answers the start option
             first = trace[0][1]
             self.assertIn(f"so Equation (19.4) picks {first}", state["interpretation"])
+            self.assertIn("(1 + 0 + (-1)) / 3 = 0.00", state["interpretation"])
 
-    def test_d02_mover_always_gains_one(self):
-        # Each update is an exact best response: the mover's payoff is +1 against the option it faces.
+    def test_d02_steps_follow_the_trace(self):
+        for (updates, start), state in self.states("C19-D02"):
+            updates = int(updates)
+            trace, _ = self.reference_cycle(start, updates)
+            steps = state["steps"]
+            shown = min(updates, 6)
+            self.assertEqual(len(steps), shown + (1 if updates > 6 else 0))
+            for k, one, two in trace[:shown]:
+                mover_choice = one if k % 2 else two
+                self.assertTrue(steps[k - 1].startswith(f"Update {k}: "), steps[k - 1])
+                self.assertTrue(steps[k - 1].endswith(f"plays {mover_choice}."), (steps[k - 1], mover_choice))
+            if updates > 6:
+                self.assertIn("period 6", steps[-1])
+
+    def test_d02_mover_always_gains_one_and_averages_zero(self):
+        beats = {("B", "A"), ("C", "B"), ("A", "C")}
+
+        def pay(mine, theirs):
+            return 0 if mine == theirs else (1 if (mine, theirs) in beats else -1)
+
         for start in "ABC":
             trace, _ = self.reference_cycle(start, 12)
-            beats = {("B", "A"), ("C", "B"), ("A", "C")}
             for k, one, two in trace:
                 mine, theirs = (one, two) if k % 2 else (two, one)
                 self.assertIn((mine, theirs), beats)
+                self.assertEqual(sum(pay(mine, o) for o in "ABC"), 0)
 
     def test_d02_dependence_sentence_names_the_option_actually_played(self):
-        # Regression for the reviewer's g7-01: the old text hard-coded option B (pays 1 against A, (-1) against C),
-        # which is false when party two starts at C and party one plays A.
         beats = {("B", "A"), ("C", "B"), ("A", "C")}
 
         def pay(mine, theirs):
@@ -201,21 +273,16 @@ class Chapter19ReaderTests(unittest.TestCase):
             option, reply = trace[0][1], trace[1][2]
             expected = f"option {option} pays {show(pay(option, start))} against {start} but {show(pay(option, reply))} against {reply}"
             self.assertIn(expected, state["interpretation"], (updates, start))
-            self.assertNotIn("the same option pays", state["interpretation"])
-            if start == "C":
-                self.assertEqual((option, reply), ("A", "B"))
-                self.assertIn("option A pays 1 against C but (-1) against B", state["interpretation"])
-                self.assertNotIn("pays 1 against A and (-1) against C", state["interpretation"])
-            else:
-                self.assertIn("option B pays 1 against A but (-1) against C", state["interpretation"])
+        by = {(u, s): st for (u, s), st in self.states("C19-D02")}
+        self.assertIn("option A pays 1 against C but (-1) against B", by[(6, "C")]["interpretation"])
+        self.assertIn("option C pays 1 against B but (-1) against A", by[(6, "B")]["interpretation"])
 
     def test_d02_static_text_does_not_misstate_the_option_order(self):
-        # g7-02: the options played in the default state are B, C, A, B, C, A, not A, B, C, A, B, C.
         self.assertNotIn("A, B, C, A, B, C", self.section_text("C19-D02"))
         self.assertIn("repeats every six updates", self.section_text("C19-D02"))
 
     def test_d01_does_not_claim_the_chapter_draws_a_diamond(self):
-        small3 = next(s for (t,), s in self.states("C19-D01") if t == "small3")
+        small3 = next(s for (t, v), s in self.states("C19-D01") if t == "small3" and v == "means")
         self.assertNotIn("as the chapter does", small3["interpretation"])
         self.assertIn("the chapter flags the same difference in its text", small3["interpretation"])
 
@@ -225,73 +292,100 @@ class Chapter19ReaderTests(unittest.TestCase):
         self.assertIn("joint return", self.section_text("C19-D01"))
         self.assertIn("success indicator", self.section_text("C19-D04"))
 
-    # D3: what a fix costs
+    # D3: return on depth
 
-    def test_d03_three_numbers_move_in_different_directions(self):
-        before, after = (30.44, 20.03), (28.20, 26.63)
-        loss0, loss1 = (before[0] - before[1]) / before[0], (after[0] - after[1]) / after[0]
-        self.assertAlmostEqual(loss0, 0.342, places=3)
-        self.assertAlmostEqual(loss1, 1.57 / 28.20, places=12)
-        expected = {
-            "Diagonal mean": (f"{before[0]:.2f}", f"{after[0]:.2f}", f"{after[0] - before[0]:.2f}", "regression"),
-            "Off-diagonal mean": (f"{before[1]:.2f}", f"{after[1]:.2f}", f"{after[1] - before[1]:.2f}", "improvement"),
-            "Loss from Equation (19.2)": (f"{loss0:.3f}", f"{loss1:.3f}", f"{loss1 - loss0:.3f}", "improvement"),
-        }
-        seen = set()
-        for _, state in self.states("C19-D03"):
+    def test_d03_depth_numbers_by_hand(self):
+        loss = {"base": 71.7, "l3": 24.6, "l5": 15.6, "l10": 71.7 - 56.7}
+        order = ["base", "l3", "l5", "l10"]
+        # Chapter: reductions 47.1 (level three, printed 44) and 56.1 (level five), 56.7 (level ten); last doubling buys under one point.
+        self.assertAlmostEqual(71.7 - 24.6, 47.1)
+        self.assertAlmostEqual(71.7 - 15.6, 56.1)
+        self.assertLess(56.7 - 56.1, 1.0)
+        for (depth, view), state in self.states("C19-D03"):
+            i = order.index(depth)
+            red = 71.7 - loss[depth]
             m = self.m(state)
-            b, a, change, verdict = expected[m["Number tracked"]]
-            self.assertEqual((m["Independent learners"], m["Population method"], m["Change"], m["Reads as"]), (b, a, change, verdict))
-            seen.add(m["Number tracked"])
-        self.assertEqual(seen, set(expected))
-        self.assertEqual(f"{after[0] - before[0]:.2f}", "-2.24")
-        self.assertEqual(f"{after[1] - before[1]:.2f}", "6.60")
+            self.assertTrue(m["Loss"].startswith(f"{loss[depth]:.1f} percent"))
+            if i == 0:
+                self.assertTrue(m["Points removed from the baseline"].startswith("0.0"))
+                self.assertTrue(m["Extra points from the last step"].startswith("none"))
+            else:
+                prev = 71.7 - loss[order[i - 1]]
+                self.assertEqual(m["Points removed from the baseline"], f"{red:.1f}")
+                self.assertEqual(m["Extra points from the last step"], f"{red - prev:.1f}")
+                self.assertIn(f"71.7 - {loss[depth]:.1f} = {red:.1f}", state["interpretation"])
+                self.assertIn(f"{red:.1f} - {prev:.1f} = {red - prev:.1f}", state["interpretation"])
+            self.assertEqual(m["Loss"].endswith("(derived)"), depth == "l10")
 
-    def test_d03_ratio_state_flags_printed_5_5(self):
-        ratio = next(s for (k,), s in self.states("C19-D03") if k == "ratio")
-        self.assertIn("5.5 percent", ratio["interpretation"])
-        self.assertIn("5.57 percent", ratio["interpretation"])
+    def test_d03_level_three_flags_printed_44(self):
+        for (depth, view), state in self.states("C19-D03"):
+            if depth == "l3":
+                self.assertIn("prints 44 points", state["interpretation"])
+                self.assertIn("71.7 - 24.6 = 47.1", state["interpretation"])
+            else:
+                self.assertNotIn("prints 44 points", state["interpretation"])
 
-    def test_d03_loss_is_attributed_to_the_gap_and_the_28_7_point_difference_is_flagged(self):
-        # g7-04: the loss falls because the gap collapses (10.41 to 1.57), not because of the division by the diagonal.
-        self.assertAlmostEqual(30.44 - 20.03, 10.41)
-        self.assertAlmostEqual(28.20 - 26.63, 1.57)
-        # Dividing by the smaller diagonal alone would push the ratio up: 1.57 / 30.44 < 1.57 / 28.20.
-        self.assertLess(1.57 / 30.44, 1.57 / 28.20)
-        for _, state in self.states("C19-D03"):
-            self.assertIn("driven by the gap", self.section_text("C19-D03"))
-        explanation = self.section_text("C19-D03")
-        self.assertIn("from 10.41 to 1.57", explanation)
-        self.assertNotIn("Because Equation (19.2) divides the gap by the diagonal", explanation)
-        # g7-05: chapter prints 34.2 - 5.5 = 28.7 points; the printed means give 28.6.
-        ratio = next(s for (k,), s in self.states("C19-D03") if k == "ratio")
-        self.assertEqual(f"{100 * ((30.44 - 20.03) / 30.44 - 1.57 / 28.20):.1f}", "28.6")
-        self.assertIn("reduction of 28.7 points, while the printed means give 28.6", ratio["interpretation"])
+    def test_d03_last_doubling_buys_under_one_point(self):
+        l10 = next(s for (d, v), s in self.states("C19-D03") if d == "l10")
+        self.assertEqual(self.m(l10)["Extra points from the last step"], "0.6")
+        self.assertIn("under one point", l10["interpretation"])
 
-    # D4: partner mix with the laboratory's matrix
+    # D4: partner mixtures with the laboratory's matrices
+
+    MATRIX = {"two": [[0.95, 0.2], [0.4, 0.9]], "three": [[1, 0, 0], [0.6, 0.6, 0.6], [0, 0, 1]]}
+    MIX = {
+        "two": {"target": [0.5, 0.5], "changed": [0.9, 0.1], "tie": [0.56, 0.44], "known": [1, 0]},
+        "three": {"target": [0.2, 0.6, 0.2], "changed": [0.5, 0, 0.5], "tie": [0.6, 0, 0.4], "known": [1, 0, 0]},
+    }
 
     def test_d04_weighted_values_by_hand(self):
-        for (w,), state in self.states("C19-D04"):
-            v0 = w * 0.95 + (1 - w) * 0.2
-            v1 = w * 0.4 + (1 - w) * 0.9
+        for (matrix, mix), state in self.states("C19-D04"):
+            M, w = self.MATRIX[matrix], self.MIX[matrix][mix]
+            k = len(M)
+            values = [sum(w[j] * M[i][j] for j in range(k)) for i in range(k)]
             m = self.m(state)
-            self.assertEqual(m["Policy 0 against the mix"], f"{v0:.3f}")
-            self.assertEqual(m["Policy 1 against the mix"], f"{v1:.3f}")
-            expected = "tie" if abs(v0 - v1) < 1e-9 else ("Policy 0" if v0 > v1 else "Policy 1")
-            self.assertEqual(m["Ranks first"], expected, w)
-            self.assertEqual(m["Diagonal alone names"], "Policy 0")  # 0.95 against 0.90
-            self.assertEqual(m["Loss from Equation (19.2)"], f"{(0.925 - 0.3) / 0.925:.3f}")
+            for i in range(k):
+                self.assertEqual(m[f"Policy {i} against the mix"], f"{values[i]:.3f}", (matrix, mix, i))
+            best = max(values)
+            winners = [i for i in range(k) if abs(values[i] - best) < 1e-9]
+            expected = " and ".join(f"Policy {i}" for i in winners) + (" tie" if len(winners) > 1 else "")
+            self.assertEqual(m["Ranks first"], expected, (matrix, mix))
+            diag = [M[i][i] for i in range(k)]
+            dbest = max(diag)
+            dwin = [i for i in range(k) if abs(diag[i] - dbest) < 1e-9]
+            self.assertEqual(m["Diagonal alone names"], " and ".join(f"Policy {i}" for i in dwin) + (" (tie)" if len(dwin) > 1 else ""))
+            dmean = sum(diag) / k
+            off = (sum(map(sum, M)) - sum(diag)) / (k * (k - 1))
+            self.assertEqual(m["Loss from Equation (19.2)"], f"{(dmean - off) / dmean:.3f}")
 
-    def test_d04_the_tie_and_the_chapter_cases(self):
-        by_w = {w: s for (w,), s in self.states("C19-D04")}
+    def test_d04_the_chapter_laboratory_cases(self):
+        by = {(a, b): s for (a, b), s in self.states("C19-D04")}
+        # default: equal weights 0.575 and 0.65, policy 1 wins; changed: 0.875 and 0.45, policy 0 wins
+        d, c = self.m(by[("two", "target")]), self.m(by[("two", "changed")])
+        self.assertEqual((d["Policy 0 against the mix"], d["Policy 1 against the mix"], d["Ranks first"]), ("0.575", "0.650", "Policy 1"))
+        self.assertEqual((c["Policy 0 against the mix"], c["Policy 1 against the mix"], c["Ranks first"]), ("0.875", "0.450", "Policy 0"))
+        # tie at p = 0.7 / 1.25 = 0.56
         self.assertAlmostEqual(0.7 / 1.25, 0.56)
-        self.assertEqual(self.m(by_w[0.56])["Ranks first"], "tie")
-        self.assertIn("tie at 0.620", by_w[0.56]["interpretation"].replace("The two policies tie at 0.620", "tie at 0.620"))
-        # Laboratory worked values: equal weights give 0.575 and 0.65, weights 0.9 and 0.1 give 0.875 and 0.45.
-        m5, m9 = self.m(by_w[0.5]), self.m(by_w[0.9])
-        self.assertEqual((m5["Policy 0 against the mix"], m5["Policy 1 against the mix"], m5["Ranks first"]), ("0.575", "0.650", "Policy 1"))
-        self.assertEqual((m9["Policy 0 against the mix"], m9["Policy 1 against the mix"], m9["Ranks first"]), ("0.875", "0.450", "Policy 0"))
-        self.assertEqual(self.m(by_w[0.1])["Ranks first"], "Policy 1")
+        self.assertEqual(self.m(by[("two", "tie")])["Ranks first"], "Policy 0 and Policy 1 tie")
+        self.assertIn("p = 0.7 / 1.25 = 0.56", by[("two", "tie")]["interpretation"])
+        # transfer: generalist 0.6 against specialists 0.2 and 0.2; supervisor mix 0.5 each, still below 0.6
+        t, s = self.m(by[("three", "target")]), self.m(by[("three", "changed")])
+        self.assertEqual((t["Policy 0 against the mix"], t["Policy 1 against the mix"], t["Policy 2 against the mix"], t["Ranks first"]),
+                         ("0.200", "0.600", "0.200", "Policy 1"))
+        self.assertEqual((s["Policy 0 against the mix"], s["Policy 1 against the mix"], s["Policy 2 against the mix"], s["Ranks first"]),
+                         ("0.500", "0.600", "0.500", "Policy 1"))
+        self.assertEqual(self.m(by[("three", "tie")])["Ranks first"], "Policy 0 and Policy 1 tie")
+        self.assertEqual(self.m(by[("three", "known")])["Ranks first"], "Policy 0")
+
+    def test_d04_asymmetry_is_named_from_the_matrix(self):
+        by = {(a, b): s for (a, b), s in self.states("C19-D04")}
+        self.assertIn("cell (0, 1) is 0.20 but cell (1, 0) is 0.40", by[("two", "target")]["interpretation"])
+        self.assertIn("cell (0, 1) is 0.00 but cell (1, 0) is 0.60", by[("three", "target")]["interpretation"])
+
+    def test_d04_steps_list_one_weighted_sum_per_policy(self):
+        for (matrix, mix), state in self.states("C19-D04"):
+            k = len(self.MATRIX[matrix])
+            self.assertEqual(len(state["steps"]), k + 2)
 
     def test_laboratory_function_agrees_with_the_chapter_formula(self):
         sys.path.insert(0, str(LAB / "src"))
@@ -303,6 +397,29 @@ class Chapter19ReaderTests(unittest.TestCase):
         self.assertAlmostEqual(out["metrics"]["joint_policy_correlation_loss"], (0.925 - 0.3) / 0.925)
         one = evaluate({"matrix": [[0.9]], "partner_weights": [1.0], "supervisor_weights": [1.0]})
         self.assertIsNone(one["metrics"]["joint_policy_correlation_loss"])  # one policy: no off-diagonal, statistic undefined
+        transfer = evaluate({"matrix": [[1, 0, 0], [0.6, 0.6, 0.6], [0, 0, 1]], "partner_weights": [0.2, 0.6, 0.2], "supervisor_weights": [0.5, 0, 0.5]})
+        self.assertEqual(transfer["metrics"]["selected_policy"], 1)
+
+    # optional reader features
+
+    def test_optional_features_are_present(self):
+        self.assertIn("Ask the chapter skill", self.page)
+        for demo_id in self.demos:
+            text = self.section_text(demo_id)
+            self.assertIn("Common wrong turn", text, demo_id)
+            self.assertIn("What this does not settle", text, demo_id)
+            self.assertIn("Your prediction", text, demo_id)
+        for demo_id in self.demos:
+            for _, state in self.states(demo_id):
+                self.assertTrue(2 <= len(state["steps"]) <= 8)
+
+    def test_scope_notes_quote_the_chapter(self):
+        chapter = (LAB.parent / "Manuscript/part-v/19-when-another-mind-becomes-part-of-the-world.md").read_text(encoding="utf-8")
+        flat = " ".join(chapter.split())
+        for phrase in ("single conference paper reporting its authors' own method on gridworld tasks",
+                       "instrument requires multiple independent training runs, which many deployments cannot afford",
+                       "Best-response cycling is one distinct difficulty with adapting counterparties"):
+            self.assertIn(phrase, flat)
 
     # equations, text rules, links, harness
 
@@ -340,7 +457,7 @@ class Chapter19ReaderTests(unittest.TestCase):
             self.assertIn(f'href="{href}"', self.page)
             self.assertTrue((LAB / href.replace("../../", "")).exists(), href)
         self.assertIn('<a class="skip" href="#main">', self.page)
-        self.assertEqual(self.page.count('aria-live="polite"'), 4)
+        self.assertGreaterEqual(self.page.count('aria-live="polite"'), 4)
 
     def test_dom_harness(self):
         if shutil.which("node") is None:
@@ -348,7 +465,26 @@ class Chapter19ReaderTests(unittest.TestCase):
         run = subprocess.run(["node", str(HARNESS), str(self.reader)], capture_output=True, text=True, timeout=120)
         self.assertEqual(run.returncode, 0, run.stderr)
         report = json.loads(run.stdout)["reports"][0]
-        self.assertEqual((report["states_checked"], report["resets_checked"]), (19, 4))
+        self.assertEqual((report["states_checked"], report["resets_checked"]), (40, 4))
+        self.assertEqual(report["ask_skill"], 1)
+
+
+    def test_patch2_wording_fixes(self):
+        gath = " ".join(self.demos["C19-D01"]["states"][k]["interpretation"] for k in self.demos["C19-D01"]["states"] if "fix" in k or True)
+        self.assertNotIn("so a fix has little to repair", gath)
+        self.assertIn("does not report a fix for this task", gath)
+        text = self.section_text("C19-D02") + " " + " ".join(s["interpretation"] for s in self.demos["C19-D02"]["states"].values())
+        self.assertIn("uniform mix of the three options", text)
+        self.assertNotIn("fixed evaluation set of all three options", text)
+        self.assertIn("Values the chapter prints", self.section_text("C19-D01"))
+        self.assertNotIn("Constructed example: the diagonal and off-diagonal means", self.section_text("C19-D01"))
+        for d in ("C19-D03",):
+            alts = " ".join(s.get("alt", "") for s in self.demos[d]["states"].values())
+            self.assertIn("a derived 15.0", alts)
+        fb = self.demos["C19-D04"]["prediction"]["feedback"] if "feedback" in self.demos["C19-D04"].get("prediction", {}) else None
+        page = self.page
+        self.assertIn("The diagonal alone does not give the ranking", html.unescape(page))
+        self.assertIn("Doubling the depth from level five to level ten", html.unescape(page))
 
 
 if __name__ == "__main__":

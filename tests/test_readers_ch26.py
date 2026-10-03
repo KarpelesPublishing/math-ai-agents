@@ -7,6 +7,7 @@ and the three constructed saturation points), not read from the module.
 from __future__ import annotations
 
 import html
+import itertools
 import importlib.util
 import json
 import math
@@ -71,92 +72,120 @@ class Chapter26ReaderTests(unittest.TestCase):
 
     def test_four_demos_and_every_state_rendered(self):
         self.assertEqual(list(self.demos), ["C26-D01", "C26-D02", "C26-D03", "C26-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [8, 6, 8, 6])
-        self.assertLess(self.path.stat().st_size, 2_500_000)
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [12, 12, 12, 6])
+        self.assertLess(self.path.stat().st_size, 4_000_000)
+        for text in ("Ask the chapter skill", "Common wrong turn", "What this does not settle", "Your prediction", "Worked steps"):
+            self.assertIn(text, self.page)
+        self.assertIn("Step 2 of 4", self.page)  # D01 stepper on the subset size
+        for demo in self.data["demos"]:
+            for state in demo["states"].values():
+                self.assertGreaterEqual(len(state["steps"]), 2)
 
     def test_d01_finite_pool_coverage(self):
-        for (c, k), state in self.states("C26-D01"):
-            c, k = int(c), int(k)
-            n = 10
-            # Hypergeometric: probability that no passing program is among k chosen.
-            none = math.prod((n - c - i) / (n - i) for i in range(k))
+        pools = {"Chapter's worked pool (one task, 2 passing)": [2], "Low temperature (passes 8, 8, 0, 0)": [8, 8, 0, 0],
+                 "High temperature (passes 3, 3, 2, 2)": [3, 3, 2, 2]}
+        n = 10
+        for (name, k), state in self.states("C26-D01"):
+            k = int(k)
+            counts = pools[name]
+            cov = plug = sel = 0.0
+            for c in counts:
+                # enumerate every size-k subset of ten programs, the first c of which pass
+                subsets = list(itertools.combinations(range(n), k))
+                hit = sum(1 for sub in subsets if any(i < c for i in sub))
+                cov += hit / len(subsets)
+                plug += 1 - (1 - c / n) ** k
+                sel += c / n
+            t = len(counts)
             m = dict(state["metrics"])
-            self.assertEqual(m["Finite-pool coverage"], f"{1 - none:.4f}")
-            self.assertEqual(m["Independent-draw formula"], f"{1 - (1 - c / n) ** k:.4f}")
-            self.assertEqual(m["No-signal selector success"], f"{c / n:.2f}")
-            self.assertEqual(m["Subsets with no pass"], str(round(none * math.comb(n, k))))
-        book = dict(next(s for v, s in self.states("C26-D01") if v == [2, 3])["metrics"])
-        self.assertEqual((book["Subsets in total"], book["Subsets with no pass"]), ("120", "56"))
-        self.assertEqual(book["Finite-pool coverage"], "0.5333")
+            self.assertEqual(m[f"Exact coverage at k = {k}"], f"{cov / t:.4f}")
+            self.assertEqual(m["Independent-draw formula"], f"{plug / t:.4f}")
+            self.assertEqual(m["No-signal selector success"], f"{sel / t:.3f}")
+            self.assertEqual(m["Tasks in the bank"], str(t))
+            self.assertGreaterEqual(cov / t + 1e-12, plug / t)
+            if k == 1:
+                self.assertEqual(f"{cov / t:.4f}", f"{plug / t:.4f}")
+        book = dict(next(s for v, s in self.states("C26-D01") if v[0].startswith("Chapter") and v[1] == 3)["metrics"])
+        self.assertEqual(book["Exact coverage at k = 3"], "0.5333")
         self.assertEqual(book["Independent-draw formula"], "0.4880")
         self.assertEqual(book["Coverage not collected by that selector"], "0.3333")
-        self.assertIn("1 - C(8,3) / C(10,3) = 1 - 56 / 120 = 0.5333", self.page)
+        interp = next(s for v, s in self.states("C26-D01") if v[0].startswith("Chapter") and v[1] == 3)["interpretation"]
+        self.assertIn("1 - C(8,3) / C(10,3) = 1 - 56 / 120 = 0.5333", interp)
 
-    def test_d01_subset_table_matches_the_chapter(self):
-        # 56 / 56 / 8 subsets with zero, one, two passes; 64 covered; uniform selector 24 of 120.
-        n, c, k = 10, 2, 3
-        rows = [math.comb(c, j) * math.comb(n - c, k - j) for j in range(3)]
+    def test_d01_temperature_crossing_and_table(self):
+        # k = 1: the concentrated bank leads; k = 5: the dispersed bank leads (the chapter's temperature direction)
+        by = {}
+        for (name, k), state in self.states("C26-D01"):
+            by[(name.split()[0], int(k))] = float(dict(state["metrics"])[f"Exact coverage at k = {int(k)}"])
+        self.assertGreater(by[("Low", 1)], by[("High", 1)])
+        self.assertGreater(by[("High", 5)], by[("Low", 5)])
+        # the chapter's table: 56 / 56 / 8 subsets with zero, one, two passes; 64 covered; uniform selector 24 of 120
+        rows = [math.comb(2, j) * math.comb(8, 3 - j) for j in range(3)]
         self.assertEqual(rows, [56, 56, 8])
         self.assertEqual(sum(rows[1:]), 64)
-        self.assertAlmostEqual((rows[1] * 1 / 3 + rows[2] * 2 / 3) / 120, 0.2)
+        self.assertAlmostEqual((rows[1] / 3 + 2 * rows[2] / 3) / 120, 0.2)
+        steps = next(s for v, s in self.states("C26-D01") if v[0].startswith("Chapter") and v[1] == 3)["steps"]
+        self.assertTrue(any("0 passes: 56, 1 passes: 56, 2 passes: 8" in x for x in steps))
 
-    def test_d02_ceiling_by_hand(self):
-        weights = [0.2, 0.3, 0.5]
-        bank = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
-        for (m, selector), state in self.states("C26-D02"):
-            m = int(m)
-            rows = bank[:m]
-            cov = sum(w for t, w in enumerate(weights) if any(r[t] for r in rows))
-            if selector.startswith("Always"):
-                sel = sum(w for t, w in enumerate(weights) if rows[0][t])
-            else:
-                sel = cov  # an oracle takes a passing candidate whenever one exists
-            mt = dict(state["metrics"])
-            self.assertEqual(mt["Oracle coverage Cov"], f"{cov:.2f}")
-            self.assertEqual(mt["Actual selection Sel"], f"{sel:.2f}")
-            self.assertEqual(mt["Cov minus Sel"], f"{cov - sel:.2f}")
+    def test_d02_ladder_by_hand_and_lab_cases(self):
+        nb = lambda n: json.loads((LAB / "data" / "examples" / f"ch{n}.json").read_text())
+        transfer = nb(26)
+        self.assertEqual(transfer["selected_candidates"], [1, 1])
+        self.assertEqual(transfer["deployment_allowed"], [True, False])
+        banks = {"Three specialists (notebook default)": ([[1, 0, 0], [0, 1, 0], [0, 0, 1]], [0.2, 0.3, 0.5], [0, 0, 0], [0, 1, 2], [1, 1, 0]),
+                 "First two specialists only": ([[1, 0, 0], [0, 1, 0]], [0.2, 0.3, 0.5], [0, 0, 0], [0, 1, 0], [1, 1, 0]),
+                 "Two candidates, two tasks (notebook transfer)": ([[1, 1], [1, 0]], [0.5, 0.5], [1, 1], [0, 0], [1, 0])}
+        for (bank, selector, deploy), state in self.states("C26-D02"):
+            mat, w, dflt, orc, denied = banks[bank]
+            chosen = dflt if selector.startswith("The notebook") else orc
+            allowed = [1] * len(w) if deploy.startswith("Every") else denied
+            cov = sum(w[t] for t in range(len(w)) if any(r[t] for r in mat))
+            sel = sum(w[t] for t in range(len(w)) if mat[chosen[t]][t])
+            dep = sum(w[t] for t in range(len(w)) if mat[chosen[t]][t] and allowed[t])
+            m = dict(state["metrics"])
+            self.assertEqual(m["Oracle coverage Cov"], f"{cov:.2f}")
+            self.assertEqual(m["Actual selection Sel"], f"{sel:.2f}")
+            self.assertEqual(m["Deployed success"], f"{dep:.2f}")
+            self.assertEqual(m["Lost to selection (Cov minus Sel)"], f"{cov - sel:.2f}")
+            self.assertEqual(m["Lost to deployment (Sel minus deployed)"], f"{sel - dep:.2f}")
+            self.assertLessEqual(dep, sel + 1e-12)
             self.assertLessEqual(sel, cov + 1e-12)
-        # The no-passing-candidate reminder appears only when a task is uncovered (bank of 1 or 2).
-        for (m_, selector), state in self.states("C26-D02"):
-            has_note = "adds nothing to Cov" in state["interpretation"]
-            self.assertEqual(has_note, int(m_) < 3, (m_, selector))
+            self.assertEqual("adds nothing to Cov" in state["interpretation"], any(not any(r[t] for r in mat) for t in range(len(w))))
         by_key = {k: dict(s["metrics"]) for k, s in self.demos["C26-D02"]["states"].items()}
-        # Notebook default: oracle 1, first-candidate selection 0.2.
-        self.assertEqual((by_key["2,0"]["Oracle coverage Cov"], by_key["2,0"]["Actual selection Sel"]), ("1.00", "0.20"))
-        # One-candidate bank: ceiling is only task 1 (weight 0.2), no selector passes it.
-        self.assertEqual(by_key["0,1"]["Oracle coverage Cov"], "0.20")
+        g = lambda key: tuple(by_key[key][x] for x in ("Oracle coverage Cov", "Actual selection Sel", "Deployed success"))
+        self.assertEqual(g("0,0,0"), ("1.00", "0.20", "0.20"))      # notebook default
+        self.assertEqual(g("0,1,1"), ("1.00", "1.00", "0.50"))      # notebook changed
+        self.assertEqual(g("2,0,1"), ("1.00", "0.50", "0.50"))      # notebook transfer
+        self.assertEqual(g("1,1,0"), ("0.50", "0.50", "0.50"))      # task 3 absent, nothing to select
+        self.assertIn("task 3 absent from bank", by_key["1,0,0"]["Where each task stands"])
+        self.assertEqual(by_key["1,0,0"]["Coverage as candidates are added"], "0.20 / 0.50")
 
     def test_d03_gap_and_hypothetical_share(self):
-        base = {"Single sample (37.7, one draw, shown for scale)": 37.7, "Mean log-probability (44.5)": 44.5}
-        for (start, share), state in self.states("C26-D03"):
-            b, share = base[start], float(share)
-            gap = 77.5 - b
-            after = b + share * gap
+        pts = {"Codex-S, mean log-probability (44.5 of 77.5)": (44.5, 77.5, 1),
+               "Codex-12B, one sample against pass@100 (28.81, 72.31)": (28.81, 72.31, 2),
+               "Constructed: selector near the ceiling": (78.0, 80.0, 1),
+               "Constructed: low ceiling": (15.0, 20.0, 1)}
+        for (name, share), state in self.states("C26-D03"):
+            sel, cov, d = pts[name]
+            share = float(share)
+            gap = cov - sel
+            after = sel + share * gap
             m = dict(state["metrics"])
-            self.assertEqual(m["Gap Cov minus Sel (points)"], f"{gap:.1f}")
-            digits = 1 if all(abs(x * 10 - round(x * 10)) < 1e-9 for x in (after, 77.5 - after)) else 2
-            self.assertEqual(m["New selected success"], f"{after:.{digits}f}")
-            self.assertEqual(m["Gap that remains"], f"{77.5 - after:.{digits}f}")
-            # The written subtraction on the page must be true for the digits it shows.
-            shown_after = float(m["New selected success"])
-            shown_left = float(m["Gap that remains"])
-            self.assertAlmostEqual(77.5 - shown_after, shown_left, places=6)
-            self.assertIn(f"77.5 - {m['New selected success']} = {m['Gap that remains']} points", state["interpretation"])
+            self.assertEqual(m["Gap Cov minus Sel (points)"], f"{gap:.{d}f}")
+            self.assertEqual(m["New selected success"], f"{after:.{d}f}")
+            self.assertEqual(m["Gap that remains"], f"{cov - after:.{d}f}")
+            self.assertAlmostEqual(cov - float(m["New selected success"]), float(m["Gap that remains"]), places=6)
+            self.assertIn(f"{cov:.{d}f} - {m['New selected success']} = {m['Gap that remains']} points", state["interpretation"])
             self.assertGreaterEqual(gap, 0)
-        mid = dict(next(s for v, s in self.states("C26-D03") if v == ["Mean log-probability (44.5)", 0.5])["metrics"])
+        mid = dict(next(s for v, s in self.states("C26-D03") if v[0].startswith("Codex-S") and v[1] == 0.5)["metrics"])
         self.assertEqual((mid["Gap Cov minus Sel (points)"], mid["New selected success"], mid["Gap that remains"]), ("33.0", "61.0", "16.5"))
-        # Regression: the 0.25 share from 44.5 is 52.75 and 24.75, not the rounded 52.8 and a false 24.8.
-        quarter = next(s for v, s in self.states("C26-D03") if v == ["Mean log-probability (44.5)", 0.25])
-        self.assertIn("44.5 + 0.25 x 33.0 = 52.75, leaving 77.5 - 52.75 = 24.75 points", quarter["interpretation"])
-        self.assertNotIn("52.8", quarter["interpretation"])
-        self.assertNotIn("24.8", quarter["interpretation"])
-        self.assertEqual(dict(quarter["metrics"])["New selected success"], "52.75")
-        # The single-sample start is not a matched-bank gap and says so; the key explains both outlines.
-        single = next(s for v, s in self.states("C26-D03") if v[0].startswith("Single") and v[1] == 0.5)
-        self.assertIn("shown for scale", single["interpretation"])
-        self.assertNotIn("as Equation (26.3) says", single["interpretation"])
-        self.assertIn("as Equation (26.3) says", quarter["interpretation"])
-        full = dict(next(s for v, s in self.states("C26-D03") if v == ["Mean log-probability (44.5)", 1.0])["metrics"])
+        interp = next(s for v, s in self.states("C26-D03") if v[0].startswith("Codex-S") and v[1] == 0.5)["interpretation"]
+        self.assertIn("44.5 - 37.7 = 6.8", interp)       # gain over a single sample, as the chapter reports
+        self.assertIn("44.5 + 0.50 x 33.0 = 61.0", interp)
+        c12 = next(s for v, s in self.states("C26-D03") if v[0].startswith("Codex-12B") and v[1] == 0)["interpretation"]
+        self.assertIn("72.31 / 28.81 = 2.51", c12)        # the chapter's "about two and a half times"
+        self.assertAlmostEqual(72.31 / 28.81, 2.51, places=2)
+        full = dict(next(s for v, s in self.states("C26-D03") if v[0].startswith("Codex-S") and v[1] == 1.0)["metrics"])
         self.assertEqual(full["Gap that remains"], "0.0")
 
     def test_d04_exact_fits_and_limits(self):
@@ -189,7 +218,8 @@ class Chapter26ReaderTests(unittest.TestCase):
             for k, c in pts:
                 self.assertAlmostEqual(a - b * basis(k, p), c, places=9)
         shown = {"Exponential approach": exp, "Hyperbolic approach": hyp, "Power-law approach": pw}
-        for (family, horizon), state in self.states("C26-D04"):
+        sel50 = {"0.60 (selector near the ceiling)": 0.60, "0.30 (selector far below it)": 0.30}
+        for (family, selector), state in self.states("C26-D04"):
             p, b, a = shown[family]
             m = dict(state["metrics"])
             self.assertEqual(m["Projected limit A"], f"{a:.3f}")
@@ -197,10 +227,51 @@ class Chapter26ReaderTests(unittest.TestCase):
             self.assertEqual(m["Spread of the limits (points)"], f"{100 * (pw[2] - exp[2]):.0f}")
             basis = {"Exponential approach": lambda k: math.exp(-k / p), "Hyperbolic approach": lambda k: 1 / (k + p),
                      "Power-law approach": lambda k: k ** -p}[family]
-            self.assertEqual(m[f"Curve at k = {int(horizon)}"], f"{a - b * basis(horizon):.3f}")
+            at100 = a - b * basis(100)
+            self.assertEqual(m["Curve at k = 100"], f"{at100:.3f}")
+            self.assertEqual(m["Room from a larger bank (50 to 100)"], f"{at100 - 0.63:.3f}")
+            self.assertEqual(m["Room below the ceiling at k = 50"], f"{0.63 - sel50[selector]:.3f}")
+        # the larger room depends on the family when the selector is near the ceiling
+        near = {}
+        for (family, selector), state in self.states("C26-D04"):
+            if selector.startswith("0.60"):
+                m = dict(state["metrics"])
+                near[family] = float(m["Room from a larger bank (50 to 100)"]) > float(m["Room below the ceiling at k = 50"])
+        self.assertEqual(near, {"Exponential approach": False, "Hyperbolic approach": True, "Power-law approach": True})
+
+    def test_c26_d04_verdict_matches_family_comparison(self):
+        far_old = "under this family the selector has the larger room, and a different family could reverse that"
+        for (family, selector), state in self.states("C26-D04"):
+            text = state["interpretation"]
+            self.assertNotIn(far_old, text)
+            self.assertNotIn("a different family could reverse that", text)
+            if selector.startswith("0.30"):
+                self.assertIn("all three families agree that the selector has the larger room", text)
+            else:
+                self.assertIn("the families disagree at this selector value: a larger bank has the larger room under the hyperbolic, power-law curve, "
+                              "the selector under the exponential curve", text)
+
+    def test_minor_wording_patch2(self):
+        equal_seen = 0
+        for state in self.demos["C26-D01"]["states"].values():
+            m = dict(state["metrics"])
+            text = state["interpretation"]
+            if m.get("Exact coverage at k = 1") is None and "Independent-draw formula" in m and len(m) > 4:
+                pass
+            exact = [v for key, v in m.items() if key.startswith("Exact coverage") or key.startswith("Mean coverage")]
+            plug = m.get("Independent-draw formula")
+            if exact and plug is not None and exact[0] == plug and "which differs from the exact mean" in text:
+                self.fail("claims a difference that prints equal: " + text)
+            if "matches the exact mean to four decimals" in text:
+                equal_seen += 1
+                self.assertEqual(exact[0], plug)
+        self.assertGreater(equal_seen, 0)
+        codex12 = [s["interpretation"] for s in self.demos["C26-D03"]["states"].values() if "two and a half times" in s["interpretation"]]
+        self.assertTrue(codex12)
+        for text in codex12:
+            self.assertNotIn("as Equation (26.3) says", text)
 
     def test_wording_fixes(self):
-        self.assertIn("pass@k (coverage at k)", self.page)
         self.assertIn("per-task pass counts", self.page)
         self.assertIn("Euler", self.page)
         self.assertIn("all fitted", self.page)
@@ -241,8 +312,7 @@ class Chapter26ReaderTests(unittest.TestCase):
         run = subprocess.run(["node", str(HARNESS), str(self.path)], capture_output=True, text=True, timeout=120)
         self.assertEqual(run.returncode, 0, run.stderr)
         report = json.loads(run.stdout)["reports"][0]
-        self.assertGreaterEqual(report["states_checked"], 28)
-        self.assertEqual(report["labelled_controls"], 8)
+        self.assertEqual(report["states_checked"], 42)
 
 
 if __name__ == "__main__":

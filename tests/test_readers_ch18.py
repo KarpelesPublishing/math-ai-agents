@@ -61,94 +61,181 @@ class Chapter18ReaderTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
+    VALUES = {
+        "C18-D01": [["coordinate", "semantic", "transactional"], [0.6, 0.8], ["off", "on"]],
+        "C18-D02": [[0.0, 0.01, 0.5, 1.0], ["none", "layout1", "layout2"]],
+        "C18-D03": [["default", "changed", "transfer"], [5, 10, 15, 30]],
+        "C18-D04": [[40, 3], [0.0, 0.1, 0.2], [1, 2]],
+    }
+
     def states(self, demo_id):
-        demo = self.demos[demo_id]
-        for key, state in demo["states"].items():
+        """Yield (control values as written in the reader's definition, metrics, state); the page stores labels, so map by index."""
+        for key, state in self.demos[demo_id]["states"].items():
             idx = [int(i) for i in key.split(",")]
-            values = [as_number(c["values"][i]) for c, i in zip(demo["controls"], idx)]
-            yield values, dict(state["metrics"]), state
+            yield [vals[i] for vals, i in zip(self.VALUES[demo_id], idx)], dict(state["metrics"]), state
 
     def test_four_demonstrations_and_budgets(self):
         self.assertEqual(list(self.demos), ["C18-D01", "C18-D02", "C18-D03", "C18-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [6, 4, 8, 6])
-        self.assertLess(self.reader.stat().st_size, 2_500_000)
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [12, 12, 12, 12])
+        self.assertLess(self.reader.stat().st_size, 4_000_000)
 
-    def test_d01_transition_law_by_hand(self):
-        # Layout 1: saved click releases v2. Layout 2: releases v3, or is denied with the check on.
-        for (b1, check), m, _ in self.states("C18-D01"):
-            b1 = float(b1)
+    def test_optional_fields_present(self):
+        self.assertIn("Ask the chapter skill", self.page)
+        self.assertEqual(self.page.count("Common wrong turn:"), 4)
+        self.assertIn('Chapter 18 source: "What this does not settle".', html.unescape(self.page))
+        for d in self.data["demos"]:
+            self.assertTrue(d["predict"]["correct"] and d["predict"]["incorrect"])
+            for state in d["states"].values():
+                self.assertTrue(2 <= len(state["steps"]) <= 8)
+
+    def test_d01_transition_law_by_hand_for_three_interfaces(self):
+        # Layout 1: every command reaches v2. Layout 2 (rows swapped, version changed):
+        #   coordinate reaches v3 (denied when the check is on), semantic still reaches v2,
+        #   transactional is refused because the saved version differs.
+        for (interface, b1, check), m, _ in self.states("C18-D01"):
             b2 = 1 - b1
-            on = check == "On"
-            v2 = b1
-            v3 = 0.0 if on else b2
-            denied = b2 if on else 0.0
-            self.assertEqual(m["Release v2 (authorized completion)"], f"{v2:.2f}")
-            self.assertEqual(m["Release v3 (prohibited release)"], f"{v3:.2f}")
-            self.assertEqual(m["Denied, no release"], f"{denied:.2f}")
+            on = check == "on"
+            if interface == "coordinate":
+                v2, v3, denied = b1, 0.0 if on else b2, b2 if on else 0.0
+            elif interface == "semantic":
+                v2, v3, denied = 1.0, 0.0, 0.0
+            else:
+                v2, v3, denied = b1, 0.0, b2
+            self.assertEqual(m["Release v2 (authorized completion)"], f"{v2:.2f}", (interface, b1, check))
+            self.assertEqual(m["Release v3 (prohibited release)"], f"{v3:.2f}", (interface, b1, check))
+            self.assertEqual(m["Denied or refused, no release"], f"{denied:.2f}", (interface, b1, check))
             self.assertEqual(m["Total"], "1.00")
-        book = next(m for v, m, _ in self.states("C18-D01") if v == [0.8, "Off"])
-        self.assertEqual(book["Release v3 (prohibited release)"], "0.20")  # the chapter's 0.8 and 0.2
-        guarded = next(m for v, m, _ in self.states("C18-D01") if v == [0.8, "On"])
-        self.assertEqual((guarded["Release v2 (authorized completion)"], guarded["Release v3 (prohibited release)"]), ("0.80", "0.00"))
+        by = {tuple(v): m for v, m, _ in self.states("C18-D01")}
+        # the chapter's beliefs 0.8 and 0.2, and workbench exercise 1's 0.6 and 0.4 (no mediation, then a monitor)
+        self.assertEqual(by[("coordinate", 0.8, "off")]["Release v3 (prohibited release)"], "0.20")
+        self.assertEqual(by[("coordinate", 0.6, "off")]["Release v3 (prohibited release)"], "0.40")
+        self.assertEqual(by[("coordinate", 0.6, "off")]["Release v2 (authorized completion)"], "0.60")
+        self.assertEqual(by[("coordinate", 0.6, "on")]["Release v3 (prohibited release)"], "0.00")
+        self.assertEqual(by[("coordinate", 0.6, "on")]["Release v2 (authorized completion)"], "0.60")
+        # the transactional interface trades completion for safety: refusal probability equals the belief in the changed layout
+        self.assertEqual(by[("transactional", 0.8, "off")]["Denied or refused, no release"], "0.20")
+        text = next(s for v, m, s in self.states("C18-D01") if v == ["coordinate", 0.6, "off"])["interpretation"]
+        self.assertIn("P(release v3) = 0.60 x 0 + 0.40 x 1 = 0.40", text)
 
     def test_d02_intersection_by_hand(self):
         # Authorized sets: layout 1 allows all five commands; layout 2 allows all but the saved-point click.
         layout1 = {0, 1, 2, 3, 4}
         layout2 = {1, 2, 3, 4}
-        for (b2,), m, st in self.states("C18-D02"):
-            b2 = float(b2)
+        for (prior2, obs), m, st in self.states("C18-D02"):
+            b2 = {"none": prior2, "layout1": 0.0, "layout2": 1.0}[obs]
             support = [s for s, w in ((layout1, 1 - b2), (layout2, b2)) if w > 0]
             kept = set.intersection(*support)
-            self.assertEqual(m["Commands kept"], f"{len(kept)} of 5")
+            self.assertEqual(m["Commands kept"], f"{len(kept)} of 5", (prior2, obs))
             self.assertEqual(m["Saved-point click"], "kept" if 0 in kept else "removed")
             self.assertIn(f"5 - {len(kept)} = {5 - len(kept)}", st["interpretation"])
-        # the 0.5 state used to say "however small 0.50 is"; the sentence is now true at every belief
-        half = next(st for v, m, st in self.states("C18-D02") if v == [0.5])
-        self.assertNotIn("however small", half["interpretation"])
-        self.assertNotIn("0.50 is", half["interpretation"])
+            self.assertEqual(m["Belief in layout 2"], f"{b2:.2f}")
+        by = {tuple(v): m for v, m, _ in self.states("C18-D02")}
+        # any positive weight removes the click; zero weight does not (chapter: a very small probability can remove release)
+        self.assertEqual((by[(0.0, "none")]["Commands kept"], by[(0.01, "none")]["Commands kept"]), ("5 of 5", "4 of 5"))
+        # a perfect read of layout 1 restores the click whatever the prior was; a read of layout 2 confirms its removal
+        for prior2 in (0.0, 0.01, 0.5, 1.0):
+            self.assertEqual(by[(prior2, "layout1")]["Saved-point click"], "kept")
+            self.assertEqual(by[(prior2, "layout2")]["Saved-point click"], "removed")
+        half = next(s for v, m, s in self.states("C18-D02") if v == [0.5, "none"])
         self.assertIn("both layouts count, whatever their size", half["interpretation"])
-        zero = next(m for v, m, _ in self.states("C18-D02") if v == [0.0])
-        tiny = next(m for v, m, _ in self.states("C18-D02") if v == [0.01])
-        self.assertEqual((zero["Commands kept"], tiny["Commands kept"]), ("5 of 5", "4 of 5"))  # any positive weight removes it
+        restore = next(s for v, m, s in self.states("C18-D02") if v == [0.01, "layout1"])
+        self.assertIn("only if the read was current and correct", restore["interpretation"])
 
-    def test_d03_freshness_by_hand(self):
-        for (rate, delay), m, _ in self.states("C18-D03"):
-            fresh = math.exp(-rate * delay)
+    def test_d03_cases_age_version_permission_and_freshness_by_hand(self):
+        cases = {
+            "default": dict(age=1, max_age=2, same=False, permission=True, confirmed=True, coord="delete", sem="release",
+                            wanted="release", rate=0.02),
+            "changed": dict(age=3, max_age=2, same=False, permission=True, confirmed=True, coord="delete", sem="release",
+                            wanted="release", rate=0.02),
+            "transfer": dict(age=0, max_age=1, same=True, permission=False, confirmed=False, coord="submit", sem="submit",
+                             wanted="submit", rate=0.05),
+        }
+        for (scenario, delay), m, st in self.states("C18-D03"):
+            c = cases[scenario]
+            fresh = math.exp(-c["rate"] * delay)
             self.assertEqual(m["Chance still fresh"], f"{fresh:.4f}")
             self.assertEqual(m["Chance of an invalidating change"], f"{1 - fresh:.4f}")
-            self.assertEqual(m["Rate x delay"], f"{rate * delay:.2f}")
-            self.assertEqual(m["Delay at which freshness is one half"], f"{math.log(2) / rate:.1f} seconds")
+            self.assertEqual(m["Rate x delay"], f"{c['rate'] * delay:.2f}")
+            self.assertEqual(m["Delay at which freshness is one half"], f"{math.log(2) / c['rate']:.1f} seconds")
+            age_ok = c["age"] <= c["max_age"]
+            coord_issued = age_ok and c["permission"]
+            sem_issued = age_ok and c["permission"]
+            vb_issued = age_ok and c["permission"] and c["same"]
+            issued = [n for n, ok in (("coordinate", coord_issued), ("semantic", sem_issued), ("version-bound", vb_issued)) if ok]
+            done = []
+            if coord_issued and c["coord"] == c["wanted"] and c["confirmed"]:
+                done.append("coordinate")
+            if sem_issued and c["sem"] == c["wanted"] and c["confirmed"]:
+                done.append("semantic")
+            if vb_issued and c["sem"] == c["wanted"] and c["confirmed"]:
+                done.append("version-bound")
+            self.assertEqual(m["Interfaces that issue"], ", ".join(issued) or "none", (scenario, delay))
+            self.assertEqual(m["Confirmed completions"], ", ".join(done) or "none", (scenario, delay))
+            self.assertEqual(m["Observation age against the limit"],
+                             f"{c['age']} s against {c['max_age']} s: {'fresh' if age_ok else 'stale'}")
+            self.assertIn(f"{c['rate']:.2f} x {delay} = {c['rate'] * delay:.2f}", st["interpretation"])
         by = {tuple(v): m["Chance still fresh"] for v, m, _ in self.states("C18-D03")}
-        # The chapter: 0.9048 at 5 s and 0.5488 at 30 s with rate 0.02; the lab's exercise gives 0.7408 at 15 s.
-        self.assertEqual((by[(0.02, 5)], by[(0.02, 30)], by[(0.02, 15)]), ("0.9048", "0.5488", "0.7408"))
+        # The chapter: 0.9048 at 5 s and 0.5488 at 30 s with rate 0.02; workbench exercise 2 adds 0.7408 at 15 s.
+        self.assertEqual((by[("default", 5)], by[("default", 30)], by[("default", 15)]), ("0.9048", "0.5488", "0.7408"))
         # Doubling the delay squares the freshness: 0.7408 squared is 0.5488.
         self.assertAlmostEqual(0.7408 ** 2, 0.5488, places=3)
+        # notebook worked example: default issues coordinate and semantic, only semantic completes, version-bound refuses
+        d = next(m for v, m, _ in self.states("C18-D03") if v == ["default", 30])
+        self.assertEqual((d["Interfaces that issue"], d["Confirmed completions"]), ("coordinate, semantic", "semantic"))
+        # changed case (age 3 beyond 2): every interface refuses; transfer case: permission denied blocks all
+        self.assertEqual(next(m for v, m, _ in self.states("C18-D03") if v == ["changed", 5])["Interfaces that issue"], "none")
+        self.assertEqual(next(m for v, m, _ in self.states("C18-D03") if v == ["transfer", 10])["Interfaces that issue"], "none")
+        self.assertAlmostEqual(math.exp(-0.05 * 10), 0.6065, places=4)
+
+    def test_g6_03_age_limit_is_not_drawn_on_the_delay_axis(self):
+        source = (LAB / "tools" / "readers" / "chapters" / "ch18.py").read_text(encoding="utf-8")
+        self.assertNotIn("age limit {max_age", source)
+        self.assertNotIn("axvline(max_age", source)
+        for v, m, st in self.states("C18-D03"):
+            self.assertIn("they are separate inputs", st["interpretation"], v)
+            self.assertIn("changing the delay moves the curve and not the table", st["interpretation"], v)
+            self.assertNotIn("dotted line at the age limit", st["alt"], v)
+        self.assertNotIn("The age rule is a separate test that the laboratory reports beside the curve", self.page)
+
+    def test_g6_19_20_22_wording(self):
+        text = html.unescape(self.page)
+        self.assertIn("the saved screen version differs from the current one", text)
+        self.assertNotIn("in layout 2 the versions differ", text)
+        self.assertIn("Completion is 1.00 in both layouts, so the belief does not matter for this command", text)
+        self.assertNotIn("Authorized completion is the whole belief in both layouts", text)
+        self.assertIn("the notebook's name for the wrong object (v3 in Demonstration 1)", text)
 
     def test_d04_price_of_another_look_by_hand(self):
-        for (loss, p), m, _ in self.states("C18-D04"):
+        for (loss, p, cost), m, _ in self.states("C18-D04"):
             now = p * loss
             self.assertEqual(m["Expected loss of clicking now"], f"{now:.2f}")
-            self.assertEqual(m["Net advantage of looking"], f"{now - 2:.2f}")
-            self.assertEqual(m["Break-even chance of a wrong target"], f"{2 / loss:.3f}")
-            expected = "tie" if abs(now - 2) < 1e-9 else ("Observe first" if now > 2 else "Click now")
+            self.assertEqual(m["Cost of one more look"], f"{cost:.2f}")
+            self.assertEqual(m["Net advantage of looking"], f"{now - cost:.2f}")
+            self.assertEqual(m["Break-even chance of a wrong target"], f"{cost / loss:.3f}")
+            expected = "tie" if abs(now - cost) < 1e-9 else ("Observe first" if now > cost else "Click now")
             self.assertEqual(m["Better option"], expected)
-        book = next(m for v, m, _ in self.states("C18-D04") if v == [40, 0.1])
+        by = {tuple(v): (m, s) for v, m, s in self.states("C18-D04")}
+        # the chapter: 0.1 x 40 = 4 against a look costing 2 (net 2); with denial costing 3, 0.1 x 3 = 0.3 (look does not pay)
+        book = by[(40, 0.1, 2)][0]
         self.assertEqual((book["Expected loss of clicking now"], book["Net advantage of looking"]), ("4.00", "2.00"))
-        denied = next(m for v, m, _ in self.states("C18-D04") if v == [3, 0.1])
+        denied = by[(3, 0.1, 2)][0]
         self.assertEqual((denied["Expected loss of clicking now"], denied["Better option"]), ("0.30", "Click now"))
-        tie = next(m for v, m, _ in self.states("C18-D04") if v == [40, 0.05])
-        self.assertEqual(tie["Better option"], "tie")  # 0.05 x 40 = 2 exactly
-        tie_state = next(st for v, m, st in self.states("C18-D04") if v == [40, 0.05])
-        self.assertIn("Other considerations, such as a deadline or the cost of a denial, have to break the tie.",
-                      tie_state["interpretation"])
-        self.assertNotIn("the other costs a denial", tie_state["interpretation"])
+        # workbench exercise 3: a look costing 1, wrong chance 0.2: denial 3 gives 0.6 (no), unguarded 40 gives 8 (yes)
+        self.assertEqual(by[(3, 0.2, 1)][0]["Better option"], "Click now")
+        self.assertEqual(by[(3, 0.2, 1)][0]["Expected loss of clicking now"], "0.60")
+        self.assertEqual(by[(40, 0.2, 1)][0]["Better option"], "Observe first")
+        self.assertEqual(by[(40, 0.2, 1)][0]["Expected loss of clicking now"], "8.00")
+        # the transactional interface: chance 0, so the look never pays for document identity
+        for key, (m, st) in by.items():
+            if key[1] == 0.0:
+                self.assertEqual(m["Better option"], "Click now")
+                self.assertIn("no value for document identity", st["interpretation"])
         # negative advantage is printed as a plain signed number, in the metric and in the sentence
-        neg = next((m, st) for v, m, st in self.states("C18-D04") if v == [3, 0.05])
-        self.assertEqual(neg[0]["Net advantage of looking"], "-1.85")
-        self.assertIn("0.15 - 2.0 = -1.85", neg[1]["interpretation"])
-        self.assertNotIn("(-1.85)", neg[1]["interpretation"])
-        # the demonstration states its own comparison and defines the symbols it shows
-        self.assertIn("looking pays when chance x loss is more than 2", self.page)
+        neg = by[(3, 0.1, 2)]
+        self.assertEqual(neg[0]["Net advantage of looking"], "-1.70")
+        self.assertIn("0.30 - 2.0 = -1.70", neg[1]["interpretation"])
+        self.assertNotIn("(-1.70)", neg[1]["interpretation"])
+        self.assertIn("looking pays when chance x loss is more than its cost", self.page)
         self.assertIn("Act with subscript ui the set of realizable operations", self.page)
 
     def test_laboratory_agrees_with_chapter_numbers(self):
@@ -191,7 +278,8 @@ class Chapter18ReaderTests(unittest.TestCase):
         run = subprocess.run(["node", str(HARNESS), str(self.reader)], capture_output=True, text=True, timeout=120)
         self.assertEqual(run.returncode, 0, run.stderr)
         report = json.loads(run.stdout)["reports"][0]
-        self.assertEqual((report["states_checked"], report["resets_checked"]), (24, 4))
+        self.assertEqual((report["states_checked"], report["resets_checked"]), (48, 4))
+        self.assertEqual((report["ask_skill"], report["predictions_checked"] > 0, report["steps_checked"] > 0, report["panels_checked"] > 0), (1, True, True, True))
 
 
 if __name__ == "__main__":

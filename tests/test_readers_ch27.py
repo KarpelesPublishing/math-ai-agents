@@ -76,145 +76,166 @@ class Chapter27ReaderTests(unittest.TestCase):
 
     def test_four_demonstrations_with_state_budget(self):
         self.assertEqual(list(self.demos), ["C27-D01", "C27-D02", "C27-D03", "C27-D04"])
-        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [6, 6, 8, 8])
-        self.assertLess(BUILT.stat().st_size, 2_500_000)
+        self.assertEqual([len(d["states"]) for d in self.data["demos"]], [12, 12, 12, 12])
+        self.assertLess(BUILT.stat().st_size, 4_000_000)
+        for text in ("Ask the chapter skill", "Common wrong turn", "What this does not settle", "Your prediction", "Worked steps"):
+            self.assertIn(text, self.page)
+        self.assertIn("of 4:", self.page)  # D03 stepper on the delegation fraction
+        for demo in self.data["demos"]:
+            for state in demo["states"].values():
+                self.assertGreaterEqual(len(state["steps"]), 2)
 
-    # Demonstration 1: Equation (27.2), defer when p_E >= max_y p(y | x)
-    def test_d01_route_by_comparison(self):
-        seen = {}
-        for (expert, model), state in self.states("C27-D01"):
+    # Demonstration 1: Equation (27.2) and the workbench's timely-return problem VI.3
+    def test_d01_route_and_value_by_hand(self):
+        from fractions import Fraction as Fr
+        cases = {"Chapter: model 0.78, expert 0.95": (Fr(78, 100), Fr(95, 100)),
+                 "Chapter: model 0.78, expert 0.60": (Fr(78, 100), Fr(60, 100)),
+                 "Workbench: act 0.80, expert 0.95": (Fr(80, 100), Fr(95, 100)),
+                 "Tie: model 0.78, expert 0.78": (Fr(78, 100), Fr(78, 100))}
+        ts = {"1.00 (guaranteed)": Fr(1), "0.60": Fr(3, 5), "5/7 (break-even for the workbench case)": Fr(5, 7)}
+        demo = self.demos["C27-D01"]
+        for key, state in demo["states"].items():
+            i, j = (int(x) for x in key.split(","))
+            model, expert = cases[list(cases)[i]]
+            t = list(ts.values())[j]
+            act = model * 10 - (1 - model) * 10
+            gross = expert * 10 - (1 - expert) * 10
+            deleg = t * gross + (1 - t) * 2 - 1
             m = dict(state["metrics"])
-            defers = expert >= model - 1e-12
-            route = m["Route chosen by Equation (27.2)"]
-            self.assertEqual(route.startswith("Delegate"), defers, (expert, model))
-            self.assertEqual(m["Expert minus classifier"], f"{expert - model:.2f}")
-            seen[(expert, model)] = route
-        # The chapter's two cases at confidence 0.78: expert 0.95 delegates, expert 0.60 does not.
-        self.assertTrue(seen[(0.95, 0.78)].startswith("Delegate"))
-        self.assertFalse(seen[(0.6, 0.78)].startswith("Delegate"))
-        # Boundary: equality defers (the "at least as large" side) and is called a tie.
-        self.assertIn("tie", seen[(0.78, 0.78)])
-        # The same expert at 0.95 loses to a 0.97 classifier.
-        self.assertFalse(seen[(0.95, 0.97)].startswith("Delegate"))
-
-    # Demonstration 2: the book's route-value table and Equation (27.3)
-    def test_d02_route_values_against_the_books_table(self):
-        gross = 0.90 * (0.98 * 10 + 0.02 * (-10)) + 0.10 * (0.94 * 0 + 0.06 * (-100))
-        self.assertAlmostEqual(gross, 8.04)
-        for (cost, authorized), state in self.states("C27-D02"):
-            m = dict(state["metrics"])
-            release = 0.90 * 10 + 0.10 * (-100)
-            review = 0.35 * gross + 0.65 * release - 1
-            wait = 0.5 * 9 + 0.5 * (-1) - 2
-            hold = 0.95 * gross + 0.05 * (-4) - cost - 1
-            self.assertEqual(m["Release now"], f"{release:.3f}")
-            self.assertEqual(m["Review; release on timeout"], f"{review:.3f}")
-            self.assertEqual(m["Wait for confirmation; release on timeout"], f"{wait:.3f}")
-            hold_shown = m["Reversible hold and review; return on timeout"]
-            allowed = {"Release now": release, "Review; release on timeout": review, "Wait for confirmation; release on timeout": wait}
-            if authorized == "Yes, authorized":
-                self.assertEqual(hold_shown, f"{hold:.3f}")
-                allowed["Reversible hold and review; return on timeout"] = hold
+            self.assertEqual(m["Value of acting now"], f"{float(act):.2f}", key)
+            self.assertEqual(m["Value of delegating"], f"{float(deleg):.2f}", key)
+            eq_route = "Delegate to E" if expert >= model else "Predict the most probable class"
+            self.assertTrue(m["Route by Equation (27.2), delay ignored"].startswith(eq_route), key)
+            better = "act now" if act > deleg else ("delegate" if deleg > act else "tie")
+            self.assertEqual(m["Route with the higher value"], better, key)
+            if gross > 2 and (act - 1) / (gross - 2) <= 1:
+                self.assertEqual(m["Timely-return probability that ties them"], f"{float((act - 1) / (gross - 2)):.3f}", key)
             else:
-                self.assertEqual(hold_shown, f"{hold:.3f} (excluded)")
-            best = max(allowed, key=allowed.get)
-            self.assertEqual(m["Highest of the four modeled routes"], best)
-            # Break-even hold cost: 0.95 x 8.04 + 0.05 x (-4) - 1 - 2 = 4.438
-            self.assertEqual(m["Hold cost at which waiting (2) overtakes it"], f"{0.95 * 8.04 - 0.2 - 1 - 2:.3f}")
-        book = dict(next(s for v, s in self.states("C27-D02") if v == [2, "Yes, authorized"])["metrics"])
-        self.assertEqual((book["Release now"], book["Review; release on timeout"], book["Wait for confirmation; release on timeout"],
-                          book["Reversible hold and review; return on timeout"]), ("-1.000", "1.164", "2.000", "4.438"))
-        # At hold cost 5 the hold falls below waiting; unauthorized, the hold cannot win even at cost 2.
-        self.assertEqual(dict(next(s for v, s in self.states("C27-D02") if v == [5, "Yes, authorized"])["metrics"])["Highest of the four modeled routes"],
-                         "Wait for confirmation; release on timeout")
-        self.assertEqual(dict(next(s for v, s in self.states("C27-D02") if v == [2, "No, not authorized"])["metrics"])["Highest of the four modeled routes"],
-                         "Wait for confirmation; release on timeout")
+                self.assertTrue(m["Timely-return probability that ties them"].startswith("none"), key)
+        # the workbench's solution VI.3: 6, 8, 5.2 and the break-even 5/7
+        wb = (LAB / "workbook" / "original-mathematical-workbench.md").read_text()
+        self.assertIn("5.2", wb)
+        g = lambda key, name: dict(demo["states"][key]["metrics"])[name]
+        self.assertEqual((g("2,0", "Value of acting now"), g("2,0", "Value of delegating")), ("6.00", "8.00"))
+        self.assertEqual(g("2,1", "Value of delegating"), "5.20")
+        self.assertEqual(g("2,1", "Route with the higher value"), "act now")
+        self.assertEqual(g("2,2", "Route with the higher value"), "tie")
+        self.assertEqual(g("2,0", "Timely-return probability that ties them"), f"{5 / 7:.3f}")
+        self.assertIn("(5/7) x 9.00 + (2/7) x 2 - 1 = 6.00", demo["states"]["2,2"]["interpretation"])
+        # a 0.60 expert never matches acting: its gross value 0.60 x 10 - 0.40 x 10 = 2 equals the fallback
+        self.assertTrue(g("1,0", "Timely-return probability that ties them").startswith("none"))
+        # the check question
+        self.assertAlmostEqual(0.97 - 0.95, 0.02)
 
-    # Demonstration 3: mean time in system 1 / (mu - f lambda)
-    def test_d03_mm1_mean_time(self):
-        lam = 4.0
-        for (mu, f), state in self.states("C27-D03"):
+    # Demonstration 2: Equation (27.1) filter, then Equation (27.3)
+    def test_d02_route_values_and_authorized_set(self):
+        timely = 0.90 * (0.98 * 10 + 0.02 * (-10)) + 0.10 * (0.94 * 0 + 0.06 * (-100))
+        self.assertAlmostEqual(timely, 8.04)
+        names = ["Release now", "Review; release on timeout", "Wait for confirmation; release on timeout",
+                 "Reversible hold and review; return on timeout"]
+        out = {"all": [], "holdno": [3], "unavail": [1, 3], "stopped": [0]}
+        order = list(out)
+        demo = self.demos["C27-D02"]
+        for key, state in demo["states"].items():
+            i, j = (int(x) for x in key.split(","))
+            cost = float(demo["controls"][0]["values"][i])
+            vals = [-1.0, 0.35 * timely + 0.65 * (-1) - 1, 0.5 * 9 + 0.5 * (-1) - 2, 0.95 * timely + 0.05 * (-4) - cost - 1]
+            excluded = out[order[j]]
             m = dict(state["metrics"])
-            load = f * lam
+            for n, v, e in zip(names, vals, [k in excluded for k in range(4)]):
+                self.assertEqual(m[n], f"{v:.3f}" + (" (excluded)" if e else ""), (key, n))
+            inside = [k for k in range(4) if k not in excluded]
+            best = max(inside, key=lambda k: vals[k])
+            self.assertEqual(m["Highest among the authorized routes"], names[best], key)
+            self.assertEqual(m["Hold cost at which waiting (2) overtakes it"], "4.438")
+        # the book's table: -1, 1.164, 2, 4.438 with the hold winning
+        mm = dict(demo["states"]["0,0"]["metrics"])
+        self.assertEqual([mm[n] for n in names], ["-1.000", "1.164", "2.000", "4.438"])
+        self.assertEqual(mm["Highest among the authorized routes"], names[3])
+        # raising the hold cost to 5 hands the win to waiting (1.438 < 2); an unauthorized hold also does
+        self.assertEqual(dict(demo["states"]["2,0"]["metrics"])["Highest among the authorized routes"], names[2])
+        self.assertIn("1.438", dict(demo["states"]["2,0"]["metrics"])[names[3]])
+        self.assertEqual(dict(demo["states"]["0,1"]["metrics"])["Highest among the authorized routes"], names[2])
+        # the excluded route would have won and stays a recommendation
+        self.assertIn("stays a recommendation", demo["states"]["0,1"]["interpretation"])
+        self.assertIn("0.95 x 8.04 + 0.05 x (-4) - 1 = 6.438", demo["states"]["0,0"]["interpretation"])
+        self.assertIn("6.438 - 2 = 4.438", demo["states"]["0,0"]["interpretation"])
+        # check question: hold cost 4 gives 2.438
+        self.assertAlmostEqual(0.95 * 8.04 + 0.05 * (-4) - 4 - 1, 2.438)
+
+    # Demonstration 3: M/M/1 mean time and the laboratory's release contract
+    def test_d03_mm1_and_ledger_by_hand(self):
+        wb = (LAB / "workbook" / "workbook.md").read_text()
+        self.assertIn('"name": "release", "agent_authorized": false, "risk": 0.05', wb)
+        nb = json.loads((LAB / "data" / "examples" / "ch27.json").read_text())
+        self.assertEqual((nb["arrival_rate"], nb["service_rate"], nb["delegation_fraction"]), (1, 2, 1))
+        tasks = {"default": (4, 3, 0.1, [("routine", True, 0.02, 2, False, False), ("release", False, 0.05, 2, True, True),
+                                         ("sensitive", False, 0.2, 2, True, False)]),
+                 "fast": (4, 4, 0.1, [("routine", True, 0.02, 2, False, False), ("release", False, 0.05, 2, True, True),
+                                      ("sensitive", False, 0.2, 2, True, False)]),
+                 "transfer": (1, 2, 0.05, [("approval", False, 0.01, 0.5, True, True)])}
+        order = ["default", "fast", "transfer"]
+        demo = self.demos["C27-D03"]
+        for key, state in demo["states"].items():
+            i, j = (int(x) for x in key.split(","))
+            lam, mu, limit, rows = tasks[order[i]]
+            f = float(demo["controls"][1]["values"][j])
+            load = lam * f
+            m = dict(state["metrics"])
             self.assertEqual(m["Review arrivals f x lambda (per hour)"], f"{load:.2f}")
-            shown = m["Mean time in system"]
+            released = 0
+            for name, agent, risk, deadline, human, packet in rows:
+                needs = (not agent) or risk > limit
+                if not needs:
+                    released += 1
+                elif load < mu:
+                    released += int(human and packet and 1 / (mu - load) <= deadline)
+            self.assertEqual(m["Tasks released"], f"{released} of {len(rows)}", key)
             if load < mu:
-                mean = 1 / (mu - load)
-                self.assertEqual(shown, f"{mean:.2f} hours ({mean * 60:.0f} minutes)")
-                self.assertEqual(m["Mean within the 20-minute window"], "yes" if mean <= 20 / 60 else "no")
+                self.assertEqual(m["Mean time in system"], f"{1 / (mu - load):.2f} hours ({60 / (mu - load):.0f} minutes)", key)
             else:
-                self.assertTrue(shown.startswith("undefined"), (mu, f))
-                self.assertEqual(m["Mean within the 20-minute window"], "not applicable")
-        pick = lambda mu, f: dict(next(s for v, s in self.states("C27-D03") if v == [mu, f])["metrics"])["Mean time in system"]
-        # The chapter's numbers at 3 reviews per hour: 1 hour at f = 0.5, 5 hours at f = 0.7, undefined at 0.9.
-        self.assertTrue(pick(3, 0.5).startswith("1.00 hours (60 minutes)"))
-        self.assertTrue(pick(3, 0.7).startswith("5.00 hours (300 minutes)"))
-        self.assertTrue(pick(3, 0.9).startswith("undefined"))
-        # Singular case: f x lambda = mu exactly is a division by zero and is called one.
-        self.assertTrue(pick(4, 1.0).startswith("undefined"))
-        self.assertIn("division by zero", next(s for v, s in self.states("C27-D03") if v == [4, 1.0])["interpretation"])
+                self.assertIn("undefined", m["Mean time in system"], key)
+        g = lambda key, name: dict(demo["states"][key]["metrics"])[name]
+        self.assertEqual(g("0,0", "Mean time in system"), "1.00 hours (60 minutes)")   # notebook default
+        self.assertEqual(g("0,0", "Tasks released"), "2 of 3")
+        self.assertIn("5.00 hours", g("0,1", "Mean time in system"))                   # chapter: 70 percent gives 5 hours
+        self.assertIn("undefined", g("0,2", "Mean time in system"))                    # notebook changed case: 3.6 > 3
+        self.assertEqual(g("0,2", "Tasks released"), "1 of 3")
+        self.assertEqual(g("2,3", "Tasks released"), "0 of 1")                         # notebook transfer: mean 1 > 0.5
+        # the exponential tail the skill quotes: 1 - exp(-2) = 0.865 at the default state
+        self.assertEqual(g("0,0", "Chance the first delegated case meets its deadline"), f"{1 - math.exp(-2):.3f}")
+        self.assertIn("1 - exp(-1.00 x 2.0) = 0.865", demo["states"]["0,0"]["interpretation"])
 
-    # Demonstration 4: Equation (27.4), VOI > delay cost and an authorized fallback
-    def test_d04_wait_test(self):
-        for (q, fallback), state in self.states("C27-D04"):
-            m = dict(state["metrics"])
-            voi = q * 9 + (1 - q) * (-1) - (-1)
-            self.assertAlmostEqual(voi, 10 * q)
-            self.assertEqual(m["Value of information (VOI)"], f"{voi:.2f}")
-            self.assertEqual(m["VOI minus delay cost"], f"{voi - 2:.2f}")
-            ok = fallback == "Yes, authorized"
-            waits = voi > 2 + 1e-9 and ok
-            self.assertEqual(m["Passes Equation (27.4)"].startswith("Yes"), waits, (q, fallback))
-            self.assertEqual(m["Break-even arrival probability"], "0.20")
-        decision = lambda q, fb: dict(next(s for v, s in self.states("C27-D04") if v == [q, fb])["metrics"])["Passes Equation (27.4)"]
-        # Boundary: q = 0.2 makes VOI exactly equal the delay cost, and the strict inequality fails.
-        self.assertIn("equals", decision(0.2, "Yes, authorized"))
-        self.assertEqual(decision(0.5, "Yes, authorized"), "Yes (waiting allowed)")
-        self.assertIn("fallback not authorized", decision(0.8, "No, not authorized"))
-        # The book's wait route: 0.50 x 9 + 0.50 x (-1) - 2 = 2 equals the net value shown by VOI 5 minus delay 2 plus release (-1).
-        self.assertEqual(0.50 * 9 + 0.50 * (-1) - 2, 5 - 2 + (-1))
-
-    # Regression tests for the reviewed fixes
     def test_d03_names_the_m_m_1_model(self):
         self.assertIn("M/M/1", self.page)
         self.assertIn("exponentially distributed service times", self.page)
-        self.assertNotIn("random service times with a steady rate", self.page)
-        self.assertNotIn("For one reviewer with random arrivals and service times", self.page)
-        # The counterexample the review used: deterministic service at mu = 3 with 2 arrivals per hour is 2/3 hour, not 1.
         rho, mu = 2 / 3, 3
-        self.assertAlmostEqual(1 / mu + rho / (2 * mu * (1 - rho)), 2 / 3)
+        self.assertAlmostEqual(1 / mu + rho / (2 * mu * (1 - rho)), 2 / 3)   # deterministic service would give 2/3, not 1
         self.assertAlmostEqual(1 / (mu - 2), 1.0)
+        unstable = self.demos["C27-D03"]["states"]["0,2"]
+        self.assertIn("long-run", unstable["interpretation"] + " long-run")
 
-    def test_d04_check_answer_boundary_is_strict(self):
-        # At q = 0.30 and delay cost 3, VOI equals the delay cost, which fails the strict test.
-        voi = 0.3 * 9 + 0.7 * (-1) + 1
-        self.assertAlmostEqual(voi, 3.0)
-        answer = self.page
-        self.assertIn("at or below q = 3 / 10 = 0.30", answer)
-        self.assertNotIn("It would fail only below q = 3 / 10", answer)
-        # The demonstration itself treats VOI equal to the delay cost as failing (q = 0.2, delay 2).
-        eq = dict(next(s for v, s in self.states("C27-D04") if v == [0.2, "Yes, authorized"])["metrics"])
-        self.assertEqual(eq["Passes Equation (27.4)"], "No (VOI equals delay cost)")
-
-    def test_d02_shows_where_the_break_even_comes_from(self):
-        state = next(s for v, s in self.states("C27-D02") if v == [2, "Yes, authorized"])
-        self.assertIn("0.95 x 8.04 + 0.05 x (-4) - 1 = 6.438", state["interpretation"])
-        self.assertIn("6.438 - 2 = 4.438", state["interpretation"])
-        metrics = dict(state["metrics"])
-        self.assertNotIn("Chosen by Equation (27.3)", metrics)
-        self.assertNotIn("Break-even hold cost", metrics)
-        self.assertIn("returning control is not given a value", self.page)
-
-    def test_d01_d03_d04_wording(self):
-        self.assertNotIn("never low in absolute terms", self.page)
-        self.assertNotIn("Do not set a single confidence threshold", self.page)
-        self.assertIn("justified only if the destination's correctness is the same", html.unescape(self.page))
-        self.assertIn("assumed calibrated", self.page)
-        self.assertNotIn("licensed", self.page)
-        self.assertNotIn("Decision under Equation (27.4)", self.page)
-        unstable = next(s for v, s in self.states("C27-D03") if v == [3, 0.9])
-        self.assertNotIn("No stationary mean exists", unstable["interpretation"])
-        self.assertIn("long-run", unstable["interpretation"])
+    # Demonstration 4: Equation (27.4)
+    def test_d04_wait_test_and_reachable_states(self):
+        demo = self.demos["C27-D04"]
+        gaps = ["none", "late", "changed", "failed"]
+        for key, state in demo["states"].items():
+            i, j = (int(x) for x in key.split(","))
+            q = float(demo["controls"][0]["values"][i])
+            voi = q * 9 + (1 - q) * (-1) + 1
+            ok = gaps[j] == "none"
+            m = dict(state["metrics"])
+            self.assertEqual(m["Value of information (VOI)"], f"{voi:.2f}", key)
+            allowed = voi > 2 + 1e-9 and ok
+            self.assertEqual(m["Passes Equation (27.4)"].startswith("Yes"), allowed, key)
+            self.assertEqual(m["Fallback authorized in every reachable state"].startswith("yes"), ok, key)
+        g = lambda key: dict(demo["states"][key]["metrics"])["Passes Equation (27.4)"]
+        self.assertEqual(g("0,0"), "No (VOI equals delay cost)")          # strict inequality at q = 0.2
+        self.assertEqual(g("1,0"), "Yes (waiting allowed)")
+        self.assertTrue(g("2,2").startswith("No (a reachable state"))      # high VOI, one state without a fallback
+        # check question: delay cost 3, q = 0.5 gives VOI 5 > 3; boundary at q = 0.30
+        self.assertAlmostEqual(0.5 * 9 + 0.5 * (-1) + 1, 5.0)
+        self.assertIn("at or below q = 3 / 10 = 0.30", self.page)
 
     def test_displayed_equations_are_chapter_equations(self):
         chapter = next(c for c in json.loads((LAB / "chapter-map.json").read_text()) if c["chapter"] == 27)
@@ -227,7 +248,7 @@ class Chapter27ReaderTests(unittest.TestCase):
         allowed = {norm(e["tex"]) for e in chapter["equations"]}
         allowed |= {norm(m) for m in re.findall(r"`([^`]+)`", CHAPTER_TEXT.read_text(encoding="utf-8"))}
         alts = re.findall(r'data-tex="([^"]+)"', self.page)
-        self.assertEqual(len(alts), 3)  # (27.2), (27.3), (27.4) are pre-rendered; the inline M/M/1 formula is typeset as TeX
+        self.assertEqual(len(alts), 4)  # (27.1) to (27.4) are pre-rendered; the inline M/M/1 formula is typeset as TeX
         self.assertIn(r"1/(\mu-f\lambda)", html.unescape(self.page))
         for tex in alts:
             self.assertIn(norm(html.unescape(tex)), allowed)
@@ -259,7 +280,7 @@ class Chapter27ReaderTests(unittest.TestCase):
         run = subprocess.run(["node", str(HARNESS), str(BUILT)], capture_output=True, text=True, timeout=120)
         self.assertEqual(run.returncode, 0, run.stderr)
         report = json.loads(run.stdout)["reports"][0]
-        self.assertEqual((report["states_checked"], report["resets_checked"], report["labelled_controls"]), (28, 4, 8))
+        self.assertEqual((report["states_checked"], report["resets_checked"]), (48, 4))
 
 
 if __name__ == "__main__":
