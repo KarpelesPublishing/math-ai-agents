@@ -47,4 +47,4 @@ Start with the master skill: it routes a question to the right chapter. The skil
 
 ## Copyright
 
-Copyright Jason Karpeles. All rights reserved. The code is also available under the license in `LICENSE`.
+Copyright Jason Karpeles. The code in this repository is released under the MIT License (see `LICENSE`).
