@@ -61,15 +61,15 @@
   "exercises": [
     {
       "question": "Express default regret through counts.",
-      "answer": "0.3 times the number of pulls of arm 0."
+      "answer": "Arm 1 (mean 0.7) is best, so each pull of arm 0 (mean 0.4) costs 0.7 - 0.4 = 0.3 and pulls of arm 1 cost nothing. Regret = 0.3 x n0. Check against the returned counts: greedy 0.3 x 2 = 0.6, UCB 0.3 x 31 = 9.3, Thompson 0.3 x 46 = 13.8, matching the reported pseudo-regrets."
     },
     {
       "question": "Does common pull cost change arm pseudo-regret?",
-      "answer": "No; identical cost cancels in the expected-reward comparison."
+      "answer": "No. Pseudo-regret compares mean payoffs of arms, and a cost charged equally to every pull cancels from each gap. It only lowers net observed reward, by 0.05 x 120 = 6 for every policy (for example greedy: 90 successes - 6 = 84)."
     },
     {
       "question": "Express transfer regret.",
-      "answer": "The best transfer mean is 0.8, so each pull of arm 0 costs 0.8-0.2=0.6 and each pull of arm 1 costs 0.8-0.5=0.3. Regret is 0.6*n0+0.3*n1, where n0 and n1 count pulls of arms 0 and 1; pulls of the best arm add none."
+      "answer": "The best transfer mean is 0.8, so each pull of arm 0 costs 0.8-0.2=0.6 and each pull of arm 1 costs 0.8-0.5=0.3. Regret is 0.6 x n0 + 0.3 x n1, where n0 and n1 count pulls of arms 0 and 1; pulls of the best arm add none. With the returned counts: greedy 0.6 x 1 + 0.3 x 1 = 0.9, UCB 0.6 x 9 + 0.3 x 25 = 12.9, Thompson 0.6 x 2 + 0.3 x 2 = 1.8, matching the reported values."
     }
   ],
   "routes": [
@@ -81,5 +81,6 @@
     "Pull counts sum to round budget.",
     "Regret equals the independent mean-gap calculation.",
     "Repeated same input gives identical seeded results."
-  ]
+  ],
+  "agent_application": "An agent trying several tools must spend some actions learning which tool works best. Compare exploration choices under the same constructed stationary task. The known reward means are a teaching oracle, not information ordinarily available to the controller."
 }

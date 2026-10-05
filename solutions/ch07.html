@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch07</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 7: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute draft value with two decisions.</p>
+<p>max(2,-1+6)=5.</p>
+<h2>Question 2</h2>
+<p>Why does horizon 3 not exceed horizon 2 here?</p>
+<p>Both routes reach done, whose subsequent rewards are zero.</p>
+<h2>Question 3</h2>
+<p>What is transfer later value?</p>
+<p>0+0.5&#42;4=2.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>With gamma = 0.95, about how many steps does it take for a reward to fall to roughly a third of its value, and what is a reward of 100 worth at 20 steps?</p>
+<p>The scale is 1 / (1 - 0.95) = 1 / 0.05 = 20 steps, and 100 x 0.95^20 = 35.8, roughly a third.</p>
+<p><strong>Prediction answer:</strong> Less than 1, but still above 0.</p>
+<p>100 x 0.9^50 = 0.52: small, but every finite delay keeps a positive weight.</p>
+<p><strong>If you chose another answer:</strong> Set gamma to 0.90 and steps to 50: the worth is 0.52, below 1 but above 0, because a finite delay never reaches zero.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>If a verified release were worth 90 (support probability 0.90), release at once were worth 85 and verifying cost 8, what would verifying be worth at the start with gamma = 1, and does the controller verify?</p>
+<p>Verifying is worth (-8) + 90 = 82 and releasing at once is worth 85, so the controller releases. The break-even cost is 90 - 85 = 5.</p>
+<p><strong>Prediction answer:</strong> Verify, then release.</p>
+<p>Verify then release scores (-5) + 97 = 92, which beats 85 by 7.</p>
+<p><strong>If you chose another answer:</strong> Choose the chapter's controller and step to the start state: verify then release scores (-5) + 97 = 92, above 85.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>In the now or later model with two decisions left and gamma = 0.2, which action is worth more, and by how much?</p>
+<p>Later = 0 + 0.2 x 4 = 0.8 and now = 1 + 0.2 x 0 = 1.0, so now wins by 0.2. The break-even discount is (1 - 0) / 4 = 0.25.</p>
+<p><strong>Prediction answer:</strong> Prepare with two left, cash with one left.</p>
+<p>With two left, prepare is (-1) + 1 x 6 = 5 against cash 2. With one left, preparing is worth -1 because no decision remains to release.</p>
+<p><strong>If you chose another answer:</strong> Choose the cash or prepare model at discount 1.00 and step the decisions remaining: two left gives prepare 5 against cash 2; one left gives prepare (-1) against 2.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>For the all-zeros guess at gamma = 0.9, the residual is 97. What does Equation (7.5) allow the error to be, at most?</p>
+<p>97 / (1 - 0.9) = 97 / 0.1 = 970. The true error is 97, well inside that ceiling.</p>
+<p><strong>Prediction answer:</strong> Far above the actual error.</p>
+<p>The residual is 97 and 97 / (1 - 0.99) = 9700, a hundred times the true error of 97.</p>
+<p><strong>If you chose another answer:</strong> Set gamma to 0.99 at the all-zeros stage: the bound is 97 / 0.01 = 9700 against a true error of 97. Dividing by 1 - gamma inflates it.</p></body></html>

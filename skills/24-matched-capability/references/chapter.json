@@ -1,0 +1,234 @@
+{
+  "chapter": 24,
+  "title": "How Much Capability Have We Extracted?",
+  "source_path": "Manuscript/part-vi/24-how-much-capability-have-we-extracted.md",
+  "source_sha256": "289e42f8d56324e46a6db076015b8ad45f9da6b3345cf5299ac69c061b45712b",
+  "notebook": "notebooks/24-matched-capability.ipynb",
+  "skill": "maa-24-matched-capability",
+  "skill_path": "skills/maa-24-matched-capability/SKILL.md",
+  "method": "matched-capability",
+  "outcome": "Report observed denominators, matched differences, uncertainty assumptions, and target mixtures.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "Sample means and paired observations"
+  ],
+  "routes": [
+    "paired procedure capability evaluation",
+    "reweight target task mixture",
+    "observed exposure subset denominator"
+  ],
+  "input_fields": {
+    "baseline": "Observed baseline procedure identifier.",
+    "candidate": "Observed distinct candidate procedure identifier.",
+    "records": "List of records with procedure,task,run:string and success:exact boolean; optional cost:nonnegative number, exposed:exact boolean. Procedure/task/run must be unique.",
+    "task_weights": "Optional object of task identifiers to normalized probabilities defining a target mixture."
+  },
+  "example_input": "data/examples/ch24.json",
+  "reader": "readers/24-matched-capability/reader.html",
+  "equations": [
+    {
+      "label": "EQV24-01",
+      "number": "24.1",
+      "tex": "\\widehat U_{\\mathcal V}(S)\n= \\frac{1}{N_{\\mathrm{eval}}}\\sum_{j=1}^{N_{\\mathrm{eval}}} u_j.\n\\tag{24.1}",
+      "asset": "assets/math/886a2c6b1896a4538022.svg",
+      "explanations": [
+        "Averages the scored outcomes from a declared number of evaluation instances for one specified assembly and protocol.",
+        "`\\mathcal V` fixes what each `u_j` means, while `S` identifies enabled components and `N_{\\mathrm{eval}}` identifies the evaluated sample."
+      ]
+    },
+    {
+      "label": "EQV24-02",
+      "number": "24.2",
+      "tex": "\\Delta_{\\mathrm{match}}(\\theta)\n= \\widehat U_{\\mathcal V_{\\mathrm{bench}}}(\\{\\theta\\})\n- \\widehat U_{\\mathcal V_{\\mathrm{match}}}(\\{\\theta\\}).\n\\tag{24.2}",
+      "asset": "assets/math/045e257aff580c8bb95a.svg",
+      "explanations": [
+        "Records the score gap for fixed weights between a named benchmark protocol and a declared matched evaluation.",
+        "A positive gap says the benchmark protocol scored higher, but it cannot identify why the two contracts differ."
+      ]
+    },
+    {
+      "label": "EQV24-03",
+      "number": "24.3",
+      "tex": "\\operatorname{Onset}_{\\zeta}\n= \\inf\\{m: g(m)\\ge \\zeta\\}.\n\\tag{24.3}",
+      "asset": "assets/math/1344d05a793fef025f76.svg",
+      "explanations": [
+        "Names the first declared family member whose continuous metric reaches a stated threshold under one stable protocol.",
+        "Move the threshold `\\zeta`, metric `g`, family order, or protocol, and the reported onset can move with it."
+      ]
+    },
+    {
+      "label": "EQV24-04",
+      "number": "24.4",
+      "tex": "\\Pr\\!\\left[\\forall \\xi\\in\\mathcal C:\n\\operatorname{Lower}^{\\mathrm{sim}}_{\\alpha_{\\mathrm{tail}}}(\\xi)\n\\le U_{\\mathcal V}(S_\\xi)\\right]\\ge 1-\\alpha_{\\mathrm{tail}},\n\\qquad\n\\operatorname{LCF}_{\\alpha_{\\mathrm{tail}}}(\\mathcal C)\n=\\max_{\\xi\\in\\mathcal C}\\operatorname{Lower}^{\\mathrm{sim}}_{\\alpha_{\\mathrm{tail}}}(\\xi).\n\\tag{24.4}",
+      "asset": "assets/math/51e54aadcb3e927d56f9.svg",
+      "explanations": [
+        "Defines a frontier from lower bounds jointly supported across all tested configurations, then selects the strongest of those bounds.",
+        "The first clause supplies multiple-comparison support; the maximum ranges over tested `\\xi` only and leaves untested configurations outside the frontier."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C24-D01",
+      "title": "Observations, denominators and estimands",
+      "notebook_anchor": "demo-c24-d01",
+      "source_section": "The matched question is not the same question twice",
+      "source_anchor": "the-matched-question-is-not-the-same-question-twice",
+      "equations": [
+        "\\widehat U_{\\mathcal V}(S)= \\frac{1}{N_{\\mathrm{eval}}}\\sum_{j=1}^{N_{\\mathrm{eval}}} u_j.",
+        "\\Delta_{\\mathrm{match}}(\\theta)= \\widehat U_{\\mathcal V_{\\mathrm{bench}}}(\\{\\theta\\})- \\widehat U_{\\mathcal V_{\\mathrm{match}}}(\\{\\theta\\})."
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Observations",
+          "values": [
+            "book",
+            "lab",
+            "transfer",
+            "aged"
+          ],
+          "default": "book",
+          "value_labels": [
+            "Two independent banks (the chapter's table)",
+            "Paired records, default and changed weights",
+            "Records with no overlap (transfer)",
+            "An aged benchmark (constructed mixture)"
+          ]
+        },
+        {
+          "key": "reading",
+          "label": "What to read off",
+          "values": [
+            "scores",
+            "gap",
+            "weights"
+          ],
+          "default": "scores",
+          "value_labels": [
+            "Scores and their denominators",
+            "The difference between two scores",
+            "Re-weighting to a target"
+          ]
+        }
+      ],
+      "function": "observations_picture",
+      "states": 12
+    },
+    {
+      "id": "C24-D02",
+      "title": "An onset belongs to its threshold",
+      "notebook_anchor": "demo-c24-d02",
+      "source_section": "Scale profiles and extraction profiles are different maps",
+      "source_anchor": "scale-profiles-and-extraction-profiles-are-different-maps",
+      "equations": [
+        "\\operatorname{Onset}_{\\zeta}= \\inf\\{m: g(m)\\ge \\zeta\\}."
+      ],
+      "controls": [
+        {
+          "key": "threshold",
+          "label": "Threshold zeta",
+          "values": [
+            0.3,
+            0.5,
+            0.6,
+            0.7
+          ],
+          "default": 0.5
+        },
+        {
+          "key": "tested",
+          "label": "Family members tested",
+          "values": [
+            "all",
+            "odd",
+            "even"
+          ],
+          "default": "all",
+          "value_labels": [
+            "All eight members",
+            "Only members 1, 3, 5, 7",
+            "Only members 2, 4, 6, 8"
+          ]
+        }
+      ],
+      "function": "onset_picture",
+      "states": 12
+    },
+    {
+      "id": "C24-D03",
+      "title": "A lower frontier is evidence, not a ceiling",
+      "notebook_anchor": "demo-c24-d03",
+      "source_section": "A frontier is lower evidence, not a final ceiling",
+      "source_anchor": "a-frontier-is-lower-evidence-not-a-final-ceiling",
+      "equations": [
+        "\\Pr\\!\\left[\\forall \\xi\\in\\mathcal C:\\operatorname{Lower}^{\\mathrm{sim}}_{\\alpha_{\\mathrm{tail}}}(\\xi)\\le U_{\\mathcal V}(S_\\xi)\\right]\\ge 1-\\alpha_{\\mathrm{tail}},\\qquad\\operatorname{LCF}_{\\alpha_{\\mathrm{tail}}}(\\mathcal C)=\\max_{\\xi\\in\\mathcal C}\\operatorname{Lower}^{\\mathrm{sim}}_{\\alpha_{\\mathrm{tail}}}(\\xi)."
+      ],
+      "controls": [
+        {
+          "key": "tasks",
+          "label": "Tasks per configuration",
+          "values": [
+            100,
+            400,
+            1600
+          ],
+          "default": 400
+        },
+        {
+          "key": "tested",
+          "label": "Configurations tested",
+          "values": [
+            2,
+            3,
+            4
+          ],
+          "default": 4
+        }
+      ],
+      "function": "frontier_picture",
+      "states": 9
+    },
+    {
+      "id": "C24-D04",
+      "title": "Same average, different reliability",
+      "notebook_anchor": "demo-c24-d04",
+      "source_section": "The same average can describe different reliability",
+      "source_anchor": "the-same-average-can-describe-different-reliability",
+      "equations": [
+        "1-(1-.9)^3=.999",
+        ".9^3=.729"
+      ],
+      "controls": [
+        {
+          "key": "bank",
+          "label": "Bank of tasks",
+          "values": [
+            "0.50",
+            "0.20",
+            "0.10",
+            "recorded"
+          ],
+          "default": "0.20",
+          "value_labels": [
+            "Two tasks at 0.50 and 0.50",
+            "Two tasks at 0.20 and 0.80 (the chapter's)",
+            "Two tasks at 0.10 and 0.90",
+            "Recorded runs: 3 successes in 4"
+          ]
+        },
+        {
+          "key": "runs",
+          "label": "Runs per task (subset size for the recorded bank)",
+          "values": [
+            2,
+            3
+          ],
+          "default": 2
+        }
+      ],
+      "function": "reliability_picture",
+      "states": 8
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Chapter 11: The Mathematics of Curiosity"
+  short_description: "Calculate and interpret Chapter 11 agent methods"
+  default_prompt: "Use $maa-11-bounded-exploration to analyze my supplied inputs and explain the result."
+policy:
+  allow_implicit_invocation: true

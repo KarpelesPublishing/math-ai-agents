@@ -18,7 +18,7 @@
   "method": "Provide a rectangular candidate-by-task boolean matrix, normalized task weights, one selected candidate index per task, and one deployment permission flag per task. The code validates exact booleans and index ranges. It forms oracle, selected, and deployed task flags, then aggregates them under the target weights.\n\nThe first figure shows prefix coverage of the supplied bank. The second shows a separate independent constructed saturation law. Their labels distinguish observed finite structure from a hypothetical sampling model. In the changed case improve selection while denying deployment on the heaviest task. Predict all three aggregate values before execution. Export the bank identity and task boundary whenever reporting a ceiling.",
   "worked_interpretation": "The default bank has one specialist for each of three tasks. Oracle coverage is 1. The selector chooses candidate 0 for every task, so actual success is only task 0's weight 0.2. All tasks are deployable, leaving deployed success 0.2.\n\nThe changed selector chooses the correct specialist for every task, raising actual success to 1. Deployment denies task 2, whose weight is 0.5, so deployed success is 0.5. Oracle coverage remains 1. Better selection extracted available capability, but the authority boundary still limits what the system may realize. None of these numbers forecasts a future model's maximum.",
   "failure_explanation": "An oracle ceiling can be mistaken for a deployable system when a report omits the selector. The gap may be large even if every task has a correct candidate somewhere. Evaluating only bank coverage rewards availability without measuring the controller's ability to identify the right answer.\n\nAnother failure transports the finite ceiling to unseen tasks or candidate classes. The stated maximum is conditional on the supplied bank and distribution. Adding a new candidate can raise it; changing task weights can change it; a new interface can change feasibility.\n\nThe independent curve also becomes misleading under shared errors. Candidates may agree because they share a failure mechanism, not because repeated sampling created independent evidence. Use the finite success matrix to study actual overlap, and treat the independent curve as a labeled construction rather than an empirical extrapolation.",
-  "transfer_explanation": "The transfer bank has oracle coverage 1 because candidate 0 solves both tasks. Selection chooses candidate 1, which solves only task 0, so actual success is 0.5. Task 1 is denied, but it was already a selected failure, leaving deployed success 0.5.\n\nFor local use, define the candidate bank and task success predicate before inspecting selection. Keep permission filtering outside correctness labels so a denied correct answer is not counted as a model error. Report the supported conditional ceiling together with actual selector performance and the missing measurements needed for any proposed expansion. Do not rename a finite bank result an open-ended capability maximum.",
+  "transfer_explanation": "The transfer bank has oracle coverage 1 because candidate 0 solves both tasks. Selection chooses candidate 1, which solves only task 0, so actual success is 0.5. Task 1 is denied, but it was already a selected failure, leaving deployed success 0.5.\n\nFor your own case, define the candidate bank and task success predicate before inspecting selection. Keep permission filtering outside correctness labels so a denied correct answer is not counted as a model error. Report the supported conditional ceiling together with actual selector performance and the missing measurements needed for any proposed expansion. Do not rename a finite bank result an open-ended capability maximum.",
   "summary": "Available capability, selected capability, and deployed capability are different quantities. This notebook verifies their ordering and exposes selector and authority gaps under a fixed task distribution. The changed case improves selection while limiting deployment; the transfer checks overlap. Prefix coverage is finite-bank evidence, while independent saturation is a separate construction. Any ceiling remains conditional on bank, distribution, interface, and permissions, without forecasting universal future capability.",
   "limitations": [
     "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
@@ -128,12 +128,12 @@
   },
   "exercises": [
     {
-      "question": "What are default oracle,actual,deployed values?",
+      "question": "What are the default oracle, actual and deployed values?",
       "answer": "Each task is solved by some candidate, so the oracle coverage is 1. Selecting candidate 0 for every task solves only task 0, so actual selection success is 0.2 (its weight), and with deployment allowed everywhere the deployed value is also 0.2. The three values are 1, 0.2 and 0.2."
     },
     {
       "question": "Why is changed deployment 0.5 despite perfect selection?",
-      "answer": "The denied task has weight 0.5."
+      "answer": "The changed selector picks the passing specialist for every task, so actual success is 0.2 + 0.3 + 0.5 = 1.0. Deployment then denies task 2 (counting from 0), whose weight is 0.5, so deployed success is 0.2 + 0.3 = 0.5. The lost 0.5 is an authority limit, not a selection or model error."
     },
     {
       "question": "Can adding a candidate reduce oracle prefix coverage?",
@@ -149,5 +149,6 @@
     "Deployment<=selection<=oracle for every fixture.",
     "Prefix coverage is nondecreasing.",
     "Invalid selected indices are rejected."
-  ]
+  ],
+  "agent_application": "A finite bank may contain a successful action that the agent cannot recognize or is not permitted to deploy. Separate oracle coverage, actual selection and authorized completion. The bank ceiling says nothing about unexamined tasks or future candidate classes."
 }

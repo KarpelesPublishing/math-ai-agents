@@ -28,6 +28,15 @@ def main(argv=None):
     cap = sub.add_parser("capstone", help="Run the integrated fictitious document-release controller.")
     cap.add_argument("--input", type=Path)
     cap.add_argument("--output", type=Path)
+    demo = sub.add_parser('demo', help='Run a matching web/notebook demonstration.')
+    demo.add_argument('--chapter', type=int, required=True)
+    demo.add_argument('--id', required=True)
+    demo.add_argument('--input', type=Path, help='Complete declared controls as JSON.')
+    demo.add_argument('--output', type=Path)
+    demo.add_argument('--figure', type=Path)
+    demo.add_argument('--text', action='store_true')
+    catalog = sub.add_parser('demo-list', help='List chapter demonstrations and declared controls.')
+    catalog.add_argument('--chapter', type=int, required=True)
     sub.add_parser("list")
     args = parser.parse_args(argv)
     try:
@@ -47,6 +56,18 @@ def main(argv=None):
             from .capstone import simulate
             data = json.loads(args.input.read_text(encoding="utf-8")) if args.input else None
             output = json.dumps(simulate(data), indent=2, ensure_ascii=False, allow_nan=False)
+        elif args.command == 'demo':
+            from .demos import run_demo, demo_report_text
+            controls = json.loads(args.input.read_text(encoding='utf-8')) if args.input else None
+            report = run_demo(args.chapter, args.id, controls, include_figure=bool(args.figure))
+            if args.figure:
+                args.figure.parent.mkdir(parents=True, exist_ok=True)
+                args.figure.write_text(report.pop('figure_svg'), encoding='utf-8')
+            output = demo_report_text(report) if args.text else json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False)
+        elif args.command == 'demo-list':
+            from .demos import demo_catalog
+            output = json.dumps([{'id': d['id'], 'title': d['title'], 'controls': d['controls']}
+                                 for d in demo_catalog(args.chapter)], indent=2, ensure_ascii=False)
         else:
             output = "\n".join(f"{n:02d}  {chapter_content(n)['slug']}" for n in available_chapters())
         target = getattr(args, "output", None)

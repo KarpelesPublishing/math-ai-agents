@@ -1,0 +1,257 @@
+{
+  "chapter": 13,
+  "title": "Learning to Choose: Training an Agent from Trajectories",
+  "source_path": "Manuscript/part-iii/13-learning-to-choose.md",
+  "source_sha256": "c7a59b429f5f75a0ae08aa3479d95f49341dba631ace4dab3920c70627ea571d",
+  "notebook": "notebooks/13-finite-policy-learning.ipynb",
+  "skill": "maa-13-finite-policy-learning",
+  "skill_path": "skills/maa-13-finite-policy-learning/SKILL.md",
+  "method": "finite-policy-learning",
+  "outcome": "Train a seeded softmax policy with REINFORCE and evaluate a separate success predicate.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "REINFORCE verifier mismatch",
+    "seeded softmax policy learning",
+    "terminal reward shaping audit"
+  ],
+  "input_fields": {
+    "rewards": "Finite verifier reward per one-step action.",
+    "success_probabilities": "External success chance per action in [0,1].",
+    "terminal_potentials": "Potential value of each terminal action outcome; zero is the episodic invariant condition.",
+    "episodes": "Bounded training sample count 1..10000.",
+    "seeds": "Nonempty integer seed list.",
+    "learning_rate": "Logit step size in [0,1].",
+    "discount": "Gamma in [0,1].",
+    "evaluation_runs": "Positive separate evaluation count."
+  },
+  "example_input": "data/examples/ch13.json",
+  "reader": "readers/13-finite-policy-learning/reader.html",
+  "equations": [
+    {
+      "label": "EQV13-01",
+      "number": "13.1",
+      "tex": "\\tau=(o_0,a_0,r_0,o_1,a_1,r_1,\\ldots,o_T),\n\\qquad G_t=\\sum_{k=t}^{T-1}\\gamma^{k-t}r_k.\n\\tag{13.1}",
+      "asset": "assets/math/e8b63b917b0cd273f2b0.svg",
+      "explanations": [
+        "Equation (13.1) separates observations, sampled actions, rewards, terminal condition, and return-to-go.",
+        "Observe, choose action, receive reward and next observation; stop at terminal `o_T`."
+      ]
+    },
+    {
+      "label": "EQV13-02",
+      "number": "13.2",
+      "tex": "\\nabla_\\phi J(\\phi)=\\operatorname E_{\\tau\\sim\\pi_\\phi}\\!\\left[\n\\sum_{t=0}^{T-1}\\gamma^t\\nabla_\\phi\\log \\pi_\\phi(a_t\\mid o_t)\\,G_t\n\\right].\n\\tag{13.2}",
+      "asset": "assets/math/5057a181c49bf1e087f0.svg",
+      "explanations": [
+        "Equation (13.2) estimates how changing action probabilities changes expected trajectory return.",
+        "Raise probability of sampled actions in proportion to discounted return-to-go, averaged over trajectories."
+      ]
+    },
+    {
+      "label": "EQV13-03",
+      "number": "13.3",
+      "tex": "r'_t=r_t+\\gamma\\operatorname{Pot}(x_{t+1})-\\operatorname{Pot}(x_t).\n\\tag{13.3}",
+      "asset": "assets/math/fa10db71513b077b1f44.svg",
+      "explanations": [
+        "Equation (13.3) moves some feedback between stages through a stated state potential.",
+        "Add the discounted potential of the next state and subtract the potential of the state just left."
+      ]
+    },
+    {
+      "label": "EQV13-04",
+      "number": "13.4",
+      "tex": "G'_0\n=\nG_0-\\operatorname{Pot}(x_0)\n+\\gamma^T\\operatorname{Pot}(x_T).\n\\tag{13.4}",
+      "asset": "assets/math/c2a7371dff0313500054.svg",
+      "explanations": [
+        "Equation (13.4) shows exactly which terms remain after intermediate potential changes cancel.",
+        "Interior potentials telescope away; the initial and discounted terminal potentials survive."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C13-D01",
+      "title": "What one episode records: return-to-go and the action mask",
+      "notebook_anchor": "demo-c13-d01",
+      "source_section": "What one training episode contains",
+      "source_anchor": "what-one-training-episode-contains",
+      "equations": [
+        "\\tau=(o_0,a_0,r_0,o_1,a_1,r_1,\\ldots,o_T),\\qquad G_t=\\sum_{k=t}^{T-1}\\gamma^{k-t}r_k.",
+        "-[(1)(-0.4)+(0)(-1.2)]=0.4"
+      ],
+      "controls": [
+        {
+          "key": "stream",
+          "label": "Reward stream",
+          "values": [
+            "release",
+            "exercise"
+          ],
+          "default": "release",
+          "value_labels": [
+            "Release task: -0.05, 0, 1",
+            "Chapter exercise: 1, 2"
+          ]
+        },
+        {
+          "key": "gamma",
+          "label": "Discount gamma",
+          "values": [
+            1.0,
+            0.9,
+            0.5
+          ],
+          "default": 1.0
+        },
+        {
+          "key": "tool_mask",
+          "label": "Mask on the observed tool text",
+          "values": [
+            0,
+            1
+          ],
+          "default": 0,
+          "value_labels": [
+            "Mask 0 (excluded from the loss)",
+            "Mask 1 (counted by mistake)"
+          ]
+        }
+      ],
+      "function": "return_picture",
+      "states": 12
+    },
+    {
+      "id": "C13-D02",
+      "title": "Retrieve or answer: the gradient of one choice and what a baseline changes",
+      "notebook_anchor": "demo-c13-d02",
+      "source_section": "Retrieve or answer",
+      "source_anchor": "retrieve-or-answer",
+      "equations": [
+        "\\nabla_\\phi J(\\phi)=\\operatorname E_{\\tau\\sim\\pi_\\phi}\\!\\left[\\sum_{t=0}^{T-1}\\gamma^t\\nabla_\\phi\\log \\pi_\\phi(a_t\\mid o_t)\\,G_t\\right].",
+        "\\sum_a\\pi_\\phi(a\\mid o)\\nabla_\\phi\\log \\pi_\\phi(a\\mid o)=0"
+      ],
+      "controls": [
+        {
+          "key": "phi",
+          "label": "Policy parameter phi",
+          "values": [
+            -2,
+            0,
+            1,
+            3
+          ],
+          "default": 0
+        },
+        {
+          "key": "baseline",
+          "label": "Baseline subtracted from the return",
+          "values": [
+            "none",
+            "expected",
+            "action"
+          ],
+          "default": "none",
+          "value_labels": [
+            "None",
+            "Expected return b (context only)",
+            "Return of the sampled action (breaks the rule)"
+          ]
+        }
+      ],
+      "function": "retrieve_picture",
+      "states": 12
+    },
+    {
+      "id": "C13-D03",
+      "title": "A verifier can teach the wrong success",
+      "notebook_anchor": "demo-c13-d03",
+      "source_section": "A verifier can teach the wrong success",
+      "source_anchor": "a-verifier-can-teach-the-wrong-success",
+      "equations": [
+        "\\nabla_\\phi J(\\phi)=\\operatorname E_{\\tau\\sim\\pi_\\phi}\\!\\left[\\sum_{t=0}^{T-1}\\gamma^t\\nabla_\\phi\\log \\pi_\\phi(a_t\\mid o_t)\\,G_t\\right]."
+      ],
+      "controls": [
+        {
+          "key": "scenario",
+          "label": "Case",
+          "values": [
+            "default",
+            "changed",
+            "transfer",
+            "story"
+          ],
+          "default": "default",
+          "value_labels": [
+            "Default: rewards 1, 2; success 0.9, 0.2",
+            "Changed: rewards 2, 1",
+            "Transfer: rewards 0, 1; potentials 2, 0; success 0, 1",
+            "Chapter story: noisy verifier plus shortcut tool"
+          ]
+        },
+        {
+          "key": "length",
+          "label": "Training length",
+          "values": [
+            "short",
+            "case",
+            "long"
+          ],
+          "default": "case",
+          "value_labels": [
+            "10 episodes",
+            "The case's own length (120; transfer 100)",
+            "400 episodes"
+          ]
+        }
+      ],
+      "function": "verifier_picture",
+      "states": 12
+    },
+    {
+      "id": "C13-D04",
+      "title": "Reward shaping: what cancels and what does not",
+      "notebook_anchor": "demo-c13-d04",
+      "source_section": "When the reward arrives in pieces",
+      "source_anchor": "when-the-reward-arrives-in-pieces",
+      "equations": [
+        "r'_t=r_t+\\gamma\\operatorname{Pot}(x_{t+1})-\\operatorname{Pot}(x_t).",
+        "G'_0=G_0-\\operatorname{Pot}(x_0)+\\gamma^T\\operatorname{Pot}(x_T)."
+      ],
+      "controls": [
+        {
+          "key": "evidence_potential",
+          "label": "Potential of the evidence state",
+          "values": [
+            0.4,
+            1.0
+          ],
+          "default": 0.4
+        },
+        {
+          "key": "retrieve_end_potential",
+          "label": "Potential at the end of the retrieve route",
+          "values": [
+            0.0,
+            0.2
+          ],
+          "default": 0.0
+        },
+        {
+          "key": "direct_end_potential",
+          "label": "Potential at the end of the direct route",
+          "values": [
+            0.0,
+            0.2,
+            0.3
+          ],
+          "default": 0.0
+        }
+      ],
+      "function": "shaping_picture",
+      "states": 12
+    }
+  ]
+}

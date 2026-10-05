@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch11</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 11: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Express default regret through counts.</p>
+<p>Arm 1 (mean 0.7) is best, so each pull of arm 0 (mean 0.4) costs 0.7 - 0.4 = 0.3 and pulls of arm 1 cost nothing. Regret = 0.3 x n0. Check against the returned counts: greedy 0.3 x 2 = 0.6, UCB 0.3 x 31 = 9.3, Thompson 0.3 x 46 = 13.8, matching the reported pseudo-regrets.</p>
+<h2>Question 2</h2>
+<p>Does common pull cost change arm pseudo-regret?</p>
+<p>No. Pseudo-regret compares mean payoffs of arms, and a cost charged equally to every pull cancels from each gap. It only lowers net observed reward, by 0.05 x 120 = 6 for every policy (for example greedy: 90 successes - 6 = 84).</p>
+<h2>Question 3</h2>
+<p>Express transfer regret.</p>
+<p>The best transfer mean is 0.8, so each pull of arm 0 costs 0.8-0.2=0.6 and each pull of arm 1 costs 0.8-0.5=0.3. Regret is 0.6 x n0 + 0.3 x n1, where n0 and n1 count pulls of arms 0 and 1; pulls of the best arm add none. With the returned counts: greedy 0.6 x 1 + 0.3 x 1 = 0.9, UCB 0.6 x 9 + 0.3 x 25 = 12.9, Thompson 0.6 x 2 + 0.3 x 2 = 1.8, matching the reported values.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>If tool A succeeds 0.78 and tool B 0.90, how much regret does an agent that rotates evenly build up over 500 tasks?</p>
+<p>Half the tasks go to A and cost 0.12 each: 250 x 0.12 = 30. Equivalently 500 x 0.90 - (250 x 0.78 + 250 x 0.90) = 450 - 420 = 30.</p>
+<p><strong>Prediction answer:</strong> Stuck regret grows ten times; the optimistic run grows by less than ten times..</p>
+<p>Stuck regret is 0.12 x 1,000 = 120 and 0.12 x 10,000 = 1,200, ten times. The optimistic run goes from 29.64 to 105.24, about 3.6 times.</p>
+<p><strong>If you chose another answer:</strong> Choose the ten-times-longer run in the book's world: stuck regret goes from 0.12 x 1,000 = 120 to 0.12 x 10,000 = 1,200 (ten times), while the optimistic run goes from 29.64 to 105.24, about 3.6 times.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>At pull 5 of the table the counts are 3 and 1 after 4 completed pulls. With c = 1.414, what is B's bonus?</p>
+<p>ln 4 = 1.386, so the bonus is 1.414 x sqrt(1.386 / 1) = 1.414 x 1.177 = 1.665 (rounded).</p>
+<p><strong>Prediction answer:</strong> Tool B, because its bonus is larger than the gap in means..</p>
+<p>B's index is 0.000 + 1.665 = 1.665 and A's is 0.667 + 0.961 = 1.628, so B is called although its mean is lower.</p>
+<p><strong>If you chose another answer:</strong> Pick pull 5 with c = 1.414: B's bonus is 1.414 x sqrt(1.386 / 1) = 1.665, so its index 1.665 beats A's 0.667 + 0.961 = 1.628 and B is called.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>With prior 0.85 and a check that is right 0.70 of the time, a report of unsupported leaves the release score at 70.8. Does that report change the action?</p>
+<p>P(supported and report unsupported) = 0.85 x 0.30 = 0.255 and P(report unsupported) = 0.36, so the release score is 100 x 0.255 / 0.36 = 70.8. That is below 92, which is also the action chosen before the check, so this report changes nothing; only the supported report (score 92.97) does.</p>
+<p><strong>Prediction answer:</strong> It removes uncertainty but does not change the action..</p>
+<p>The gain is positive, but a supported report moves the release score only to 100 x 0.8947 = 89.5, still below 92, so the same action wins and VOI is 0.</p>
+<p><strong>If you chose another answer:</strong> Set accuracy 0.60 and prior 0.85: the gain is positive (the reports correlate with the claim), but neither report lifts the release score above 92, so the action never changes and VOI is 0.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>With a shift of 5, what is the gross value, and is the call worth buying at cost 2?</p>
+<p>Release scores 80 after flag and 95 after clear, and 90 before. With the call: 1/3 x 92 + 2/3 x 95 = 94.0, so gross value = 94 - 92 = 2.0. Net = 2 - 2 = 0, a tie.</p>
+<p><strong>Prediction answer:</strong> Yes: gross value is 7/3 = 2.333, above 2, so the net value is 0.333..</p>
+<p>With 10 added, flag leaves release at 85 (evidence wins, 92) and clear gives 100: 1/3 x 92 + 2/3 x 100 = 97.333 against 95 before, so gross 7/3 and net 7/3 - 2 = 0.333.</p>
+<p><strong>If you chose another answer:</strong> Set the shift to 10 and the cost to 2: with the call the best scores are 92 after flag and 100 after clear, 1/3 x 92 + 2/3 x 100 = 97.333, against 95 without it, so gross value is 7/3 = 2.333 and net 0.333.</p></body></html>

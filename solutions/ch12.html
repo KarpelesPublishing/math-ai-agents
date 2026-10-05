@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch12</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 12: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute default trace update to draft.</p>
+<p>Updating draft uses learning rate 0.5, a temporal-difference error of 1 at review (reward 1, no bootstrap) and trace weight discount times lambda, 1(0.8)=0.8: 0.5&#42;1&#42;0.8=0.4.</p>
+<h2>Question 2</h2>
+<p>What are changed return targets?</p>
+<p>[3,3], because final bootstrap 2 adds to final reward 1.</p>
+<h2>Question 3</h2>
+<p>What should lambda = 0 match?</p>
+<p>TD(0) under the same sequential update convention.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>In the draft, review, done run (step size 0.5, lambda 0.8, terminal) after one pass, what does the outcome rule give draft, and what does the one-step rule give draft?</p>
+<p>The return from draft is 0 + 1 = 1, so the outcome rule gives 0 + 0.5 x (1 - 0) = 0.5. The one-step error at draft is 0 + 0 - 0 = 0 (review is still 0 when draft is updated), so draft stays at 0.</p>
+<p><strong>Prediction answer:</strong> All four under the outcome rule, only state 4 under the one-step rule..</p>
+<p>The outcome rule moves every state to 0.5 + 0.1 x (1 - 0.5) = 0.55; the one-step errors for states 1 to 3 are 0 + 0.5 - 0.5 = 0, and only state 4 moves, 1 + 0 - 0.5 = 0.5.</p>
+<p><strong>If you chose another answer:</strong> Choose the four-action run at pass 1: the outcome rule moves every state to 0.5 + 0.1 x (1 - 0.5) = 0.55, while the one-step errors for states 1 to 3 are 0 + 0.5 - 0.5 = 0, so only state 4 moves.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>Suppose three of the seven B-only episodes pay 1 and the A episode ends at 0. What is B, and how far is the outcome rule's value for A from the one-step rule's?</p>
+<p>B = (3 + 0) / 8 = 0.375. The outcome rule gives A = 0, the one-step rule gives A = 0.375, so they differ by 0.375.</p>
+<p><strong>Prediction answer:</strong> Outcome rule 0, one-step rule 0.75..</p>
+<p>B = (6 + 0) / 8 = 0.75. The outcome rule copies A's one return, 0; the one-step rule gives A = 0 + B = 0.75.</p>
+<p><strong>If you chose another answer:</strong> Use six ones and an A episode ending at 0: B = (6 + 0) / 8 = 0.75, the outcome rule gives A the one return it saw (0), and the one-step rule gives A = 0 + B = 0.75.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>With 8 transitions remaining and lambda = 0.3, what weight does the first target get, and what does the complete return get?</p>
+<p>First target: 1 - 0.3 = 0.7. Complete return: 0.3^7 = 0.0002187, which the figure labels as less than 0.001. The weights still add to 1.</p>
+<p><strong>Prediction answer:</strong> The complete return, 0.9^7 = 0.478, against 0.1 for the one-step target..</p>
+<p>The complete return gets 0.9^7 = 0.4783 and the one-step target gets 1 - 0.9 = 0.1, as in Figure 12.4.</p>
+<p><strong>If you chose another answer:</strong> Set lambda to 0.9: the one-step target gets 1 - 0.9 = 0.1, while the complete return gets the remaining weight 0.9^7 = 0.4783, as in Figure 12.4.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>At step size 0.5, what is the estimate of y after training, and which action does the controller now choose?</p>
+<p>delta = 1 + 0 - 0.5 = 0.5, so the estimate becomes 0.5 + 0.5 x 0.5 = 0.75. Inspect scores -0.1 + 0.75 = 0.65, above finish's 0.6, so the controller now inspects.</p>
+<p><strong>Prediction answer:</strong> 0.50 and 0.80: any successor above 0.22..</p>
+<p>delta = -0.02 + successor - 0.20: 0.10 gives -0.12, 0.50 gives 0.28 and 0.80 gives 0.58. The error is positive above 0.22.</p>
+<p><strong>If you chose another answer:</strong> Use delta = -0.02 + successor - 0.20: successor 0.10 gives -0.12, 0.50 gives 0.28 and 0.80 gives 0.58, so only the two higher successors give a positive error.</p></body></html>

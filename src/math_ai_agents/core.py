@@ -15,7 +15,7 @@ VERSION = "1.0.0"
 def bundle_root() -> Path:
     root = Path(__file__).resolve().parents[2]
     if not (root / "content").is_dir():
-        raise RuntimeError("The content directory is missing. Run from a full clone of the repository.")
+        raise RuntimeError("The chapter content directory is missing. Restore the complete laboratory bundle.")
     return root
 
 
@@ -24,7 +24,7 @@ def chapter_content(chapter: int) -> dict:
         raise ValueError("Choose an integer chapter from 1 through 27.")
     path = bundle_root() / "content" / f"ch{chapter:02d}.json"
     if not path.is_file():
-        raise ValueError(f"Chapter {chapter} is missing from the content directory.")
+        raise ValueError(f"Chapter {chapter} has not been installed in this bundle.")
     return json.loads(path.read_text(encoding="utf-8"))
 
 

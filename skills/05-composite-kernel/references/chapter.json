@@ -1,0 +1,278 @@
+{
+  "chapter": 5,
+  "title": "What the Model Becomes Inside an Agent",
+  "source_path": "Manuscript/revisions/part-i-v2/05-what-the-model-becomes-inside-an-agent.md",
+  "source_sha256": "466dcf8031dda473ec8808bcf24d5e728739664ed11c5bb36c6100f93c969d8b",
+  "notebook": "notebooks/05-composite-kernel.ipynb",
+  "skill": "maa-05-composite-kernel",
+  "skill_path": "skills/maa-05-composite-kernel/SKILL.md",
+  "method": "composite-kernel",
+  "outcome": "Compose a chooser and tool kernel, then separate marginal from trajectory reliability.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "compose frozen chooser tool kernel",
+    "conditional versus marginal trajectory reliability",
+    "shared failure long-run construction"
+  ],
+  "input_fields": {
+    "step_success": "Marginal equal-step probability in [0,1] for separate constructed reliability cases.",
+    "steps": "Positive integer transition count up to 1000.",
+    "conditional_success": "List of probabilities conditioned on all previous steps succeeding, one per step; its length must equal steps.",
+    "chooser": "State by action row-stochastic matrix.",
+    "tool": "Action by next-state row-stochastic matrix.",
+    "initial": "Normalized state distribution matching the composed kernel.",
+    "assemblies": "Optional rows with name,budget,steps,observation,memory,retrieval,tool. Context maps are square stochastic matrices in the declared context encoding. Chooser stays fixed. Resource allowances must share units; actual consumed work is not measured."
+  },
+  "example_input": "data/examples/ch05.json",
+  "reader": "readers/05-composite-kernel/reader.html",
+  "equations": [
+    {
+      "label": "chapter-05-display-1",
+      "number": "un-numbered display 1",
+      "tex": "0.90(0.85)+0.10(0.10)=0.775.",
+      "asset": "assets/math/788eb3973bb881ecf8ff.svg",
+      "explanations": []
+    },
+    {
+      "label": "EQV5-01",
+      "number": "5.1",
+      "tex": "x_t=(c_t,m_t,w_t,b_t).\n\\tag{5.1}",
+      "asset": "assets/math/5f46914d9ff9a53d8e15.svg",
+      "explanations": [
+        "Equation (5.1) says the agent's real state is larger than its current prompt, bundling context with retained memory, the world, and the remaining budget.",
+        "The state at time $t$ is the four listed coordinates held together: the context, the memory, the world, and the budget."
+      ]
+    },
+    {
+      "label": "chapter-05-display-3",
+      "number": "un-numbered display 3",
+      "tex": "\\pi_\\theta(z,a\\mid x)=K_\\theta(z\\mid c)\\operatorname{dec}(a\\mid z,c).",
+      "asset": "assets/math/58eccb7e6e81e54929b0.svg",
+      "explanations": []
+    },
+    {
+      "label": "EQV5-02",
+      "number": "5.2",
+      "tex": "\\begin{aligned}\nP_{\\mathrm{env}}(x'\\mid x,u)\n &=\\sum_{g,o}\\operatorname{Grant}(g\\mid x,u)\\\\\n &\\quad\\cdot \\operatorname{Env}(w',o\\mid x,u,g)\\\\\n &\\quad\\cdot \\operatorname{Upd}(c',m',b'\\mid x,u,g,w',o),\\\\[3pt]\nP_\\theta(x'\\mid x)\n &=\\sum_u\\pi_\\theta(u\\mid x)P_{\\mathrm{env}}(x'\\mid x,u).\n\\end{aligned}\n\\tag{5.2}",
+      "asset": "assets/math/d730604202b83b1f70fe.svg",
+      "explanations": [
+        "Equation (5.2) defines every coordinate of the next state and separates a controlled transition from the policy that selects proposals.",
+        "For a fixed proposal, draw the permission outcome, next world and observation, then the internal update, and average that normalized transition over the model and decoder's proposal law."
+      ]
+    },
+    {
+      "label": "chapter-05-display-5",
+      "number": "5.3",
+      "tex": "\\sum_{y:\\kappa(y)=\\bar y}P(y\\mid x_1,a)\n=\n\\sum_{y:\\kappa(y)=\\bar y}P(y\\mid x_2,a).\n\\tag{5.3}",
+      "asset": "assets/math/570697d8140dd69c230d.svg",
+      "explanations": [
+        "Equation (5.3) states when merging detailed states preserves the controlled process relevant to action.",
+        "From either detailed state, an allowed action must send equal probability into every abstract class."
+      ]
+    },
+    {
+      "label": "EQV5-03",
+      "number": "5.4",
+      "tex": "I(Y;O)=H(Y)-H(Y\\mid O).\n\\tag{5.4}",
+      "asset": "assets/math/94b9a9d7210adada496e.svg",
+      "explanations": [
+        "Equation (5.4) measures how much a tool's observation actually reduces uncertainty about the thing the agent needs to know.",
+        "Subtract the uncertainty remaining about $Y$ after seeing the observation from the uncertainty before it; what remains is what the observation told you."
+      ]
+    },
+    {
+      "label": "EQV5-04",
+      "number": "5.5",
+      "tex": "\\Pr(x_{0:T})=\\Pr(x_0)\\prod_{t=0}^{T-1}P(x_{t+1}\\mid x_t).\n\\tag{5.5}",
+      "asset": "assets/math/4bb12830ba698a772a97.svg",
+      "explanations": [
+        "Equation (5.5) says a whole run's probability is a product of one-step probabilities, so recurrence multiplies rather than adds.",
+        "Start from the initial state and multiply the one-step transition probabilities along the run."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C05-D01",
+      "title": "Six assemblies around one frozen model",
+      "notebook_anchor": "demo-c05-d01",
+      "source_section": "The fair experiment",
+      "source_anchor": "the-fair-experiment",
+      "equations": [
+        "0.90(0.85)+0.10(0.10)=0.775",
+        "x_t=(c_t,m_t,w_t,b_t)"
+      ],
+      "controls": [
+        {
+          "key": "request",
+          "label": "Share of blind calls that output request",
+          "values": [
+            0.2,
+            0.4,
+            0.6
+          ],
+          "default": 0.4
+        },
+        {
+          "key": "rejection",
+          "label": "What a denied request does",
+          "values": [
+            "stop",
+            "blind"
+          ],
+          "default": "stop",
+          "value_labels": [
+            "Stops, no answer (the book's rule)",
+            "Makes a second blind call"
+          ]
+        },
+        {
+          "key": "calls",
+          "label": "Calls allowed in a run",
+          "values": [
+            2,
+            1
+          ],
+          "default": 2,
+          "value_labels": [
+            "Two (the book's budget)",
+            "One"
+          ]
+        }
+      ],
+      "function": "six_assemblies_picture",
+      "states": 12
+    },
+    {
+      "id": "C05-D02",
+      "title": "A fixed chooser, a different tool, a different system",
+      "notebook_anchor": "demo-c05-d02",
+      "source_section": "The law the model does not contain",
+      "source_anchor": "the-law-the-model-does-not-contain",
+      "equations": [
+        "\\begin{aligned}P_{\\mathrm{env}}(x'\\mid x,u) &=\\sum_{g,o}\\operatorname{Grant}(g\\mid x,u)\\\\ &\\quad\\cdot \\operatorname{Env}(w',o\\mid x,u,g)\\\\ &\\quad\\cdot \\operatorname{Upd}(c',m',b'\\mid x,u,g,w',o),\\\\[3pt]P_\\theta(x'\\mid x) &=\\sum_u\\pi_\\theta(u\\mid x)P_{\\mathrm{env}}(x'\\mid x,u).\\end{aligned}"
+      ],
+      "controls": [
+        {
+          "key": "system",
+          "label": "System",
+          "values": [
+            "default",
+            "changed",
+            "transfer"
+          ],
+          "default": "default",
+          "value_labels": [
+            "Default tool",
+            "Changed tool",
+            "Transfer case"
+          ]
+        },
+        {
+          "key": "transitions",
+          "label": "Number of transitions",
+          "values": [
+            1,
+            2,
+            3,
+            30
+          ],
+          "default": 2
+        }
+      ],
+      "function": "composite_kernel_picture",
+      "states": 12
+    },
+    {
+      "id": "C05-D03",
+      "title": "What an observation is worth, and what a memory may drop",
+      "notebook_anchor": "demo-c05-d03",
+      "source_section": "What an observation is worth",
+      "source_anchor": "what-an-observation-is-worth",
+      "equations": [
+        "I(Y;O)=H(Y)-H(Y\\mid O)",
+        "\\sum_{y:\\kappa(y)=\\bar y}P(y\\mid x_1,a)=\\sum_{y:\\kappa(y)=\\bar y}P(y\\mid x_2,a)"
+      ],
+      "controls": [
+        {
+          "key": "accuracy",
+          "label": "Chance the tool reports the bit correctly",
+          "values": [
+            0.5,
+            0.75,
+            0.9,
+            1.0
+          ],
+          "default": 0.9
+        },
+        {
+          "key": "reaches",
+          "label": "What happens to the report",
+          "values": [
+            "stops",
+            "dropped",
+            "reaches"
+          ],
+          "default": "stops",
+          "value_labels": [
+            "The run stops (tool, no recurrence)",
+            "The memory drops it (second call is blind)",
+            "It is kept and enters the next context (connected, granted)"
+          ]
+        }
+      ],
+      "function": "observation_picture",
+      "states": 12
+    },
+    {
+      "id": "C05-D04",
+      "title": "Recurrence multiplies",
+      "notebook_anchor": "demo-c05-d04",
+      "source_section": "Recurrence multiplies",
+      "source_anchor": "recurrence-multiplies",
+      "equations": [
+        "\\Pr(x_{0:T})=\\Pr(x_0)\\prod_{t=0}^{T-1}P(x_{t+1}\\mid x_t)",
+        "n = \\log 0.5 / \\log p"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Per-step success",
+          "values": [
+            "p95",
+            "p99",
+            "p999",
+            "transfer"
+          ],
+          "default": "p99",
+          "value_labels": [
+            "0.95 per step",
+            "0.99 per step",
+            "0.999 per step",
+            "Transfer: rates 0.9, 0.8, 0.7 over 3 steps"
+          ]
+        },
+        {
+          "key": "handling",
+          "label": "How steps relate",
+          "values": [
+            "none",
+            "retry",
+            "shared"
+          ],
+          "default": "none",
+          "value_labels": [
+            "Independent, no retry",
+            "Independent, one retry per step",
+            "One shared cause (same marginal)"
+          ]
+        }
+      ],
+      "function": "recurrence_picture",
+      "states": 12
+    }
+  ]
+}

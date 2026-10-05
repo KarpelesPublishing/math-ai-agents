@@ -46,6 +46,22 @@ class ChapterMathTests(unittest.TestCase):
         self.assertEqual(m['slope'],c['slope']);self.assertAlmostEqual(c['test_rmse'],math.sqrt((.3**2+.35**2)/2))
         d=fixture(3);d['test_x']=[3,5]
         with self.assertRaises(ValueError):evaluate(3,d)
+    def test_03_residual_sign_matches_book_equation_and_reader(self):
+        m=evaluate(3,case='changed')['metrics']
+        self.assertAlmostEqual(m['test_bias'],(.3+.35)/2)
+        d=fixture(3,'changed');d['test_y']=[.2,.25]
+        m=evaluate(3,d)['metrics']
+        self.assertAlmostEqual(m['test_bias'],(-.3-.35)/2)
+
+    def test_23_plot_includes_data_promotions_and_forbidden_actions(self):
+        for case in ('defaults','changed','transfer'):
+            out=evaluate(23,case=case)
+            self.assertEqual(out['metrics']['security_violations'],out['series'][0]['y'][-1])
+        d=fixture(23);d['events']=[{'kind':'data','instruction_attempt':True,'promoted_to_control':True}]
+        out=evaluate(23,d)
+        self.assertEqual(1,out['metrics']['security_violations'])
+        self.assertEqual([1],out['series'][0]['y'])
+
     def test_04_permission_bridge_and_cycle(self):
         m=evaluate(4)['metrics'];self.assertEqual(m['authorized_path'],['draft','review','release']);self.assertEqual(m['authorized_count'],4)
         c=evaluate(4,case='changed')['metrics'];self.assertTrue(c['raw_reachable']);self.assertFalse(c['authorized_reachable']);self.assertEqual(c['authorized_count'],3)

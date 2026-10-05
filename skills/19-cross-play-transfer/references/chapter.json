@@ -1,0 +1,243 @@
+{
+  "chapter": 19,
+  "title": "When Another Mind Becomes Part of the World",
+  "source_path": "Manuscript/part-v/19-when-another-mind-becomes-part-of-the-world.md",
+  "source_sha256": "f4cf96a1875e4bc82b7c764ab24146dc1360dd7d5fc8713450e80c6b711674f9",
+  "notebook": "notebooks/19-cross-play-transfer.ipynb",
+  "skill": "maa-19-cross-play-transfer",
+  "skill_path": "skills/maa-19-cross-play-transfer/SKILL.md",
+  "method": "cross-play-transfer",
+  "outcome": "Compute diagonal, cross-play, and deployment-mixture performance.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "self-play cross-play partner transfer",
+    "counterparty distribution policy audit",
+    "supervisor mixture coordination"
+  ],
+  "input_fields": {
+    "matrix": "Square policy by partner success-probability matrix, entries in [0,1].",
+    "partner_weights": "Normalized target partner distribution.",
+    "supervisor_weights": "Normalized changed partner or supervisor distribution over the same columns."
+  },
+  "example_input": "data/examples/ch19.json",
+  "reader": "readers/19-cross-play-transfer/reader.html",
+  "equations": [
+    {
+      "label": "EQV19-01",
+      "number": "19.1",
+      "tex": "M_{st} \\;=\\; \\mathrm{E}\\Big[\\,u\\big(\\pi_1^{(s)},\\,\\pi_2^{(t)}\\big)\\Big].\n\\tag{19.1}",
+      "asset": "assets/math/e5e2d644660293fd85ea.svg",
+      "explanations": [
+        "Equation (19.1) records what happens when a policy from one training run meets a policy from another.",
+        "Take party one's policy from run `s`, party two's from run `t`, play them together, and average the return."
+      ]
+    },
+    {
+      "label": "EQV19-02",
+      "number": "19.2",
+      "tex": "\\operatorname{JPC}(M) \\;=\\; \\frac{\\operatorname{diag}(M) - \\operatorname{off}(M)}{\\operatorname{diag}(M)}.\n\\tag{19.2}",
+      "asset": "assets/math/b8cfa44bbf5609ac31b6.svg",
+      "explanations": [
+        "Equation (19.2) normalizes the measured matched-partner gap under the declared procedure.",
+        "Subtract the average score against strangers from the average score against training partners, and divide by the latter."
+      ]
+    },
+    {
+      "label": "EQV19-03",
+      "number": "19.3",
+      "tex": "P\\big(x' \\mid x, a\\big) \\;\\longrightarrow\\; P\\big(x' \\mid x, a,\\, \\pi_{-i}\\big).\n\\tag{19.3}",
+      "asset": "assets/math/620a3d1e80b330eeb468.svg",
+      "explanations": [
+        "Equation (19.3) exposes a policy dependence that must be checked before applying a stationary-system guarantee.",
+        "The distribution over next states now depends on the other party's policy as well as on the state and the action."
+      ]
+    },
+    {
+      "label": "EQV19-04",
+      "number": "19.4",
+      "tex": "\\operatorname{BR}_i(\\pi_{-i}) \\;=\\; \\arg\\max_{\\pi_i}\\; u_i\\big(\\pi_i, \\pi_{-i}\\big).\n\\tag{19.4}",
+      "asset": "assets/math/778d192b670fc1a2a421.svg",
+      "explanations": [
+        "Equation (19.4) gives the best an agent can do against a stated opponent policy.",
+        "Choose the policy maximizing this party's payoff, holding the other party's policy fixed."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C19-D01",
+      "title": "Diagonal against off-diagonal",
+      "notebook_anchor": "demo-c19-d01",
+      "source_section": "The instrument",
+      "source_anchor": "the-instrument",
+      "equations": [
+        "M_{st} \\;=\\; \\mathrm{E}\\Big[\\,u\\big(\\pi_1^{(s)},\\,\\pi_2^{(t)}\\big)\\Big].",
+        "\\operatorname{JPC}(M) \\;=\\; \\frac{\\operatorname{diag}(M) - \\operatorname{off}(M)}{\\operatorname{diag}(M)}."
+      ],
+      "controls": [
+        {
+          "key": "task",
+          "label": "Task",
+          "values": [
+            "small2",
+            "small3",
+            "small4",
+            "gathering"
+          ],
+          "default": "small2",
+          "value_labels": [
+            "Laser Tag small2",
+            "Laser Tag small3",
+            "Laser Tag small4",
+            "Gathering"
+          ]
+        },
+        {
+          "key": "view",
+          "label": "View",
+          "values": [
+            "means",
+            "fix"
+          ],
+          "default": "means",
+          "value_labels": [
+            "Means by pairing",
+            "What the population fix did"
+          ]
+        }
+      ],
+      "function": "instrument_picture",
+      "states": 8
+    },
+    {
+      "id": "C19-D02",
+      "title": "A best-response cycle",
+      "notebook_anchor": "demo-c19-d02",
+      "source_section": "A cycle, worked",
+      "source_anchor": "a-cycle-worked",
+      "equations": [
+        "P\\big(x' \\mid x, a\\big) \\;\\longrightarrow\\; P\\big(x' \\mid x, a,\\, \\pi_{-i}\\big).",
+        "\\operatorname{BR}_i(\\pi_{-i}) \\;=\\; \\arg\\max_{\\pi_i}\\; u_i\\big(\\pi_i, \\pi_{-i}\\big)."
+      ],
+      "controls": [
+        {
+          "key": "updates",
+          "label": "Updates shown",
+          "values": [
+            2,
+            4,
+            6,
+            12
+          ],
+          "default": 6
+        },
+        {
+          "key": "start",
+          "label": "Where party two starts",
+          "values": [
+            "A",
+            "B",
+            "C"
+          ],
+          "default": "A"
+        }
+      ],
+      "function": "cycle_picture",
+      "states": 12
+    },
+    {
+      "id": "C19-D03",
+      "title": "Return on depth",
+      "notebook_anchor": "demo-c19-d03",
+      "source_section": "How much of the method is doing the work",
+      "source_anchor": "how-much-of-the-method-is-doing-the-work",
+      "equations": [
+        "\\operatorname{JPC}(M) \\;=\\; \\frac{\\operatorname{diag}(M) - \\operatorname{off}(M)}{\\operatorname{diag}(M)}."
+      ],
+      "controls": [
+        {
+          "key": "depth",
+          "label": "Depth of the method",
+          "values": [
+            "base",
+            "l3",
+            "l5",
+            "l10"
+          ],
+          "default": "l3",
+          "value_labels": [
+            "Independent learners (baseline)",
+            "Level three",
+            "Level five",
+            "Level ten"
+          ]
+        },
+        {
+          "key": "view",
+          "label": "Right panel",
+          "values": [
+            "loss",
+            "reduction",
+            "step"
+          ],
+          "default": "loss",
+          "value_labels": [
+            "Loss left",
+            "Points removed from the baseline",
+            "Return on each step"
+          ]
+        }
+      ],
+      "function": "depth_picture",
+      "states": 12
+    },
+    {
+      "id": "C19-D04",
+      "title": "Which partners will it meet?",
+      "notebook_anchor": "demo-c19-d04",
+      "source_section": "Self-play is the diagonal",
+      "source_anchor": "self-play-is-the-diagonal",
+      "equations": [
+        "M_{st} \\;=\\; \\mathrm{E}\\Big[\\,u\\big(\\pi_1^{(s)},\\,\\pi_2^{(t)}\\big)\\Big].",
+        "\\operatorname{JPC}(M) \\;=\\; \\frac{\\operatorname{diag}(M) - \\operatorname{off}(M)}{\\operatorname{diag}(M)}."
+      ],
+      "controls": [
+        {
+          "key": "matrix",
+          "label": "Matrix",
+          "values": [
+            "two",
+            "three"
+          ],
+          "default": "two",
+          "value_labels": [
+            "Two policies (default case)",
+            "Three policies (transfer case)"
+          ]
+        },
+        {
+          "key": "mix",
+          "label": "Partner mix",
+          "values": [
+            "target",
+            "changed",
+            "tie",
+            "known"
+          ],
+          "default": "target",
+          "value_labels": [
+            "Declared mix",
+            "Changed (supervisor) mix",
+            "A mix where two policies tie",
+            "Partner 0 only"
+          ]
+        }
+      ],
+      "function": "partner_mix_picture",
+      "states": 8
+    }
+  ]
+}

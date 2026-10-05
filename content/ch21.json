@@ -18,7 +18,7 @@
   "method": "Declare demand, congestion capacity, outer constant delay, shortcut overhead, and toll. Validation requires positive demand and capacity and nonnegative other quantities. The function computes symmetric equilibrium flow, path costs, total delay, optimal shortcut flow, and toll revenue.\n\nThe figure varies shortcut flow from zero to total demand and plots exact social travel time. Its minimum should match the reported optimum. In the changed case add toll 0.5 without changing physical travel times. Predict how it shifts equilibrium, then compare social cost. The transfer case reduces demand, checking that a shortcut need not worsen performance under every loading condition.",
   "worked_interpretation": "Without the shortcut, default total time is 1(0.5+1)=1.5. With a zero-cost shortcut, equilibrium sends all demand through it, giving path time 2 and total time 2. The social optimum uses no shortcut and remains at 1.5. Price of anarchy is 2/1.5=4/3.\n\nA toll 0.5 changes the equilibrium shortcut flow to zero. Outer private time is 1.5, while an unused shortcut would also cost 1.5 including toll. Total travel time returns to 1.5. The toll affects incentives; it is not counted as destroyed travel time or an extra physical delay.\n\nThe toll 0.5 sits exactly at the break-even value, so this teaching case is knife-edge. At toll 0.49 the lab returns shortcut flow 0.02 and equilibrium social time 1.5002, and at 0.51 it returns flow 0 and time 1.5. Try nearby tolls to see the threshold rather than reading 0.5 as a robust remedy.",
   "failure_explanation": "The paradox relies on a particular network and demand regime. At low demand, the shortcut can be socially useful and privately efficient. Presenting the default construction as a law against connectivity would erase those conditions.\n\nInstitutional metrics can also confuse transfers with resource costs. A toll payment changes who bears money but is excluded from this travel-time objective. A real institution may care about distributional effects or administrative overhead, which should be modeled separately. Shortcut overhead here is a real delay and therefore enters social cost.\n\nContinuous equilibrium assumes many small participants choosing minimum private cost. A small team with indivisible jobs, strategic coordination, or centralized routing may behave differently. The calculation is an exact finite model result under those assumptions, not a fitted causal claim about organizational performance.",
-  "transfer_explanation": "At demand 0.5, capacity 1, and constant delay 1, equilibrium sends all flow through the shortcut. Its total time is 0.5, below the no-shortcut total 0.625. The social optimum also uses shortcut flow 0.5, so price of anarchy is 1.\n\nFor local workflow analysis, identify who selects routes and which costs they internalize. Separate routing overhead from incentive charges and preserve demand units. Compare local choice with a collective objective before adding a new interface. If route delays are estimated, collect measurements under several loads rather than assuming a linear congestion law.",
+  "transfer_explanation": "At demand 0.5, capacity 1, and constant delay 1, equilibrium sends all flow through the shortcut. Its total time is 0.5, below the no-shortcut total 0.625. The social optimum also uses shortcut flow 0.5, so price of anarchy is 1.\n\nFor workflow analysis, identify who selects routes and which costs they internalize. Separate routing overhead from incentive charges and preserve demand units. Compare local choice with a collective objective before adding a new interface. If route delays are estimated, collect measurements under several loads rather than assuming a linear congestion law.",
   "summary": "Local incentives and collective outcomes can diverge. The Braess construction makes that divergence exact: a shortcut worsens default equilibrium, a toll restores efficient routing, and low-demand transfer removes the paradox. The notebook distinguishes physical overhead from private incentive charges and compares equilibrium with a convex social optimum. Its conclusions depend on the supplied network form, continuous flow, and cost law. It does not infer how a real team will respond.",
   "limitations": [
     "This is a local calculation under declared inputs, not an empirical claim about a deployed agent.",
@@ -55,11 +55,11 @@
   "exercises": [
     {
       "question": "Compute default price of anarchy.",
-      "answer": "2/1.5=4/3."
+      "answer": "At the default (demand 1, zero-cost shortcut) equilibrium sends all traffic through the shortcut, so each congestible edge carries 1 and the social time is 2(1)(1)=2. The social optimum uses no shortcut, 0.5 on each outer route, with social time 1(0.5+1)=1.5. The price of anarchy is 2/1.5=4/3, about 1.333."
     },
     {
       "question": "Why exclude toll revenue from social travel time?",
-      "answer": "It is modeled as a transfer, not physical delay."
+      "answer": "A toll moves money from the traveller to whoever collects it; nobody spends extra time because of it. The objective is total travel time, so adding toll payments would count the same transfer as if it were delay and change the quantity being minimized. The toll belongs in private cost, where it changes route choices, and stays out of social cost."
     },
     {
       "question": "Compute transfer social optimum.",
@@ -75,5 +75,6 @@
     "Default shortcut worsens 1.5 to 2.",
     "Toll 0.5 restores total 1.5.",
     "Low demand transfer optimum uses full shortcut."
-  ]
+  ],
+  "agent_application": "Adding a route or worker can change the incentives of every participant. Compare private routing choices with total workflow cost before assuming that another available path improves the agent team. The network is a declared construction, not a measured deployment."
 }

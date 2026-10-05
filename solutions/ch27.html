@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch27</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 27: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute default review mean.</p>
+<p>Effective arrival 2; mean 1/(3-2)=1.</p>
+<h2>Question 2</h2>
+<p>Why is changed stationary mean unavailable?</p>
+<p>Arrival 3.6 exceeds service 3, so the M/M/1 queue is unstable.</p>
+<h2>Question 3</h2>
+<p>Does mean 1 prove the transfer receipt arrived after 0.5?</p>
+<p>No. It is a planning diagnostic; individual timing needs observed timestamps.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>A model is 0.97 sure and an expert is right with probability 0.95. Which route does Equation (27.2) choose, and by how much?</p>
+<p>0.95 &lt; 0.97, so the route is the most probable class. The classifier leads by 0.97 - 0.95 = 0.02.</p>
+<p><strong>Prediction answer:</strong> Acting wins.</p>
+<p>Delegation is worth 0.60 x 9 + 0.40 x 2 - 1 = 5.2, below acting at 6, even though the expert is still right 0.95 of the time.</p>
+<p><strong>If you chose another answer:</strong> With on-time probability 0.60 delegation is worth 0.60 x 9 + 0.40 x 2 - 1 = 5.2, below acting at 6. The expert's 0.95 holds only when the reply arrives in time.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>If the hold cost 4 instead of 2, what is its net value and does it still beat waiting?</p>
+<p>0.95 x 8.04 + 0.05 x (-4) - 4 - 1 = 7.638 - 0.2 - 5 = 2.438, which is above waiting at 2, so it still wins narrowly.</p>
+<p><strong>Prediction answer:</strong> Waiting for confirmation.</p>
+<p>At cost 5 the hold is worth 7.638 - 0.2 - 5 - 1 = 1.438, below waiting at 2, so waiting wins.</p>
+<p><strong>If you chose another answer:</strong> At cost 5 the hold is worth 0.95 x 8.04 + 0.05 x (-4) - 5 - 1 = 1.438, below waiting at 2, so waiting has the highest value.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>With mu = 4 per hour and f = 0.75, what is the mean time in review in minutes?</p>
+<p>Review arrivals = 0.75 x 4 = 3 per hour. Mean = 1 / (4 - 3) = 1 hour, which is 60 minutes.</p>
+<p><strong>Prediction answer:</strong> 1 hour, then 5 hours, then no stationary mean.</p>
+<p>1 / (3 - 2) = 1 hour, 1 / (3 - 2.8) = 5 hours, and at 0.9 the arrivals 3.6 exceed capacity 3, so no stationary mean exists.</p>
+<p><strong>If you chose another answer:</strong> The time is 1 / (3 - f x 4): 1 hour at 0.5, 1 / 0.2 = 5 hours at 0.7, and at 0.9 the arrivals 3.6 exceed the capacity 3, so there is no stationary mean.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>If the delay cost rose to 3 and the confirmation still arrived with probability 0.5, does the test allow waiting (fallback authorized everywhere)?</p>
+<p>VOI = 0.5 x 9 + 0.5 x (-1) - (-1) = 5, and 5 &gt; 3, so waiting passes. It would fail at or below q = 3 / 10 = 0.30, because equality fails the strict test.</p>
+<p><strong>Prediction answer:</strong> No, the test needs VOI strictly above the delay cost.</p>
+<p>VOI = 10 x 0.20 = 2, equal to the delay cost 2, and the inequality is strict, so waiting is not allowed.</p>
+<p><strong>If you chose another answer:</strong> VOI = 0.20 x 9 + 0.80 x (-1) - (-1) = 2, which equals the delay cost 2. Equation (27.4) needs strictly more, so waiting fails at the boundary.</p></body></html>

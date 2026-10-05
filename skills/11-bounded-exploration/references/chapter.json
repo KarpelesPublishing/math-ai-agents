@@ -1,0 +1,238 @@
+{
+  "chapter": 11,
+  "title": "The Mathematics of Curiosity",
+  "source_path": "Manuscript/part-iii/11-the-mathematics-of-curiosity.md",
+  "source_sha256": "777b9a2314ac240aa23ad6cac4270d00e0234d6a96c4dc82ee078449bdfcab66",
+  "notebook": "notebooks/11-bounded-exploration.ipynb",
+  "skill": "maa-11-bounded-exploration",
+  "skill_path": "skills/maa-11-bounded-exploration/SKILL.md",
+  "method": "bounded-exploration",
+  "outcome": "Compare greedy, UCB, and Thompson choices in a declared stationary bandit.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "bounded UCB exploration budget",
+    "Thompson posterior bandit sampling",
+    "pseudo-regret versus information value"
+  ],
+  "input_fields": {
+    "means": "Arm success probabilities in [0,1], known only to this constructed simulator.",
+    "rounds": "Integer pull budget 1..10000.",
+    "seed": "Nonnegative integer random seed.",
+    "pull_cost": "Nonnegative common cost per pull."
+  },
+  "example_input": "data/examples/ch11.json",
+  "reader": "readers/11-bounded-exploration/reader.html",
+  "equations": [
+    {
+      "label": "EQV11-01",
+      "number": "11.1",
+      "tex": "\\operatorname{Reg}(T)=T\\mu^{\\star}-\\operatorname{E}\\!\\left[\\sum_{t=0}^{T-1}\\mu_{a_t}\\right].\n\\tag{11.1}",
+      "asset": "assets/math/0748ee3073daf997794a.svg",
+      "explanations": [
+        "Equation (11.1) measures the total payoff an agent gave up over its run by not always taking the action it would have taken had it known which was best.",
+        "Multiply the best action's mean payoff by the number of rounds, then subtract the average total the agent actually collected."
+      ]
+    },
+    {
+      "label": "EQV11-02",
+      "number": "11.2",
+      "tex": "a_t=\\arg\\max_{a\\in\\mathcal{A}}\\left(\\hat\\mu_a+c\\sqrt{\\frac{\\ln t}{N_t(a)}}\\right).\n\\tag{11.2}",
+      "asset": "assets/math/b25daa0c3c98ef2794a7.svg",
+      "explanations": [
+        "Equation (11.2) ranks actions by an optimistic estimate rather than a best guess, so an action stays in contention while it remains poorly understood.",
+        "Add to each action's average payoff a bonus that grows as the run lengthens and shrinks as that action is tried more often, then take the largest sum."
+      ]
+    },
+    {
+      "label": "EQV11-03",
+      "number": "11.3",
+      "tex": "\\operatorname{Gain}(O)=I(Y;O)=H(Y)-H(Y\\mid O).\n\\tag{11.3}",
+      "asset": "assets/math/638761b25c1352586c4f.svg",
+      "explanations": [
+        "Equation (11.3) measures how much a candidate observation would reduce uncertainty about the specific quantity a decision depends on, rather than about anything at all.",
+        "Subtract the uncertainty remaining about the decision-relevant quantity after the observation from the uncertainty before it."
+      ]
+    },
+    {
+      "label": "EQV11-04",
+      "number": "11.4",
+      "tex": "\\operatorname{VOI}(O)=\\operatorname{E}_{O}\\!\\left[\\max_{a}\\operatorname{EU}(a\\mid O)\\right]-\\max_{a}\\operatorname{EU}(a).\n\\tag{11.4}",
+      "asset": "assets/math/f9f2ae99c3d3c2206ea0.svg",
+      "explanations": [
+        "Equation (11.4) prices an observation by comparing the best the agent could do knowing it against the best it can do without it.",
+        "Take the average, over possible observations, of the best expected utility available after seeing each one, then subtract the best expected utility available now."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C11-D01",
+      "title": "Regret: what never looking again costs",
+      "notebook_anchor": "demo-c11-d01",
+      "source_section": "Putting numbers on the two failures",
+      "source_anchor": "putting-numbers-on-the-two-failures",
+      "equations": [
+        "\\operatorname{Reg}(T)=T\\mu^{\\star}-\\operatorname{E}\\!\\left[\\sum_{t=0}^{T-1}\\mu_{a_t}\\right]"
+      ],
+      "controls": [
+        {
+          "key": "world",
+          "label": "World",
+          "values": [
+            "book",
+            "default",
+            "swapped",
+            "three"
+          ],
+          "default": "book",
+          "value_labels": [
+            "Book tools: A 0.78, B 0.90",
+            "Notebook default: 0.4 and 0.7",
+            "Notebook changed: 0.7 and 0.4",
+            "Notebook transfer: 0.2, 0.5 and 0.8"
+          ]
+        },
+        {
+          "key": "scale",
+          "label": "Length of the run",
+          "values": [
+            "own",
+            "ten"
+          ],
+          "default": "own",
+          "value_labels": [
+            "The world's own run (book 1,000; notebook 120; three-arm 90 tasks)",
+            "Ten times longer"
+          ]
+        }
+      ],
+      "function": "regret_picture",
+      "states": 8
+    },
+    {
+      "id": "C11-D02",
+      "title": "Optimism: why a thin record gets another call",
+      "notebook_anchor": "demo-c11-d02",
+      "source_section": "A proved rule and ten constructed pulls",
+      "source_anchor": "a-proved-rule-and-ten-constructed-pulls",
+      "equations": [
+        "a_t=\\arg\\max_{a\\in\\mathcal{A}}\\left(\\hat\\mu_a+c\\sqrt{\\frac{\\ln t}{N_t(a)}}\\right)"
+      ],
+      "controls": [
+        {
+          "key": "situation",
+          "label": "Situation",
+          "values": [
+            "p4",
+            "p5",
+            "trap",
+            "bench"
+          ],
+          "default": "p4",
+          "value_labels": [
+            "Ten-pull table, pull 4",
+            "Ten-pull table, pull 5",
+            "Trapped controller after 20 tasks",
+            "Workbench: 80 and 20 pulls"
+          ]
+        },
+        {
+          "key": "c",
+          "label": "Confidence coefficient c",
+          "values": [
+            1.4142135623730951,
+            1.0,
+            0.5
+          ],
+          "default": 1.4142135623730951,
+          "value_labels": [
+            "square root of 2 (about 1.414)",
+            "1",
+            "0.5"
+          ]
+        }
+      ],
+      "function": "ucb_picture",
+      "states": 12
+    },
+    {
+      "id": "C11-D03",
+      "title": "Information gain is not decision value",
+      "notebook_anchor": "demo-c11-d03",
+      "source_section": "The condition that makes information worthless",
+      "source_anchor": "the-condition-that-makes-information-worthless",
+      "equations": [
+        "\\operatorname{Gain}(O)=I(Y;O)=H(Y)-H(Y\\mid O)",
+        "\\operatorname{VOI}(O)=\\operatorname{E}_{O}\\!\\left[\\max_{a}\\operatorname{EU}(a\\mid O)\\right]-\\max_{a}\\operatorname{EU}(a)"
+      ],
+      "controls": [
+        {
+          "key": "accuracy",
+          "label": "How often the check is right",
+          "values": [
+            0.6,
+            0.7,
+            0.85,
+            0.95
+          ],
+          "default": 0.85
+        },
+        {
+          "key": "prior",
+          "label": "Prior chance the claims are supported",
+          "values": [
+            0.5,
+            0.85,
+            0.97
+          ],
+          "default": 0.85
+        }
+      ],
+      "function": "gain_value_picture",
+      "states": 12
+    },
+    {
+      "id": "C11-D04",
+      "title": "A worked price for one observation",
+      "notebook_anchor": "demo-c11-d04",
+      "source_section": "A worked price for one observation",
+      "source_anchor": "a-worked-price-for-one-observation",
+      "equations": [
+        "\\operatorname{VOI}(O)=\\operatorname{E}_{O}\\!\\left[\\max_{a}\\operatorname{EU}(a\\mid O)\\right]-\\max_{a}\\operatorname{EU}(a)"
+      ],
+      "controls": [
+        {
+          "key": "shift",
+          "label": "Added to both release scores",
+          "values": [
+            0,
+            5,
+            10,
+            15
+          ],
+          "default": 10
+        },
+        {
+          "key": "call_cost",
+          "label": "Cost of the call",
+          "values": [
+            0,
+            2,
+            2.3333333333333335
+          ],
+          "default": 0,
+          "value_labels": [
+            "0",
+            "2",
+            "7/3 (about 2.333)"
+          ]
+        }
+      ],
+      "function": "classifier_picture",
+      "states": 12
+    }
+  ]
+}

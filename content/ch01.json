@@ -101,5 +101,6 @@
     "Default crossing occurs at scale 4.",
     "Changed cutoff moves crossing to scale 5.",
     "Repeated scales are rejected."
-  ]
+  ],
+  "agent_application": "Treat a benchmark pass flag as one measurement of a specified agent procedure. Hold its tools, permissions, budget and success rule fixed before comparing scales. A threshold crossing alone cannot show that the procedure acquired a new mechanism."
 }

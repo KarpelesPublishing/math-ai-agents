@@ -138,5 +138,6 @@
     "Actual finite error stays below stated envelope.",
     "Identical kernels give zero epsilon and error.",
     "Rows must be normalized and rewards shared."
-  ]
+  ],
+  "agent_application": "An agent planning with an approximate environment model may assign the wrong value to a workflow state. Compare the model with a declared reference kernel and inspect both actual value error and the conditional bound. This fixed-policy calculation does not certify the best action."
 }

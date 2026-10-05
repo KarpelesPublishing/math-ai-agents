@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch09</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 9: separate solutions</h1>
+<h2>Question 1</h2>
+<p>What is the default optimal path cost?</p>
+<p>The route S,B,G costs 2+1=3 and the route S,A,G costs 1+4=5, so the optimal path cost is 3 via S,B,G.</p>
+<h2>Question 2</h2>
+<p>Which changed heuristic condition fails?</p>
+<p>Admissibility: h(B)=10 exceeds true remaining cost 1; consistency also fails on B-&gt;G.</p>
+<h2>Question 3</h2>
+<p>What does h=0 produce?</p>
+<p>Uniform-cost search on nonnegative edges: the queue orders by cost so far alone. On the transfer graph it still returns the optimal route source, middle, target at cost 4, not the direct cost 7, because a zero estimate is admissible.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>If the edge from A to B cost 2 and the direct edge from s to B cost 7, what would B's record become after A is expanded?</p>
+<p>3 + 2 = 5, which is strictly below 7, so the record falls to 5 and A becomes B's parent.</p>
+<p><strong>Prediction answer:</strong> No, it falls to 6.</p>
+<p>A offers B the route 3 + 3 = 6, strictly below the record of 7, so B's record falls to 6 and no estimate was involved.</p>
+<p><strong>If you chose another answer:</strong> Choose the bookkeeping graph and step to step 2: expanding A offers B the route 3 + 3 = 6, strictly below 7, so the record falls to 6.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>In the notebook graph the rival route through A reaches G at cost 5 and B has recorded cost 2. What is the largest estimate at B that still lets B be expanded before that goal is selected?</p>
+<p>B scores 2 + h-hat(B) and the goal scores 5, so h-hat(B) &lt;= 3. At 3 the scores tie at 5 and B wins on smaller recorded cost (2 against 5). Above 3, the cost-5 route is returned although 3 was available.</p>
+<p><strong>Prediction answer:</strong> Yes, the cost-25 route.</p>
+<p>The score of a is 1 + 25 = 26, above goal_b's 25, so goal_b is selected first and a stays on the queue: cost 25 against the best 10.</p>
+<p><strong>If you chose another answer:</strong> Choose the two-route graph at the fourth level: a scores 1 + 25 = 26, goal_b scores 25 and is selected first, so the search returns cost 25.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>If the start's estimate is 8 and the upper edge costs 4 instead of 6, what is the smallest estimate at the upper vertex that satisfies consistency?</p>
+<p>8 &lt;= 4 + h-hat(upper) requires h-hat(upper) &gt;= 8 - 4 = 4.</p>
+<p><strong>Prediction answer:</strong> Upper vertex first, score 7, below 8.</p>
+<p>The upper vertex scores 6 + 1 = 7 against 3 + 5 = 8, so it is selected first, and 7 is below the start's 8: the estimate fell by 7 across an edge costing 6.</p>
+<p><strong>If you chose another answer:</strong> Set the start to 8 and the upper estimate to 1: the upper vertex scores 6 + 1 = 7, the lower 3 + 5 = 8, so the upper is first and its score is below 8.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>In the notebook graph the estimate saves one expansion and needs 4 estimates. What is the most one estimate may cost for the estimate to break even?</p>
+<p>1 x 200 / 4 = 50 ms per estimate. Above 50 ms the zero-estimate search is faster; below it the estimate pays.</p>
+<p><strong>Prediction answer:</strong> None.</p>
+<p>Both searches select four vertices and expand three; duplicate merging has already removed the wasted alternatives, so the estimate saves nothing and any price is pure overhead.</p>
+<p><strong>If you chose another answer:</strong> Choose the research workflow: both searches expand the same three vertices (s, found, fetched), so the structural estimate saves none.</p></body></html>

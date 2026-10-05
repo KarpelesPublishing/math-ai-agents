@@ -1,0 +1,197 @@
+{
+  "chapter": 20,
+  "title": "Messages, Beliefs, and Consensus",
+  "source_path": "Manuscript/part-v/20-messages-beliefs-and-consensus.md",
+  "source_sha256": "3185adcb11c5543be7224ed250c4b3ada838e8bff79d395ed181f7d6d49ca3f0",
+  "notebook": "notebooks/20-bounded-message-knowledge.ipynb",
+  "skill": "maa-20-bounded-message-knowledge",
+  "skill_path": "skills/maa-20-bounded-message-knowledge/SKILL.md",
+  "method": "bounded-message-knowledge",
+  "outcome": "Enumerate bounded message worlds and distinguish agreement from local knowledge.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "bounded message receipt knowledge",
+    "dropped acknowledgement consensus trace",
+    "local-view handoff agreement"
+  ],
+  "input_fields": {
+    "rounds": "Integer request/acknowledgement rounds 1..6; enumeration has 2^(2 rounds) worlds.",
+    "drop_probability": "Independent per-message drop probability in [0,1]."
+  },
+  "example_input": "data/examples/ch20.json",
+  "reader": "readers/20-bounded-message-knowledge/reader.html",
+  "equations": [
+    {
+      "label": "EQV20-01",
+      "number": "20.1",
+      "tex": "\\operatorname{MK}_{\\mathcal P}^{n+1}(F) = \\bigwedge_{i \\in \\mathcal P} \\operatorname{Know}_i\\!\\left(\\operatorname{MK}_{\\mathcal P}^{n}(F)\\right), \\qquad \\operatorname{MK}_{\\mathcal P}^{1}(F) = \\bigwedge_{i \\in \\mathcal P} \\operatorname{Know}_i(F).\\tag{20.1}",
+      "asset": "assets/math/f8ef23bd6086319132c4.svg",
+      "explanations": [
+        "Defines each next mutual-knowledge level by having every party know preceding level.",
+        "First level means every party knows F; each later level wraps that group condition once more."
+      ]
+    },
+    {
+      "label": "EQV20-02",
+      "number": "20.2",
+      "tex": "\\operatorname{CK}_{\\mathcal P}(F) \\quad\\Longleftrightarrow\\quad \\bigwedge_{n=1}^{\\infty} \\operatorname{MK}_{\\mathcal P}^{n}(F).\\tag{20.2}",
+      "asset": "assets/math/fdc2593e0526f40abc3c.svg",
+      "explanations": [
+        "Defines common knowledge as every finite mutual-knowledge level holding together.",
+        "Common knowledge requires no final depth: levels one, two, and every higher finite level hold."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C20-D01",
+      "title": "One more message, one more level",
+      "notebook_anchor": "demo-c20-d01",
+      "source_section": "Stage three: finite depth has a boundary",
+      "source_anchor": "stage-three-finite-depth-has-a-boundary",
+      "equations": [
+        "\\operatorname{MK}_{\\mathcal P}^{n+1}(F) = \\bigwedge_{i \\in \\mathcal P} \\operatorname{Know}_i\\!\\left(\\operatorname{MK}_{\\mathcal P}^{n}(F)\\right), \\qquad \\operatorname{MK}_{\\mathcal P}^{1}(F) = \\bigwedge_{i \\in \\mathcal P} \\operatorname{Know}_i(F).",
+        "\\operatorname{CK}_{\\mathcal P}(F) \\quad\\Longleftrightarrow\\quad \\bigwedge_{n=1}^{\\infty} \\operatorname{MK}_{\\mathcal P}^{n}(F)."
+      ],
+      "controls": [
+        {
+          "key": "delivered",
+          "label": "Messages delivered (4 planned)",
+          "values": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "default": 2
+        },
+        {
+          "key": "fact",
+          "label": "Fact being tested",
+          "values": [
+            "message",
+            "clock"
+          ],
+          "default": "message",
+          "value_labels": [
+            "Message 1 was delivered",
+            "Dawn on a public clock"
+          ]
+        }
+      ],
+      "function": "ladder_picture",
+      "states": 8
+    },
+    {
+      "id": "C20-D02",
+      "title": "A rule that trusts the last message",
+      "notebook_anchor": "demo-c20-d02",
+      "source_section": "Stage four: why last message cannot save attack",
+      "source_anchor": "stage-four-why-last-message-cannot-save-attack",
+      "equations": [
+        "\\operatorname{Know}_i(F)"
+      ],
+      "controls": [
+        {
+          "key": "a_needs",
+          "label": "Messages A needs to have received",
+          "values": [
+            1,
+            2
+          ],
+          "default": 1
+        },
+        {
+          "key": "b_needs",
+          "label": "Messages B needs to have received",
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "default": 2
+        }
+      ],
+      "function": "rule_picture",
+      "states": 6
+    },
+    {
+      "id": "C20-D03",
+      "title": "Escrow with a deadline",
+      "notebook_anchor": "demo-c20-d03",
+      "source_section": "Stage seven: building agent protocols that fail safely",
+      "source_anchor": "stage-seven-building-agent-protocols-that-fail-safely",
+      "equations": [
+        "\\operatorname{Know}_i(F)"
+      ],
+      "controls": [
+        {
+          "key": "delivered",
+          "label": "Messages delivered (of 3)",
+          "values": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "default": 2
+        },
+        {
+          "key": "policy",
+          "label": "Policy",
+          "values": [
+            "private",
+            "escrow_seen",
+            "escrow_unseen"
+          ],
+          "default": "private",
+          "value_labels": [
+            "Two private decisions",
+            "Escrow, condition visible",
+            "Escrow, condition not visible"
+          ]
+        }
+      ],
+      "function": "escrow_picture",
+      "states": 12
+    },
+    {
+      "id": "C20-D04",
+      "title": "High chance of agreement, no knowledge of it",
+      "notebook_anchor": "demo-c20-d04",
+      "source_section": "Stage eight: consensus begins with a shared event model",
+      "source_anchor": "stage-eight-consensus-begins-with-a-shared-event-model",
+      "equations": [
+        "\\operatorname{CK}_{\\mathcal P}(F) \\quad\\Longleftrightarrow\\quad \\bigwedge_{n=1}^{\\infty} \\operatorname{MK}_{\\mathcal P}^{n}(F)."
+      ],
+      "controls": [
+        {
+          "key": "rounds",
+          "label": "Rounds of request and reply",
+          "values": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "default": 2
+        },
+        {
+          "key": "drop",
+          "label": "Probability that a message is dropped",
+          "values": [
+            0,
+            0.3,
+            0.5
+          ],
+          "default": 0.3
+        }
+      ],
+      "function": "agreement_picture",
+      "states": 12
+    }
+  ]
+}

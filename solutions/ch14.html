@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch14</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 14: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute default epsilon.</p>
+<p>Each row has half L1 distance 0.02; maximum is 0.02.</p>
+<h2>Question 2</h2>
+<p>Compute horizon 20 finite bound.</p>
+<p>With the common reward bound 1 and epsilon 0.02, the finite-horizon bound is 1&#42;0.02&#42;20&#42;19/2=3.8.</p>
+<h2>Question 3</h2>
+<p>What if the reward model also differs?</p>
+<p>This transition-only bound is insufficient; add a declared reward-error term.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>At T = 1.30, what is the model score minus the actual score, and which column is higher?</p>
+<p>732 - 753 = -21, so the actual score is higher by 21. The columns can also run the other way.</p>
+<p><strong>Prediction answer:</strong> T = 0.10 wins and scores below the random policy in the actual environment.</p>
+<p>At T = 0.10 the model reports 2086 and the actual score is 193, which is 17 below the random policy's 210.</p>
+<p><strong>If you chose another answer:</strong> The model column is largest at T = 0.10 (2086), and that setting scores only 193 in the actual environment, below the random policy's 210. Pick the model column in the judge control.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>With gamma = 0.8, epsilon = 0.05 and R = 1, what is the discounted bound, and what is the largest possible value?</p>
+<p>Bound = 0.8 x 0.05 / (1 - 0.8)^2 = 0.04 / 0.04 = 1.0. The largest possible value is 1 / 0.2 = 5, so the bound is a fifth of the range.</p>
+<p><strong>Prediction answer:</strong> About 200.</p>
+<p>0.99 x 0.02 x 1 / (1 - 0.99)^2 = 0.0198 / 0.0001 = 198, about 200, against a largest possible value of 100.</p>
+<p><strong>If you chose another answer:</strong> The denominator (1 - 0.99)^2 is 0.0001, so 0.99 x 0.02 / 0.0001 = 198, about 200. Select gamma 0.99 in the default case.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>True values 0.90 and 0.60, adversarial error 0.12. Which action does the model pick, and does the guarantee hold?</p>
+<p>Model values: 0.90 - 0.12 = 0.78 and 0.60 + 0.12 = 0.72, so the model still picks tool 6. Twice the error is 0.24, below the gap 0.30, so the guarantee holds.</p>
+<p><strong>Prediction answer:</strong> It scores tools 5 and 6 equally, a tie.</p>
+<p>Tool 6 falls to 0.90 - 0.15 = 0.75 and tool 5 rises to 0.60 + 0.15 = 0.75: an exact tie, so the strict test 2 x error &lt; gap cannot certify the ranking.</p>
+<p><strong>If you chose another answer:</strong> Marking the best down and the runner-up up by 0.15 gives 0.75 for both, an exact tie. Set the adversarial pattern and the error 0.15.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>With R = 1, epsilon = 0.04 and a gap of 0.5, what is the certified horizon?</p>
+<p>R x epsilon x H(H-1) = 0.04 x H(H-1). At H = 4 it is 0.04 x 12 = 0.48, below 0.5. At H = 5 it is 0.04 x 20 = 0.80, which is not. H-star = 4.</p>
+<p><strong>Prediction answer:</strong> It grows from 2 to 4.</p>
+<p>At 0.08, 10 x 0.08 x 2 x 1 = 1.6 passes and H = 3 gives 4.8; at 0.01, H = 4 gives 10 x 0.01 x 12 = 1.2 and H = 5 fails by equality at 2.0.</p>
+<p><strong>If you chose another answer:</strong> H(H-1) grows like H squared, so the horizon scales roughly with the square root of gap over R x epsilon: 0.08 certifies 2 rewards and 0.01 certifies 4. Choose scenario R = 10 and step the error down.</p></body></html>

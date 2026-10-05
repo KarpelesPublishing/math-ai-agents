@@ -1,0 +1,251 @@
+{
+  "chapter": 18,
+  "title": "When an Action Has Coordinates",
+  "source_path": "Manuscript/part-iv/18-when-an-action-has-coordinates.md",
+  "source_sha256": "4c8577a9eabfa6de098d89cf07cd5f24c0c149e62eeaf88e3161d24fa0b4f36c",
+  "notebook": "notebooks/18-interface-freshness.ipynb",
+  "skill": "maa-18-interface-freshness",
+  "skill_path": "skills/maa-18-interface-freshness/SKILL.md",
+  "method": "interface-freshness",
+  "outcome": "Compare coordinate, semantic, and version-bound action contracts.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "coordinate stale layout action",
+    "semantic versus version-bound interface",
+    "current permission observation age"
+  ],
+  "input_fields": {
+    "observation_age": "Nonnegative elapsed time since observation.",
+    "max_age": "Nonnegative freshness limit in the same time unit.",
+    "observed_version": "Version seen in the observation.",
+    "current_version": "Version at action time.",
+    "current_permission": "Exact boolean current authorization.",
+    "effect_confirmed": "Exact boolean receipt of desired effect confirmation.",
+    "coordinate_target": "Current object located at previously observed coordinates.",
+    "semantic_target": "Current object resolved by semantic interface.",
+    "wanted_target": "Intended object identifier.",
+    "change_rate": "Optional nonnegative rate of invalidating interface changes per unit time. When given, Fresh(delay)=exp(-rate*delay) from Equation 18.3 is reported.",
+    "delays": "Optional list of nonnegative delays in the same time unit; requires change_rate."
+  },
+  "example_input": "data/examples/ch18.json",
+  "reader": "readers/18-interface-freshness/reader.html",
+  "equations": [
+    {
+      "label": "EQV18-01",
+      "number": "18.1",
+      "tex": "P_{\\mathrm{ui}}(x'\\mid x,a)\n=\n\\sum_{\\tilde a\\in\\operatorname{Act}_{\\mathrm{ui}}}\n\\operatorname{Exec}_{\\mathrm{ui}}(\\tilde a\\mid x,a)\nP(x'\\mid x,\\tilde a).\n\\tag{18.1}",
+      "asset": "assets/math/755fe6a5928a4b2e29ce.svg",
+      "explanations": [
+        "Equation (18.1) composes an interface's execution law with the world transitions caused by its realized operations.",
+        "For each operation the command might realize in the current state, multiply its execution probability by its next-state law, then add those possibilities."
+      ]
+    },
+    {
+      "label": "EQV18-02",
+      "number": "18.2",
+      "tex": "\\mathcal A_{\\mathrm{rob}}(\\mathbf b)\n=\n\\bigcap_{x:\\,\\mathbf b(x)>0}\\mathcal A_{\\mathrm{auth}}(x).\n\\tag{18.2}",
+      "asset": "assets/math/4b0b524edbcf02f6262f.svg",
+      "explanations": [
+        "Equation (18.2) retains actions authorized in every state still considered possible.",
+        "An action survives only if each state with positive belief weight permits it."
+      ]
+    },
+    {
+      "label": "EQV18-03",
+      "number": "18.3",
+      "tex": "\\operatorname{Fresh}(\\Delta)\n=\n\\exp(-\\lambda_{\\mathrm{ui}}\\Delta).\n\\tag{18.3}",
+      "asset": "assets/math/2f33e21b021d2dab73fc.svg",
+      "explanations": [
+        "Equation (18.3) gives the chance that a coordinate binding remains valid over a delay in the stated constant-rate construction.",
+        "Longer delay and a higher material-change rate both lower the chance that no invalidating change has occurred."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C18-D01",
+      "title": "One command, two layouts, three interfaces",
+      "notebook_anchor": "demo-c18-d01",
+      "source_section": "The interface belongs in the transition law",
+      "source_anchor": "the-interface-belongs-in-the-transition-law",
+      "equations": [
+        "P_{\\mathrm{ui}}(x'\\mid x,a)=\\sum_{\\tilde a\\in\\operatorname{Act}_{\\mathrm{ui}}}\\operatorname{Exec}_{\\mathrm{ui}}(\\tilde a\\mid x,a)P(x'\\mid x,\\tilde a)"
+      ],
+      "controls": [
+        {
+          "key": "interface",
+          "label": "Kind of command",
+          "values": [
+            "coordinate",
+            "semantic",
+            "transactional"
+          ],
+          "default": "coordinate",
+          "value_labels": [
+            "Coordinate: click the saved point",
+            "Semantic: request the control bound to v2",
+            "Transactional: v2 with the saved screen version"
+          ]
+        },
+        {
+          "key": "belief_layout1",
+          "label": "Belief that layout 1 (v2 on top) is current",
+          "values": [
+            0.6,
+            0.8
+          ],
+          "default": 0.8
+        },
+        {
+          "key": "permission_check",
+          "label": "Current permission check at the service",
+          "values": [
+            "off",
+            "on"
+          ],
+          "default": "off",
+          "value_labels": [
+            "Off",
+            "On"
+          ]
+        }
+      ],
+      "function": "transition_picture",
+      "states": 12
+    },
+    {
+      "id": "C18-D02",
+      "title": "What survives when the screen is uncertain",
+      "notebook_anchor": "demo-c18-d02",
+      "source_section": "A belief over screens",
+      "source_anchor": "a-belief-over-screens",
+      "equations": [
+        "\\mathcal A_{\\mathrm{rob}}(\\mathbf b)=\\bigcap_{x:\\,\\mathbf b(x)>0}\\mathcal A_{\\mathrm{auth}}(x)"
+      ],
+      "controls": [
+        {
+          "key": "belief_layout2",
+          "label": "Belief that layout 2 (rows swapped) is current",
+          "values": [
+            0.0,
+            0.01,
+            0.5,
+            1.0
+          ],
+          "default": 0.01
+        },
+        {
+          "key": "observation",
+          "label": "Further observation",
+          "values": [
+            "none",
+            "layout1",
+            "layout2"
+          ],
+          "default": "none",
+          "value_labels": [
+            "No further observation",
+            "A perfect read shows layout 1",
+            "A perfect read shows layout 2"
+          ]
+        }
+      ],
+      "function": "robust_set_picture",
+      "states": 12
+    },
+    {
+      "id": "C18-D03",
+      "title": "How long a picture stays useful",
+      "notebook_anchor": "demo-c18-d03",
+      "source_section": "How long a picture stays useful",
+      "source_anchor": "how-long-a-picture-stays-useful",
+      "equations": [
+        "\\operatorname{Fresh}(\\Delta)=\\exp(-\\lambda_{\\mathrm{ui}}\\Delta)"
+      ],
+      "controls": [
+        {
+          "key": "scenario",
+          "label": "Case",
+          "values": [
+            "default",
+            "changed",
+            "transfer"
+          ],
+          "default": "default",
+          "value_labels": [
+            "Default: age 1 of limit 2, layout changed",
+            "Changed: age 3 beyond the limit of 2",
+            "Transfer: fresh and matching, permission denied"
+          ]
+        },
+        {
+          "key": "delay",
+          "label": "Delay before acting (seconds)",
+          "values": [
+            5,
+            10,
+            15,
+            30
+          ],
+          "default": 30
+        }
+      ],
+      "function": "freshness_picture",
+      "states": 12
+    },
+    {
+      "id": "C18-D04",
+      "title": "The price of another look",
+      "notebook_anchor": "demo-c18-d04",
+      "source_section": "The price of another look",
+      "source_anchor": "the-price-of-another-look",
+      "equations": [
+        "P_{\\mathrm{ui}}(x'\\mid x,a)=\\sum_{\\tilde a\\in\\operatorname{Act}_{\\mathrm{ui}}}\\operatorname{Exec}_{\\mathrm{ui}}(\\tilde a\\mid x,a)P(x'\\mid x,\\tilde a)"
+      ],
+      "controls": [
+        {
+          "key": "wrong_loss",
+          "label": "Loss if the click reaches the wrong record",
+          "values": [
+            40,
+            3
+          ],
+          "default": 40,
+          "value_labels": [
+            "40: unguarded harmful release",
+            "3: denied attempt (permission check)"
+          ]
+        },
+        {
+          "key": "wrong_chance",
+          "label": "Chance the saved point is wrong",
+          "values": [
+            0.0,
+            0.1,
+            0.2
+          ],
+          "default": 0.1,
+          "value_labels": [
+            "0: command bound to v2 with a version check",
+            "0.1",
+            "0.2"
+          ]
+        },
+        {
+          "key": "look_cost",
+          "label": "Cost of one more look",
+          "values": [
+            1,
+            2
+          ],
+          "default": 2
+        }
+      ],
+      "function": "another_look_picture",
+      "states": 12
+    }
+  ]
+}

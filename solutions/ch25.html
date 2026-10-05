@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch25</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 25: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Why not release steady by default?</p>
+<p>It was not the development-selected candidate; choosing it after guard inspection contaminates the guard role.</p>
+<h2>Question 2</h2>
+<p>What changed gain allows flashy to pass?</p>
+<p>One repaired outcome over 4 pairs gives 0.25&gt;=0.2.</p>
+<h2>Question 3</h2>
+<p>Does contamination erase observed gain?</p>
+<p>No; it invalidates the clean acceptance claim, while descriptive gain remains.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>A canary declares its boundary as c - margin with c = 1.20 and margin 0.15. Costs by period are 1.00, 1.05, 1.08 and 1.12. In which period does the alert fire, and what happens if the boundary had been moved to c after looking?</p>
+<p>The boundary is 1.20 - 0.15 = 1.05. A cost of 1.05 is not above 1.05, so the first cost above it is 1.08 in period 3. With the boundary moved to 1.20 none of the four costs is above it, so no alert fires.</p>
+<p><strong>Prediction answer:</strong> Period 5.</p>
+<p>Costs 0.80, 0.83, 0.86, 0.89 stay at or below 0.90 and 0.92 in period 5 is the first above it.</p>
+<p><strong>If you chose another answer:</strong> The boundary is 1.00 - 0.10 = 0.90 and the first cost above it is 0.92 in period 5. Set the rule control to 'chosen after looking' to see it move to period 8.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>A frozen candidate beats its parent on 2 of 8 guard cases, loses on 1 and ties on 5. Its threshold is 0.20. Does it pass a clean guard?</p>
+<p>Gain = (2 x 1 + 1 x (-1) + 5 x 0) / 8 = 1/8 = 0.125, which is below 0.20, so it does not pass.</p>
+<p><strong>Prediction answer:</strong> Flashy is frozen and fails the guard (gain 0.00).</p>
+<p>Flashy has the best development rate (4/4) but its guard outcomes equal the parent's, so every Z is 0 and the gain is 0.00.</p>
+<p><strong>If you chose another answer:</strong> Development picks flashy (4/4 against 3/4), and its four guard cases match the parent, so every Z is 0 and the gain is 0.00, below 0.20. Steady's 0.25 does not count: choosing it after seeing the guard would put the guard inside selection.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>With m = 300 guard cases and threshold 0.25, what is the bound for one decision?</p>
+<p>exp(-300 x 0.0625 / 2) = exp(-9.375) = 0.0000848, about 8.5 in 100,000.</p>
+<p><strong>Prediction answer:</strong> The total falls to 2 x 0.00193 but decisions 3 to 10 get no bound.</p>
+<p>Only decisions 1 and 2 were fixed before guard access, so the total is 2 x 0.00193 = 0.00386, and the eight later decisions need a new frozen guard.</p>
+<p><strong>If you chose another answer:</strong> Only decisions 1 and 2 still satisfy the fixed-before-guard condition, so the covered total is 2 x 0.00193 = 0.00386. That smaller number counts fewer decisions; decisions 3 to 10 have no bound until a new frozen guard exists.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>A candidate has uplift 0.40, cost 0.92, authority granted and rollback tested, with c = 1.00 and margin 0.10. Is it accepted?</p>
+<p>The limit is 1.00 - 0.10 = 0.90 and 0.92 &gt; 0.90, so the cost condition is 0 and accept = 1 x 0 x 1 x 1 = 0.</p>
+<p><strong>Prediction answer:</strong> No, 0.95 is above c - margin = 0.90.</p>
+<p>The cost condition compares with c minus the margin, 1.00 - 0.10 = 0.90, and 0.95 is above it, so accept = 1 x 0 x 1 x 1 = 0.</p>
+<p><strong>If you chose another answer:</strong> Cost is held to c minus the margin, 1.00 - 0.10 = 0.90, not to c. 0.95 is above 0.90, so the cost condition is 0 and accept = 1 x 0 x 1 x 1 = 0.</p></body></html>

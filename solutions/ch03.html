@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch03</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 3: separate solutions</h1>
+<h2>Question 1</h2>
+<p>What are default fit coefficients?</p>
+<p>The three development points (1,0.2), (2,0.3) and (3,0.4) lie on one line with slope (0.4-0.2)/(3-1)=0.1 and intercept 0.2-0.1(1)=0.1.</p>
+<h2>Question 2</h2>
+<p>Does the changed test update the fit?</p>
+<p>No. The fit uses only the development points, so the slope stays 0.1 and the intercept 0.1, and the predictions stay 0.5 and 0.6. The changed test values 0.8 and 0.95 change only the residuals: 0.8-0.5=0.3 and 0.95-0.6=0.35. The mean residual is 0.325. Positive residuals mean that observations exceeded the forecast. This observed-minus-forecast convention matches the book and reader.</p>
+<h2>Question 3</h2>
+<p>Why must log-family scales be positive?</p>
+<p>The real natural logarithm is undefined at zero and negative scales.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>With exact measurements and a = 1.5, c = 1.0, what loss does the fit forecast at C = 1, and what is the residual at 3 powers of ten?</p>
+<p>Forecast = a x 1 + c = 1.5 + 1.0 = 2.5 because 1 to any power is 1. The observed value is also 2.5, so the residual is 2.5 - 2.5 = 0, at any distance.</p>
+<p><strong>Prediction answer:</strong> Bigger at 4 powers of ten.</p>
+<p>For this constructed wiggle the bars on the right grow with distance: the fitted a and c trade off against b, and the forecast a + c drifts.</p>
+<p><strong>If you chose another answer:</strong> Choose the wiggle and compare the residual at 1 and at 4 powers of ten (the bars on the right): the miss grows with distance.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>Keep the forecast as registered. The observed contrast is 0.46. What is the residual, and is it inside the interval?</p>
+<p>Residual = 0.46 - 0.39 = 0.07. The interval ends at 0.456667, so 0.46 is just outside it: an assumption needs investigating, not hiding.</p>
+<p><strong>Prediction answer:</strong> Inside.</p>
+<p>The interval runs from 0.323333 to 0.456667, so 0.36 is inside: one successful check, not a proof of the line.</p>
+<p><strong>If you chose another answer:</strong> Set the observed value to 0.36 with the forecast kept: the interval is 0.39 plus or minus 0.066667, from 0.323333 to 0.456667, so it is inside.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>Take the metric-created jump with q = 0.1 + 0.1 x (m - 1) and a threshold of 0.65. Which member is the first to pass?</p>
+<p>q(7) = 0.1 + 0.1 x 6 = 0.70 &gt;= 0.65 and q(6) = 0.1 + 0.1 x 5 = 0.60 &lt; 0.65, so member 7 is the first to pass.</p>
+<p><strong>Prediction answer:</strong> By 0.1, a small step like every other.</p>
+<p>q rises by 0.1 at every member (0.4 to 0.5 at the jump), so the sudden event belongs to the cutoff, not to the model.</p>
+<p><strong>If you chose another answer:</strong> Choose the metric-created jump at threshold 0.50: q goes from 0.40 to 0.50, a step of 0.1 like every other, while the verdict jumps by 1.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>Declare the log family on the first data set and let the outcomes flatten off. What is the frozen forecast at x = 4?</p>
+<p>The log fit has slope 0.1780 and intercept 0.1937, so the forecast is 0.1780 x ln(4) + 0.1937 = 0.1780 x 1.3863 + 0.1937 = 0.440, close to the observed 0.45.</p>
+<p><strong>Prediction answer:</strong> The log family fits better, and the registered forecast is unchanged.</p>
+<p>The log family has the smaller RMSE after the fact, but switching now would be a retrospective fit; the registered forecast keeps its own RMSE.</p>
+<p><strong>If you chose another answer:</strong> Declare the straight line and choose flattening off: the metrics show the log family with the smaller RMSE, yet the registered forecast stays as made.</p></body></html>

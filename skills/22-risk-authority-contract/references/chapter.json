@@ -1,0 +1,258 @@
+{
+  "chapter": 22,
+  "title": "Safe Enough to Act",
+  "source_path": "Manuscript/part-vi/22-safe-enough-to-act.md",
+  "source_sha256": "338562b40256ec803bb04a93a2bb98759de4b37c2a64a43eecc30768f83f6c21",
+  "notebook": "notebooks/22-risk-authority-contract.ipynb",
+  "skill": "maa-22-risk-authority-contract",
+  "skill_path": "skills/maa-22-risk-authority-contract/SKILL.md",
+  "method": "risk-authority-contract",
+  "outcome": "Compare penalty choice with hard authorization and expected-risk constraints.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "expected risk versus permission boundary",
+    "penalty constrained action audit",
+    "hard authorization safe choice"
+  ],
+  "input_fields": {
+    "risk_limit": "Maximum allowed adverse-event probability in [0,1].",
+    "risk_penalty": "Nonnegative utility deduction per unit probability.",
+    "actions": "Each row has name,reward:finite number,risk:probability,authorized:exact boolean. Abstention must be an explicit row."
+  },
+  "example_input": "data/examples/ch22.json",
+  "reader": "readers/22-risk-authority-contract/reader.html",
+  "equations": [
+    {
+      "label": "EQV22-01",
+      "number": "22.1",
+      "tex": "\\begin{aligned}\n\\text{maximize}_{\\pi}\\quad & \\operatorname{Ret}^{\\pi}\\\\\n\\text{subject to}\\quad & \\operatorname{Cost}_i^{\\pi}\\le d_i \\quad \\text{for every declared } i.\n\\end{aligned}\\tag{22.1}",
+      "asset": "assets/math/eb14c1e8bbd95b7a8e74.svg",
+      "explanations": [
+        "Separates goal-seeking from permission: reward is maximized only among policies that meet every declared auxiliary-cost limit.",
+        "The same policy `\\pi` appears in both ledgers, while each `i` names a distinct measured hazard and `d_i` names its limit."
+      ]
+    },
+    {
+      "label": "EQV22-02",
+      "number": "22.2",
+      "tex": "\\operatorname{Score}_{\\lambda_{\\mathrm{safe}}}(\\pi)\n=\\operatorname{Ret}^{\\pi}-\\lambda_{\\mathrm{safe}}\\operatorname{Cost}_1^{\\pi}.\n\\tag{22.2}",
+      "asset": "assets/math/e3a0e835f74db5a1ee08.svg",
+      "explanations": [
+        "Turns one auxiliary cost into a fixed reward penalty so ordinary reward optimization can rank policies by one blended score.",
+        "`\\lambda_{\\mathrm{safe}}` sets a constant exchange rate between reward units and the first declared cost's units."
+      ]
+    },
+    {
+      "label": "EQV22-03",
+      "number": "22.3",
+      "tex": "\\operatorname{Cost}_i^{\\pi_{k+1}}\n\\le d_i+\n\\frac{\\sqrt{2\\delta}\\,\\gamma\\,\\epsilon_i}{(1-\\gamma)^2}.\n\\tag{22.3}",
+      "asset": "assets/math/371c8675bdb06b88d9bb.svg",
+      "explanations": [
+        "Bounds one update's modeled excess over cost limit by a term controlled by policy-step size, discounting, and constraint advantage.",
+        "The right side is `d_i` plus a nonnegative allowance, so the displayed result permits bounded violation rather than asserting satisfaction."
+      ]
+    },
+    {
+      "label": "EQV22-04",
+      "number": "22.4",
+      "tex": "\\operatorname{Cost}_i^{\\pi}\n\\le d_i-\\varepsilon_{\\mathrm{safe}},\n\\qquad \\varepsilon_{\\mathrm{safe}}>0.\n\\tag{22.4}",
+      "asset": "assets/math/23fd856a63c4e5644b78.svg",
+      "explanations": [
+        "Reserves room below a deployment cost limit for known modeling, approximation, sampling, and update-bound exposure.",
+        "Optimization targets a stricter internal ceiling, leaving `\\varepsilon_{\\mathrm{safe}}` between measured planning cost and external limit `d_i`."
+      ]
+    },
+    {
+      "label": "EQV22-05",
+      "number": "22.5",
+      "tex": "\\operatorname{CVaR}_{\\alpha}(C)\n= \\inf_{z\\in\\mathbb R}\\left[z+\\frac{1}{1-\\alpha}\\,\\mathbb E[(C-z)_+]\\right].\n\\tag{22.5}",
+      "asset": "assets/math/efc01bbeb46ffdf27496.svg",
+      "explanations": [
+        "Replaces a mean-cost target with a declared upper-tail severity measure for episode cost `C`.",
+        "The threshold `z` searches tail cutoffs, while `1/(1-\\alpha)` scales severity beyond each cutoff."
+      ]
+    },
+    {
+      "label": "EQV22-06",
+      "number": "22.6",
+      "tex": "b_{t+1}=b_t-\\widehat r_t(a_t),\\qquad b_0=B,\\qquad \\widehat r_t(a_t)\\le b_t.\n\\tag{22.6}",
+      "asset": "assets/math/e765c8011cb6df6a9d96.svg",
+      "explanations": [
+        "Carries a declared finite-horizon risk budget forward, preventing one charged action from spending more authority than remains.",
+        "`b_t` is an accounting state, while `\\widehat r_t(a_t)` needs its own calibration and threat-model evidence."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C22-D01",
+      "title": "A penalty hides an exchange rate",
+      "notebook_anchor": "demo-c22-d01",
+      "source_section": "Fixed penalties make a hidden exchange rate",
+      "source_anchor": "fixed-penalties-make-a-hidden-exchange-rate",
+      "equations": [
+        "\\operatorname{Score}_{\\lambda_{\\mathrm{safe}}}(\\pi)=\\operatorname{Ret}^{\\pi}-\\lambda_{\\mathrm{safe}}\\operatorname{Cost}_1^{\\pi}.",
+        "\\begin{aligned}\\text{maximize}_{\\pi}\\quad & \\operatorname{Ret}^{\\pi}\\\\\\text{subject to}\\quad & \\operatorname{Cost}_i^{\\pi}\\le d_i \\quad \\text{for every declared } i.\\end{aligned}"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Policies and limit",
+          "values": [
+            "table",
+            "workbench",
+            "transfer"
+          ],
+          "default": "table",
+          "value_labels": [
+            "Chapter table (limit 1)",
+            "Workbench VI.1 (limit 1)",
+            "Laboratory transfer (limit 0)"
+          ]
+        },
+        {
+          "key": "penalty",
+          "label": "Penalty multiplier",
+          "values": [
+            2,
+            4,
+            6,
+            100
+          ],
+          "default": 2
+        }
+      ],
+      "function": "penalty_picture",
+      "states": 12
+    },
+    {
+      "id": "C22-D02",
+      "title": "A bound permits excess, so leave a margin",
+      "notebook_anchor": "demo-c22-d02",
+      "source_section": "A constraint is not a promise",
+      "source_anchor": "a-constraint-is-not-a-promise",
+      "equations": [
+        "\\operatorname{Cost}_i^{\\pi_{k+1}}\\le d_i+\\frac{\\sqrt{2\\delta}\\,\\gamma\\,\\epsilon_i}{(1-\\gamma)^2}.",
+        "\\operatorname{Cost}_i^{\\pi}\\le d_i-\\varepsilon_{\\mathrm{safe}},\\qquad \\varepsilon_{\\mathrm{safe}}>0."
+      ],
+      "controls": [
+        {
+          "key": "step",
+          "label": "Step size delta",
+          "values": [
+            0.005,
+            0.02
+          ],
+          "default": 0.005
+        },
+        {
+          "key": "discount",
+          "label": "Discount factor gamma",
+          "values": [
+            0.5,
+            0.85,
+            0.9
+          ],
+          "default": 0.85
+        },
+        {
+          "key": "margin",
+          "label": "Safety margin",
+          "values": [
+            0.5,
+            1.0
+          ],
+          "default": 0.5
+        }
+      ],
+      "function": "bound_picture",
+      "states": 12
+    },
+    {
+      "id": "C22-D03",
+      "title": "Two other risk contracts: a tail and a budget",
+      "notebook_anchor": "demo-c22-d03",
+      "source_section": "Other risk contracts",
+      "source_anchor": "other-risk-contracts",
+      "equations": [
+        "\\operatorname{CVaR}_{\\alpha}(C)= \\inf_{z\\in\\mathbb R}\\left[z+\\frac{1}{1-\\alpha}\\,\\mathbb E[(C-z)_+]\\right].",
+        "b_{t+1}=b_t-\\widehat r_t(a_t),\\qquad b_0=B,\\qquad \\widehat r_t(a_t)\\le b_t."
+      ],
+      "controls": [
+        {
+          "key": "alpha",
+          "label": "Tail level alpha",
+          "values": [
+            0.9,
+            0.95,
+            0.99,
+            0.995
+          ],
+          "default": 0.99
+        },
+        {
+          "key": "budget",
+          "label": "Risk budget B",
+          "values": [
+            0.05,
+            0.1,
+            0.2
+          ],
+          "default": 0.1
+        }
+      ],
+      "function": "risk_contracts_picture",
+      "states": 12
+    },
+    {
+      "id": "C22-D04",
+      "title": "Authority first, risk limit second, reward last",
+      "notebook_anchor": "demo-c22-d04",
+      "source_section": "Authority is an operating envelope",
+      "source_anchor": "authority-is-an-operating-envelope",
+      "equations": [
+        "\\begin{aligned}\\text{maximize}_{\\pi}\\quad & \\operatorname{Ret}^{\\pi}\\\\\\text{subject to}\\quad & \\operatorname{Cost}_i^{\\pi}\\le d_i \\quad \\text{for every declared } i.\\end{aligned}",
+        "\\operatorname{Score}_{\\lambda_{\\mathrm{safe}}}(\\pi)=\\operatorname{Ret}^{\\pi}-\\lambda_{\\mathrm{safe}}\\operatorname{Cost}_1^{\\pi}."
+      ],
+      "controls": [
+        {
+          "key": "limit",
+          "label": "Risk limit",
+          "values": [
+            0,
+            0.1,
+            0.25
+          ],
+          "default": 0.1
+        },
+        {
+          "key": "penalty",
+          "label": "Penalty per unit of risk",
+          "values": [
+            5,
+            25
+          ],
+          "default": 5
+        },
+        {
+          "key": "route",
+          "label": "Routes to the actuator",
+          "values": [
+            "checked",
+            "bypass"
+          ],
+          "default": "checked",
+          "value_labels": [
+            "Every route passes the check",
+            "One route skips the check"
+          ]
+        }
+      ],
+      "function": "gate_picture",
+      "states": 12
+    }
+  ]
+}

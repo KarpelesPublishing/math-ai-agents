@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch19</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 19: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute default policy 1 mixture value.</p>
+<p>0.5&#42;0.4+0.5&#42;0.9=0.65.</p>
+<h2>Question 2</h2>
+<p>Why does the changed mixture favor policy 0?</p>
+<p>Under the changed partner weights [0.9,0.1], policy 0 is worth 0.9(0.95)+0.1(0.2)=0.875 and policy 1 is worth 0.9(0.4)+0.1(0.9)=0.45. Its strong column 0 value 0.95 receives weight 0.9.</p>
+<h2>Question 3</h2>
+<p>Which transfer policy wins?</p>
+<p>Policy 1 is a generalist: it succeeds with probability 0.6 against every partner, so under weights [0.2,0.6,0.2] it is worth 0.6, while policies 0 and 2 are each worth 0.2.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>A matrix has a diagonal mean of 10 and an off-diagonal mean of 8. What is the loss, and what changes if the diagonal mean is 0?</p>
+<p>(10 - 8) / 10 = 0.20. With a diagonal mean of 0 the denominator is 0, so the statistic is undefined and the chapter says to report the difference instead.</p>
+<p><strong>Prediction answer:</strong> Nearer 0.7.</p>
+<p>(20.15 - 5.71) / 20.15 = 14.44 / 20.15 = 0.717. Select Laser Tag small4 to see it.</p>
+<p><strong>If you chose another answer:</strong> The gap is 20.15 - 5.71 = 14.44, and 14.44 / 20.15 = 0.717, nearer 0.7. Select Laser Tag small4 to see it.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>If party two starts at B instead, which option does party one answer with first, and how many updates until party two is back at B?</p>
+<p>Party one's payoffs against B are A: (-1), B: 0, C: 1, so it plays C. Party two answers A, party one B, party two C, party one A, party two B, so party two is back at B after 6 updates.</p>
+<p><strong>Prediction answer:</strong> It returns to where it began.</p>
+<p>Party two is back at A after 6 updates, so the cycle repeats. Set Updates shown to 6 to see the dotted line.</p>
+<p><strong>If you chose another answer:</strong> It does not stop: party two is back at A after 6 updates, so the cycle repeats. Set Updates shown to 6 to see the dotted line.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>A different procedure loses 60 points at baseline, 25 at depth 4 and 20 at depth 8. How many extra points does the step from depth 4 to depth 8 buy?</p>
+<p>Points removed at depth 4: 60 - 25 = 35. At depth 8: 60 - 20 = 40. The step adds 40 - 35 = 5 points, much less than the first 35.</p>
+<p><strong>Prediction answer:</strong> Almost the same.</p>
+<p>Level ten removes 56.7 points, only 0.6 more than level five. Choose Level ten and read the Extra points from the last step.</p>
+<p><strong>If you chose another answer:</strong> Doubling the depth from level five to level ten does not double the gain: level five already removes 56.1 points and level ten removes 56.7, only 0.6 more. Choose Level ten and read the Extra points from the last step.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>For the two-policy matrix with weight 0.7 on partner 0, which policy ranks first, and what are the two values?</p>
+<p>Policy 0: 0.7 x 0.95 + 0.3 x 0.2 = 0.725. Policy 1: 0.7 x 0.4 + 0.3 x 0.9 = 0.55. Policy 0 ranks first, since 0.7 is above the crossing at 0.56.</p>
+<p><strong>Prediction answer:</strong> Policy 1.</p>
+<p>Policy 1 scores 0.5 x 0.4 + 0.5 x 0.9 = 0.65 against 0.575 for policy 0, despite the weaker diagonal. The default state shows it.</p>
+<p><strong>If you chose another answer:</strong> The diagonal alone does not give the ranking: policy 0 scores 0.5 x 0.95 + 0.5 x 0.2 = 0.575 against the mix, while policy 1 scores 0.5 x 0.4 + 0.5 x 0.9 = 0.65, despite the weaker diagonal. The default state shows it.</p></body></html>

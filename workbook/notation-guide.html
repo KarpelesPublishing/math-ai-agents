@@ -1,0 +1,983 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>notation-guide</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Notation Guide</h1>
+<p>The Mathematics of Artificial Intelligence Agents</p>
+<p>A Readable Guide to Decisions, Planning, Memory, Tools, Learning, and Cooperation</p>
+<p>Chapter links in this companion copy open the corresponding laboratory reading page. The symbols and explanations are retained from the book; its original notation source is preserved in reference-sources/notation-guide.md.</p>
+<p>Core symbols carry their meanings across chapters. Explicitly declared local aliases and diagram
+labels are scoped where they appear; a local count or vertex label does not redefine a global quantity.</p>
+<p>That rule costs something. It means a few symbols are less conventional than the ones a specialist
+in one subfield would expect, because a letter that is standard in information theory may already be
+doing a job in decision theory. Where this book departs from a field's usual notation, it is to
+avoid a collision, and the departure is noted at the point of use.</p>
+<p>This guide is for returning to, not for memorizing. Every symbol is also defined where it first
+appears.</p>
+<h2>Conventions</h2>
+<ul>
+<li>Scalars are italic; vectors are bold lowercase; matrices are uppercase.</li>
+<li>Sets, spaces, and operators use calligraphic or roman forms.</li>
+<li>Random variables are uppercase and their realized values are the matching lowercase letter, so the
+  composite state random variable is written one way and a particular value of it another.</li>
+<li>Named operations such as <code>dec</code>, <code>Mem</code>, and <code>Reach</code> are roman, never italic single letters.</li>
+<li>Probability is <span class="math">&#92;(&#92;Pr&#92;)</span> and expectation is <span class="math">&#92;(&#92;mathbb E&#92;)</span>. Chapters 1 and 22 typeset the expectation operator as <span class="math">&#92;(&#92;mathbb E&#92;)</span>; Chapters 6, 7, 10, 11, 13, 15, 16, and 19 typeset the same operator as roman <code>E</code> (<span class="math">&#92;(&#92;operatorname{E}&#92;)</span> or <span class="math">&#92;(&#92;mathrm{E}&#92;)</span>). Both forms denote one operator. A plain <code>E</code> used as a subscript label, such as a delegated destination in Chapter 27, names a thing and is not an operator.</li>
+<li>Every logarithm states its base or its units at first use.</li>
+<li>Subscript <code>t</code> is time, except where a chapter declares otherwise (Chapter 19's matrix <code>M_{st}</code> uses <code>s</code> and <code>t</code> as run indices). Subscript <code>m</code> indexes a member of a declared model family.</li>
+<li>A few letters change meaning between chapters, for example <span class="math">&#92;(&#92;Gamma&#92;)</span>, <span class="math">&#92;(&#92;alpha&#92;)</span>, <span class="math">&#92;(&#92;delta&#92;)</span>, <span class="math">&#92;(&#92;tau&#92;)</span>, <code>C</code>, <code>z</code>, <code>u</code>, <span class="math">&#92;(&#92;Phi&#92;)</span>, and <span class="math">&#92;(&#92;lambda&#92;)</span>. Each meaning is scoped to the chapter listed beside it and restated where it applies.</li>
+</ul>
+<h2>The two quantities the book is built on</h2>
+<p>Two objects recur from Part I onward and are worth reading before Chapter 1.</p>
+<p><strong>The score of an assembly.</strong> <span class="math">&#92;(U&#95;&#92;mathcal V(S)=&#92;mathbb E&#91;Y&#95;S&#92;mid&#92;mathcal V&#93;&#92;)</span> is the population score of
+the system built from enabled component set <code>S</code>, under declared evaluation contract <span class="math">&#92;(&#92;mathcal V&#92;)</span>;
+<code>Y_S</code> is the score of one run of that system.
+<span class="math">&#92;(&#92;widehat U&#95;&#92;mathcal V(S)&#92;)</span> is its finite-sample estimate. The contract fixes task distribution,
+scoring rule and units, sampling settings, resource budget, and stopping rule. When the set holds
+only the frozen model, <code>U</code> describes the model-alone system. As components are
+added to the set, the same notation carries through unchanged, which is the point of writing it this
+way.</p>
+<p><strong>The interaction contrast.</strong> <span class="math">&#92;(&#92;Gamma(A;B)&#92;)</span> is the signed difference between the joint gain and the
+sum of isolated gains under one matched evaluation contract. Four scores identify this nonadditivity,
+not a mechanism or the necessity of either component. Chapter 2 defines it. <span class="math">&#92;(&#92;rho&#95;&#92;Gamma&#92;)</span> divides the
+contrast by the positive total joint gain. Nonnegative isolated gains and a nonnegative contrast
+additionally make the ratio a fraction between zero and one. Negative contrasts remain meaningful signed quantities.</p>
+<h2>Part I symbols</h2>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Meaning</th>
+<th style="text-align: right;">Introduced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="math">&#92;(K&#95;&#92;theta(z&#92;mid c)&#92;)</span></td>
+<td>Model conditional law over outputs given context</td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(U&#95;&#92;mathcal V(S)&#92;)</span></td>
+<td>Population task score of assembly <code>S</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat U&#95;&#92;mathcal V(S)&#92;)</span></td>
+<td>Finite-sample estimate of that task score</td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{dec}&#92;)</span></td>
+<td>Decoding map from a distribution to a candidate output</td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{eval}&#95;&#92;tau&#92;)</span></td>
+<td>Evaluator with threshold, parser, or tolerance <span class="math">&#92;(&#92;tau&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;theta&#92;)</span></td>
+<td>Model parameters, frozen unless a chapter says otherwise</td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathbb E&#92;)</span></td>
+<td>Expectation, as in Chapters 1 and 22 (Chapters 6, 7, 10, 11, 13, 15, 16, and 19 write the same operator as roman <code>E</code>; a plain subscript label such as Chapter 27's <code>p_E</code> is not this operator)</td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal V&#92;)</span></td>
+<td>Declared evaluation contract: task distribution, scoring rule and units, sampling settings, budget, and stopping rule</td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><code>q</code>, <code>n</code></td>
+<td>Per-token success probability and target length in the exact-match example, so the score is <code>q^n</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/01-score-threshold.html">1</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Gamma(A;B)&#92;)</span></td>
+<td>Interaction contrast between component sets</td>
+<td style="text-align: right;"><a href="../guide/chapters/02-four-cell-interaction.html">2</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;rho&#95;&#92;Gamma&#92;)</span></td>
+<td>Interaction share of total joint gain</td>
+<td style="text-align: right;"><a href="../guide/chapters/02-four-cell-interaction.html">2</a></td>
+</tr>
+<tr>
+<td><code>q_m</code></td>
+<td>Per-attempt success probability for family member <code>m</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{pass}&#95;&#92;tau(q&#95;m)&#92;)</span></td>
+<td>Thresholded pass indicator on <code>q_m</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><code>L(C)=aC^b+c</code></td>
+<td>Fitted pretraining-loss curve; <code>C</code> is training compute and <code>a</code>, <code>b</code>, <code>c</code> are fitted constants</td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;psi&#92;)</span></td>
+<td>Fitted forecast parameters</td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(f&#95;&#92;psi&#92;)</span>, <span class="math">&#92;(&#92;epsilon&#95;m&#92;)</span></td>
+<td>Fitted forecast function and its error for member <code>m</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Gamma&#95;m&#92;)</span></td>
+<td>Interaction contrast measured for family member <code>m</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><code>z_m</code></td>
+<td>Declared predictor features for member <code>m</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/03-prospective-forecast.html">3</a></td>
+</tr>
+<tr>
+<td><code>G</code></td>
+<td>Action graph: vertices are controller states, edges are allowed transitions</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><code>V_0</code></td>
+<td>Initial vertex set</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{step}&#92;)</span></td>
+<td>One-transition successor map on vertex sets</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Reach}&#95;G(V&#95;0)&#92;)</span></td>
+<td>Reachable set</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Act}(v)&#92;)</span></td>
+<td>Candidate actions at vertex <code>v</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal{G}&#92;)</span></td>
+<td>Permission grant rule: maps a set of candidate actions to the permitted subset</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Allowed}&#95;{&#92;mathcal G}(v)&#92;)</span></td>
+<td>Permitted actions after filtering</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Pi&#95;{G,v}(p)&#92;)</span></td>
+<td>Infinite-cluster probability</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><code>p_c(G,v)</code></td>
+<td>Critical probability</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>Branching factor or degree</td>
+<td style="text-align: right;"><a href="../guide/chapters/04-permission-reachability.html">4</a></td>
+</tr>
+<tr>
+<td><code>x_t=(c_t,m_t,w_t,b_t)</code></td>
+<td>Composite agent state realization</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><code>w_t</code></td>
+<td>World or environment state</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(P(x&#95;{t+1}&#92;mid x&#95;t)&#92;)</span></td>
+<td>Composite transition kernel</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Mem}&#92;)</span></td>
+<td>Memory map from the whole history to the retained memory <code>m_t</code>; the update itself is part of <span class="math">&#92;(&#92;operatorname{Upd}&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;pi&#95;&#92;theta(z,a&#92;mid x)&#92;)</span></td>
+<td>Proposal policy: model law times decoder</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;kappa&#92;)</span></td>
+<td>Coarse-graining map</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><code>H(X)</code>, <code>I(X;Y)</code></td>
+<td>Shannon entropy, mutual information</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Grant}(g&#92;mid x,u)&#92;)</span></td>
+<td>Normalized permission-outcome law, including denial</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Env}(w&#x27;,o&#92;mid x,u,g)&#92;)</span></td>
+<td>Joint next-world and observation law</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Upd}(c&#x27;,m&#x27;,b&#x27;&#92;mid x,u,g,w&#x27;,o)&#92;)</span></td>
+<td>Joint context, memory, and budget update law</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(P&#95;{&#92;mathrm{env}}(x&#x27;&#92;mid x,u)&#92;)</span></td>
+<td>Controlled transition given a full proposal</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(P&#95;&#92;theta(x&#x27;&#92;mid x)&#92;)</span></td>
+<td>Closed-loop transition after averaging over proposal policy</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+<tr>
+<td><code>u=(z,a)</code></td>
+<td>Full proposal: model output and decoded action</td>
+<td style="text-align: right;"><a href="../guide/chapters/05-composite-kernel.html">5</a></td>
+</tr>
+</tbody>
+</table>
+<h2>Symbols introduced after Part I</h2>
+<table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Meaning</th>
+<th style="text-align: right;">Introduced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>u(y)</code></td>
+<td>Utility of a single outcome</td>
+<td style="text-align: right;"><a href="../guide/chapters/06-expected-utility.html">6</a></td>
+</tr>
+<tr>
+<td><code>y</code></td>
+<td>An outcome of an action</td>
+<td style="text-align: right;"><a href="../guide/chapters/06-expected-utility.html">6</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal{A}&#92;)</span></td>
+<td>The action set available at a state</td>
+<td style="text-align: right;"><a href="../guide/chapters/06-expected-utility.html">6</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{EU}(a)&#92;)</span></td>
+<td>Expected utility of an action</td>
+<td style="text-align: right;"><a href="../guide/chapters/06-expected-utility.html">6</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{CE}&#92;)</span></td>
+<td>Certainty equivalent</td>
+<td style="text-align: right;"><a href="../guide/chapters/06-expected-utility.html">6</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Ret}&#95;t&#92;)</span></td>
+<td>Return, the discounted sum of future rewards</td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><code>r_t</code></td>
+<td>Reward received on the transition out of <code>x_t</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;gamma&#92;)</span></td>
+<td>Discount factor</td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;pi(a&#92;mid x)&#92;)</span></td>
+<td>Stochastic policy</td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(V^{&#92;pi}&#92;)</span>, <span class="math">&#92;(V^{&#92;star}&#92;)</span></td>
+<td>State value under a policy, and under an optimal policy</td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(Q^{&#92;pi}&#92;)</span></td>
+<td>Action value under a policy</td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Phi(x)&#92;)</span></td>
+<td>Local shaping potential</td>
+<td style="text-align: right;"><a href="../guide/chapters/07-finite-horizon-planning.html">7</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal{X}&#92;)</span></td>
+<td>The finite state set</td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathbf{b}&#95;t&#92;)</span></td>
+<td>Belief, a distribution over <span class="math">&#92;(&#92;mathcal{X}&#92;)</span> at time <code>t</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal{B}&#92;)</span></td>
+<td>The belief simplex, the set of distributions over <span class="math">&#92;(&#92;mathcal{X}&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Obs}(o&#92;mid x,a)&#92;)</span></td>
+<td>Observation kernel: the chance of seeing <code>o</code> on arriving in <code>x</code> after <code>a</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;bar r(&#92;mathbf{b},a)&#92;)</span></td>
+<td>Expected reward of action <code>a</code> under belief <span class="math">&#92;(&#92;mathbf{b}&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(J(x&#x27;,o&#92;mid x,a)&#92;)</span></td>
+<td>Filtered joint next-state and observation law</td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Gamma&#95;H&#92;)</span>, <span class="math">&#92;(&#92;alpha&#92;)</span></td>
+<td>Finite-horizon policy-vector set and one vector</td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{VOI}(O)&#92;)</span></td>
+<td>Value of observing <code>O</code> before a declared decision; Chapter 27 writes <span class="math">&#92;(&#92;operatorname{VOI}(o)&#92;)</span> for one realized observation</td>
+<td style="text-align: right;"><a href="../guide/chapters/08-belief-information.html">8</a></td>
+</tr>
+<tr>
+<td><code>g(v)</code>, <code>h(v)</code></td>
+<td>True cost from the start to vertex <code>v</code>, and true cost from <code>v</code> to the nearest goal</td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><code>f(v)</code></td>
+<td>Cost of the best path constrained to pass through <code>v</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;hat g(v)&#92;)</span>, <span class="math">&#92;(&#92;hat h(v)&#92;)</span>, <span class="math">&#92;(&#92;hat f(v)&#92;)</span></td>
+<td>The computable estimates of each</td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{cost}(u,v)&#92;)</span></td>
+<td>Cost of the edge from <code>u</code> to <code>v</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><code>s</code>, <span class="math">&#92;(&#92;mathcal{T}&#92;)</span></td>
+<td>Start vertex and goal set</td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Exp}(A,G)&#92;)</span></td>
+<td>Number of vertices algorithm <code>A</code> expands on graph <code>G</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><code>h(u,v)</code></td>
+<td>True minimum path cost from <code>u</code> to <code>v</code>, distinct from the heuristic estimate <span class="math">&#92;(&#92;hat h(v)&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/09-astar-audit.html">9</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal{I}&#95;o&#92;)</span></td>
+<td>Initiation set of option <code>o</code>: the states where the option may start</td>
+<td style="text-align: right;"><a href="../guide/chapters/10-option-duration.html">10</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;pi&#95;o&#92;)</span></td>
+<td>Option <code>o</code>'s internal policy, mapping execution information to a primitive action</td>
+<td style="text-align: right;"><a href="../guide/chapters/10-option-duration.html">10</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;beta&#95;o&#92;)</span></td>
+<td>Option <code>o</code>'s termination condition</td>
+<td style="text-align: right;"><a href="../guide/chapters/10-option-duration.html">10</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mu&#92;)</span></td>
+<td>Policy over options: the parent policy that selects which option to run</td>
+<td style="text-align: right;"><a href="../guide/chapters/10-option-duration.html">10</a></td>
+</tr>
+<tr>
+<td><code>a_t</code></td>
+<td>Action selected at step <code>t</code>; in Chapter 11, the next action selected after <code>t</code> completed pulls</td>
+<td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Reg}(T)&#92;)</span></td>
+<td>Regret accumulated over <code>T</code> rounds</td>
+<td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;hat&#92;mu&#95;a&#92;)</span></td>
+<td>Empirical mean payoff of action <code>a</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
+</tr>
+<tr>
+<td><code>N_t(a)</code></td>
+<td>Number of pulls of action <code>a</code> among the <code>t</code> completed pulls, before the next decision</td>
+<td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Gain}(O)&#92;)</span></td>
+<td>Decision-relevant information in an observation</td>
+<td style="text-align: right;"><a href="../guide/chapters/11-bounded-exploration.html">11</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;hat V&#95;t(x)&#92;)</span></td>
+<td>The agent's current estimate of the value of state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/12-trajectory-credit.html">12</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;delta&#95;t&#92;)</span></td>
+<td>Temporal-difference error at step <code>t</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/12-trajectory-credit.html">12</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;alpha&#92;)</span></td>
+<td>Step size for an update</td>
+<td style="text-align: right;"><a href="../guide/chapters/12-trajectory-credit.html">12</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;lambda&#92;)</span></td>
+<td>Weighting between the one-step estimate and the realized outcome</td>
+<td style="text-align: right;"><a href="../guide/chapters/12-trajectory-credit.html">12</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Ret}^{&#92;lambda}&#95;t&#92;)</span></td>
+<td>The weighted return that interpolates between them</td>
+<td style="text-align: right;"><a href="../guide/chapters/12-trajectory-credit.html">12</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Pot}(x)&#92;)</span></td>
+<td>Bounded shaping potential on declared state</td>
+<td style="text-align: right;"><a href="../guide/chapters/13-finite-policy-learning.html">13</a></td>
+</tr>
+<tr>
+<td><code>r'_t, G'_0</code></td>
+<td>Shaped reward and return; the original reward <code>r</code> and the return keep their meaning (Chapter 13 gives the return a local alias for Chapter 7's <span class="math">&#92;(&#92;operatorname{Ret}&#95;t&#92;)</span>)</td>
+<td style="text-align: right;"><a href="../guide/chapters/13-finite-policy-learning.html">13</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;phi&#92;)</span></td>
+<td>Trainable policy parameters, distinct from the frozen model parameters <span class="math">&#92;(&#92;theta&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/13-finite-policy-learning.html">13</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;hat P(x&#x27;&#92;mid x,a)&#92;)</span></td>
+<td>Learned transition-model estimate</td>
+<td style="text-align: right;"><a href="../guide/chapters/14-transition-model-bound.html">14</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat{&#92;operatorname{Obs}}&#92;)</span></td>
+<td>Learned observation-kernel estimate</td>
+<td style="text-align: right;"><a href="../guide/chapters/14-transition-model-bound.html">14</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;epsilon&#92;)</span></td>
+<td>Uniform one-step total-variation model error</td>
+<td style="text-align: right;"><a href="../guide/chapters/14-transition-model-bound.html">14</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;tau&#95;{&#92;text{samp}}&#92;)</span></td>
+<td>Sampling temperature of a generative model</td>
+<td style="text-align: right;"><a href="../guide/chapters/14-transition-model-bound.html">14</a></td>
+</tr>
+<tr>
+<td><code>R</code></td>
+<td>Upper bound on the common expected immediate state-action reward</td>
+<td style="text-align: right;"><a href="../guide/chapters/14-transition-model-bound.html">14</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(H&#95;{&#92;max}&#92;)</span></td>
+<td>Declared finite planning cap</td>
+<td style="text-align: right;"><a href="../guide/chapters/14-transition-model-bound.html">14</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(R^&#92;star&#92;)</span></td>
+<td>Retained record set chosen under the token budget</td>
+<td style="text-align: right;"><a href="../guide/chapters/15-memory-budget.html">15</a></td>
+</tr>
+<tr>
+<td><code>c(m)</code>, <code>B</code>, <span class="math">&#92;(&#92;lambda&#92;)</span> (Chapter 15)</td>
+<td>Raw token cost of record <code>m</code>, the token budget, and decision-value units per token</td>
+<td style="text-align: right;"><a href="../guide/chapters/15-memory-budget.html">15</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;varepsilon&#92;)</span>, <span class="math">&#92;(2&#92;varepsilon&#92;)</span> (Chapter 15)</td>
+<td>Summary value tolerance and the resulting regret bound</td>
+<td style="text-align: right;"><a href="../guide/chapters/15-memory-budget.html">15</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Cov}(k)&#92;)</span></td>
+<td>Coverage at <code>k</code>: the chance that at least one of <code>k</code> samples is correct</td>
+<td style="text-align: right;"><a href="../guide/chapters/16-sample-allocation.html">16</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Sel}(k)&#92;)</span></td>
+<td>Selection at <code>k</code>: the chance that the returned sample is correct</td>
+<td style="text-align: right;"><a href="../guide/chapters/16-sample-allocation.html">16</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat c&#95;{&#92;mathrm{success}}&#92;)</span></td>
+<td>Total attempt cost divided by authorized confirmed completions</td>
+<td style="text-align: right;"><a href="../guide/chapters/16-sample-allocation.html">16</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;pi(k)&#92;)</span></td>
+<td>Measured chance that the selector's top-ranked sample is correct given <code>k</code> candidates that contain at least one correct candidate</td>
+<td style="text-align: right;"><a href="../guide/chapters/16-sample-allocation.html">16</a></td>
+</tr>
+<tr>
+<td><code>d</code></td>
+<td>Probability that the selector scores one correct sample above one incorrect sample</td>
+<td style="text-align: right;"><a href="../guide/chapters/16-sample-allocation.html">16</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{eff}(T,x)&#92;)</span></td>
+<td>State resulting from applying tool <code>T</code> in state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{resp}(T,x)&#92;)</span></td>
+<td>Report returned by tool <code>T</code> in state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{undo}(T)&#92;)</span></td>
+<td>Recovery tool for an effect of <code>T</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Rep}(x)&#92;)</span></td>
+<td>Conservative set of eligible repeat attempts</td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Ready}(T,x)&#92;)</span></td>
+<td>Current authorization and preconditions for a repeat attempt</td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Absent}(T,x)&#92;)</span></td>
+<td>Authoritative terminal non-application of the original attempt</td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Restored}(T,x)&#92;)</span></td>
+<td>Verified recovery of relevant consequences and preconditions</td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;beta&#92;)</span>, <span class="math">&#92;(c&#95;{&#92;text{dup}}&#92;)</span>, <span class="math">&#92;(c&#95;{&#92;text{miss}}&#92;)</span></td>
+<td>Belief that the effect already landed, cost of a duplicate effect, and cost of the effect never happening</td>
+<td style="text-align: right;"><a href="../guide/chapters/17-effect-and-retry.html">17</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Exec}&#95;{&#92;mathrm{ui}}(&#92;tilde a&#92;mid x,a)&#92;)</span></td>
+<td>Normalized realized-operation law</td>
+<td style="text-align: right;"><a href="../guide/chapters/18-interface-freshness.html">18</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(P&#95;{&#92;mathrm{ui}}&#92;)</span></td>
+<td>Execution-composed world kernel</td>
+<td style="text-align: right;"><a href="../guide/chapters/18-interface-freshness.html">18</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Act}&#95;{&#92;mathrm{ui}}&#92;)</span></td>
+<td>Finite realized-operation set including declared denial/no-effect operations</td>
+<td style="text-align: right;"><a href="../guide/chapters/18-interface-freshness.html">18</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal A&#95;{&#92;mathrm{rob}}(&#92;mathbf b)&#92;)</span></td>
+<td>Intersection of correctly specified authorization sets over belief support</td>
+<td style="text-align: right;"><a href="../guide/chapters/18-interface-freshness.html">18</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;lambda&#95;{&#92;mathrm{ui}}, &#92;operatorname{Fresh}(&#92;Delta)&#92;)</span></td>
+<td>Material-change rate and no-invalidating-change probability</td>
+<td style="text-align: right;"><a href="../guide/chapters/18-interface-freshness.html">18</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal A&#95;{&#92;mathrm{auth}}(x)&#92;)</span></td>
+<td>Commands whose protected effect is authorized in state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/18-interface-freshness.html">18</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(u&#95;i(&#92;pi&#95;1,&#92;pi&#95;2)&#92;)</span></td>
+<td>Payoff to party <code>i</code> under a pair of policies</td>
+<td style="text-align: right;"><a href="../guide/chapters/19-cross-play-transfer.html">19</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;pi&#95;i^{(s)}&#92;)</span></td>
+<td>Party <code>i</code> policy from training run <code>s</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/19-cross-play-transfer.html">19</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{diag}(M)&#92;)</span>, <span class="math">&#92;(&#92;operatorname{off}(M)&#92;)</span></td>
+<td>Matched-run and cross-run mean returns</td>
+<td style="text-align: right;"><a href="../guide/chapters/19-cross-play-transfer.html">19</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{JPC}(M)&#92;)</span></td>
+<td>Proportional cross-play loss</td>
+<td style="text-align: right;"><a href="../guide/chapters/19-cross-play-transfer.html">19</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{BR}&#95;i(&#92;pi&#95;{-i})&#92;)</span></td>
+<td>Best response by party <code>i</code> to the other policy</td>
+<td style="text-align: right;"><a href="../guide/chapters/19-cross-play-transfer.html">19</a></td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td>Matched matrix whose entry <code>M_{st}</code> pairs run <code>s</code> against run <code>t</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/19-cross-play-transfer.html">19</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Know}&#95;i(F)&#92;)</span></td>
+<td>Party <code>i</code> knows proposition <code>F</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/20-bounded-message-knowledge.html">20</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{MK}&#95;{&#92;mathcal P}^n(F)&#92;)</span></td>
+<td><code>n</code> levels of mutual knowledge among party set <span class="math">&#92;(&#92;mathcal P&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/20-bounded-message-knowledge.html">20</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{CK}&#95;{&#92;mathcal P}(F)&#92;)</span></td>
+<td>Common knowledge of <code>F</code> among party set <span class="math">&#92;(&#92;mathcal P&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/20-bounded-message-knowledge.html">20</a></td>
+</tr>
+<tr>
+<td><code>q_e</code></td>
+<td>Nonnegative flow on traffic-network edge <code>e</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;ell&#95;e(q&#95;e)&#92;)</span></td>
+<td>Latency incurred on edge <code>e</code> at flow <code>q_e</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{TL}(q)&#92;)</span></td>
+<td>Total latency of a feasible network flow <code>q</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(q^{&#92;mathrm{NE}}&#92;)</span></td>
+<td>Nash-equilibrium flow</td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(q^{&#92;star}&#92;)</span></td>
+<td>Total-latency-minimizing flow</td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;ell^{&#92;mathrm{mc}}&#95;e(q&#95;e)&#92;)</span></td>
+<td>Marginal-cost latency imposed by edge <code>e</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(q&#95;{&#92;mathrm{upper}}&#92;)</span>, <span class="math">&#92;(q&#95;{&#92;mathrm{lower}}&#92;)</span>, <span class="math">&#92;(q&#95;{&#92;mathrm{middle}}&#92;)</span></td>
+<td>Flows on the three directed Braess routes S-U-T, S-L-T, S-U-L-T</td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;gamma&#95;{&#92;mathrm{cap}}&#92;)</span></td>
+<td>Extra-traffic fraction in the bicriteria routing comparison</td>
+<td style="text-align: right;"><a href="../guide/chapters/21-congestion-incentives.html">21</a></td>
+</tr>
+<tr>
+<td><code>C</code></td>
+<td>Declared episode-cost random variable for tail-risk accounting</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{CVaR}&#95;{&#92;alpha}(C)&#92;)</span></td>
+<td>Conditional value at risk of <code>C</code> at declared tail level <span class="math">&#92;(&#92;alpha&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><code>z</code></td>
+<td>Candidate tail cutoff in CVaR's infimum representation</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><code>B</code>, <code>b_t</code></td>
+<td>Declared bounded-horizon risk budget and remaining budget before decision <code>t</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat r&#95;t(a&#95;t)&#92;)</span></td>
+<td>Conservative charged risk estimate for action <code>a_t</code> at time <code>t</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Ret}^{&#92;pi}&#92;)</span></td>
+<td>Expected discounted reward under policy <span class="math">&#92;(&#92;pi&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal I&#92;)</span></td>
+<td>Set of states in which a named invariant holds</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Cost}&#95;i^{&#92;pi}&#92;)</span></td>
+<td>Expected discounted auxiliary-cost return</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><code>d_i</code></td>
+<td>Declared limit on auxiliary cost <code>i</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal T&#92;)</span></td>
+<td>Declared threat model</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;varepsilon&#95;{&#92;mathrm{safe}}&#92;)</span></td>
+<td>Deliberate safety margin</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(A&#95;{C&#95;i}^{&#92;pi&#95;k}(s,a)&#92;)</span></td>
+<td>Constraint advantage for auxiliary cost <code>i</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;epsilon&#95;i&#92;)</span></td>
+<td>Largest candidate-policy expected constraint advantage</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;delta&#92;)</span></td>
+<td>Ideal CPO step-size bound</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;lambda&#95;{&#92;mathrm{safe}}&#92;)</span></td>
+<td>Fixed multiplier between reward and one auxiliary cost</td>
+<td style="text-align: right;"><a href="../guide/chapters/22-risk-authority-contract.html">22</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal C&#95;{&#92;mathrm{parent}}&#92;)</span>, <span class="math">&#92;(&#92;mathcal C&#95;{&#92;mathrm{child}}&#92;)</span></td>
+<td>Declared capability sets of a delegating parent and a delegated child</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><code>M_t</code>, <code>e_t</code></td>
+<td>Monitor's enforcement-layer record at time <code>t</code>, and one observed event</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Mon}&#92;)</span></td>
+<td>Monitor update map from prior record and one observed event to the next record</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;delta&#92;)</span>, <code>v</code>, <code>r</code></td>
+<td>Document identity, version, and recipient in the publish predicate</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Approved}(M&#95;t)&#92;)</span></td>
+<td>Set of <span class="math">&#92;((&#92;delta,v,r)&#92;)</span> triples the monitor's current record authorizes for release</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Publish}(&#92;delta,v,r,M&#95;t)&#92;)</span></td>
+<td>Boolean predicate: is this exact document-version-recipient triple currently approved</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal F&#92;)</span></td>
+<td>One declared, finite attack family under a fixed threat model</td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Risk}(&#92;mathcal F)&#92;)</span></td>
+<td>Worst-case violation probability across <span class="math">&#92;(&#92;mathcal F&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/23-local-security-monitor.html">23</a></td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>Number of samples drawn</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><code>p</code></td>
+<td>Probability that one sample is correct</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(N&#95;{&#92;mathrm{eval}}&#92;)</span></td>
+<td>Number of evaluated task instances</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Delta&#95;{&#92;mathrm{match}}(&#92;theta)&#92;)</span></td>
+<td>Score difference for frozen model <span class="math">&#92;(&#92;theta&#92;)</span> between a named benchmark and its matched evaluation</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;zeta&#92;)</span></td>
+<td>Declared threshold on a continuous metric when defining a thresholded scale onset</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Onset}&#95;{&#92;zeta}&#92;)</span></td>
+<td>First declared family scale at which the thresholded metric reaches <span class="math">&#92;(&#92;zeta&#92;)</span></td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal K&#92;)</span></td>
+<td>Fixed same-bank task set used to compare coverage with deployed selection</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat{&#92;operatorname{Cov}}&#95;{&#92;mathcal K}(k)&#92;)</span>, <span class="math">&#92;(&#92;widehat{&#92;operatorname{Sel}}&#95;{&#92;mathcal K}(k)&#92;)</span></td>
+<td>Empirical same-bank coverage and deployed-selector success after <code>k</code> candidates per task</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal C&#92;)</span>, <span class="math">&#92;(&#92;xi&#92;)</span></td>
+<td>Finite tested configuration set and one configuration index</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Pr&#92;)</span></td>
+<td>Probability over Equation 24.4's declared sampling or resampling design</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Lower}^{&#92;mathrm{sim}}&#95;{&#92;alpha&#95;{&#92;mathrm{tail}}}(&#92;xi)&#92;)</span></td>
+<td>Lower score bound for configuration <span class="math">&#92;(&#92;xi&#92;)</span> from a procedure with joint coverage across all tested configurations</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{SE}&#95;{&#92;mathrm{match}}&#92;)</span></td>
+<td>Estimated standard error of a difference of independent bank pass proportions</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;alpha&#95;{&#92;mathrm{tail}}&#92;)</span></td>
+<td>Tail probability level for the simultaneous lower-bound guarantee</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{LCF}&#95;{&#92;alpha&#95;{&#92;mathrm{tail}}}&#92;)</span></td>
+<td>Simultaneous lower confidence frontier across tested configurations</td>
+<td style="text-align: right;"><a href="../guide/chapters/24-matched-capability.html">24</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;phi&#95;t&#92;)</span>, <span class="math">&#92;(&#92;phi&#x27;&#92;)</span></td>
+<td>Parent and candidate versions of the agent procedure around frozen weights</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat&#92;Delta&#95;G(&#92;phi&#x27;)&#92;)</span>, <code>G</code></td>
+<td>Guard-set estimate and its frozen guard cases for the named candidate</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;widehat C&#95;G(&#92;phi&#x27;)&#92;)</span>, <span class="math">&#92;(&#92;mathcal G&#92;)</span></td>
+<td>Guard cost estimate and authority envelope for the proposed release</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;tau&#92;)</span>, <code>c</code>, <span class="math">&#92;(&#92;varepsilon&#95;{&#92;rm safe}&#92;)</span></td>
+<td>Local uplift threshold, cost limit, and reserved safety margin</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><code>D</code>, <span class="math">&#92;(&#92;widehat V&#95;D&#92;)</span></td>
+<td>Development set and a procedure's estimated value on it</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal M&#92;)</span>, <span class="math">&#92;(&#92;Phi&#95;t&#92;)</span></td>
+<td>Declared bounded family of procedure changes and the finite candidate collection compared on <code>D</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><code>m</code>, <span class="math">&#92;(Z&#95;i(&#92;phi&#x27;)&#92;)</span></td>
+<td>Number of guard cases and the paired candidate-minus-parent outcome on guard case <code>i</code>, bounded in <code>[-1,1]</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;Delta(&#92;phi&#x27;)&#92;)</span></td>
+<td>Population mean of <span class="math">&#92;(Z&#95;i(&#92;phi&#x27;)&#92;)</span>: the candidate's true uplift, an unknown parameter</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Authorized}&#95;{&#92;mathcal G}&#92;)</span>, <span class="math">&#92;(&#92;operatorname{Rollback}&#92;)</span></td>
+<td>Boolean authority predicate for the proposed release and the check for a tested path back to the parent</td>
+<td style="text-align: right;"><a href="../guide/chapters/25-development-guard-gate.html">25</a></td>
+</tr>
+<tr>
+<td><code>n</code>, <code>c</code></td>
+<td>Single-task aliases of <code>n_i</code>, <code>c_i</code>, the source-pool size and the number of passing samples for task <code>i</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/26-conditional-bank-ceiling.html">26</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;operatorname{Del}(d,&#92;Delta)&#92;)</span></td>
+<td>Delegation action to destination <code>d</code>, with stated maximum delay <span class="math">&#92;(&#92;Delta&#92;)</span> before a response, expiration, or fallback</td>
+<td style="text-align: right;"><a href="../guide/chapters/27-delegation-queue.html">27</a></td>
+</tr>
+<tr>
+<td><code>p_E(x)</code></td>
+<td>Probability that delegated destination <code>E</code> returns a correct resolution at input or state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/27-delegation-queue.html">27</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;mathcal R&#95;{&#92;mathrm{auth}}(x)&#92;)</span></td>
+<td>Authorized decision routes in state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/27-delegation-queue.html">27</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(&#92;varrho&#92;)</span></td>
+<td>One member of <span class="math">&#92;(&#92;mathcal R&#95;{&#92;mathrm{auth}}(x)&#92;)</span>, an authorized decision route</td>
+<td style="text-align: right;"><a href="../guide/chapters/27-delegation-queue.html">27</a></td>
+</tr>
+<tr>
+<td><span class="math">&#92;(V(&#92;varrho,x)&#92;)</span></td>
+<td>Declared value of authorized route <span class="math">&#92;(&#92;varrho&#92;)</span> in state <code>x</code></td>
+<td style="text-align: right;"><a href="../guide/chapters/27-delegation-queue.html">27</a></td>
+</tr>
+</tbody>
+</table>
+<h2>Chapter 25 local notation</h2>
+<p>Chapter 25 uses <span class="math">&#92;(&#92;phi&#95;t&#92;)</span>, <span class="math">&#92;(&#92;phi&#x27;&#92;)</span>, <code>G</code>, <span class="math">&#92;(&#92;widehat&#92;Delta&#95;G&#92;)</span>, <span class="math">&#92;(&#92;widehat C&#95;G&#92;)</span>, <span class="math">&#92;(&#92;tau&#92;)</span>,
+<code>c</code>, <span class="math">&#92;(&#92;varepsilon&#95;{&#92;rm safe}&#92;)</span>, and <span class="math">&#92;(&#92;mathcal G&#92;)</span> only for its constructed procedure-release rule.
+<span class="math">&#92;(&#92;theta&#92;)</span> keeps its book-wide meaning: frozen model parameters. These local release symbols do not
+rename the book's standing state, action, score, or authority notation.</p>
+<h2>Notes on symbols in Chapters 13, 16, and 18</h2>
+<p><span class="math">&#92;(&#92;operatorname{Pot}(x)&#92;)</span> in Chapter 13 is a bounded shaping potential; its terminal boundary affects policy comparisons. Chapter 16's cost per authorized confirmed success is undefined when no run succeeds. In Chapter 18, <span class="math">&#92;(&#92;operatorname{Exec}&#95;{&#92;mathrm{ui}}&#92;)</span> connects a proposed command to a realized operation. <span class="math">&#92;(&#92;mathcal A&#95;{&#92;mathrm{rob}}&#92;)</span> retains actions feasible throughout the declared belief support. <span class="math">&#92;(&#92;operatorname{Fresh}(&#92;Delta)&#92;)</span> describes no material interface change under a stated constant-rate model.</p>
+<h2>Using the guide</h2>
+<p>Local indices, declared aliases, and diagram labels retain their
+stated scope; return to the defining chapter for domains and assumptions.</p></body></html>

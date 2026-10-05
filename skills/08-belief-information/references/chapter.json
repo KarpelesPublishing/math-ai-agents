@@ -1,0 +1,273 @@
+{
+  "chapter": 8,
+  "title": "Acting in the Dark",
+  "source_path": "Manuscript/part-ii/08-acting-in-the-dark.md",
+  "source_sha256": "9e4f83929b8782f85c613b87329b657ab028e81b67ae26eca15c659f299861e2",
+  "notebook": "notebooks/08-belief-information.ipynb",
+  "skill": "maa-08-belief-information",
+  "skill_path": "skills/maa-08-belief-information/SKILL.md",
+  "method": "belief-information",
+  "outcome": "Update a belief and calculate gross and net one-step information value.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "Bayesian hidden-state belief update",
+    "one-step value of observation",
+    "uninformative signal aliasing"
+  ],
+  "input_fields": {
+    "belief": "Normalized prior state probability list.",
+    "transition": "Square row-stochastic state transition matrix.",
+    "observation": "State by observation row-stochastic matrix.",
+    "observed": "Zero-based observation index.",
+    "action_rewards": "Action by state finite reward matrix.",
+    "observation_cost": "Nonnegative cost paid before the one later action."
+  },
+  "example_input": "data/examples/ch08.json",
+  "reader": "readers/08-belief-information/reader.html",
+  "equations": [
+    {
+      "label": "EQV8-01",
+      "number": "8.1",
+      "tex": "\\mathbf{b}_{t+1}(x') \\;=\\;\n\\frac{\\begin{gathered}\n\\operatorname{Obs}(o\\mid x',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x'\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}\n{\\begin{gathered}\n\\sum_{x''\\in\\mathcal{X}}\\operatorname{Obs}(o\\mid x'',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x''\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}.\n\\tag{8.1}",
+      "asset": "assets/math/e992bac4f67c2b9f4efc.svg",
+      "explanations": [
+        "Equation (8.1) turns yesterday's belief, one action, and one observation into today's belief.",
+        "Push the old belief forward through the action, weight each destination by how well it explains what was seen, then rescale so the weights sum to one."
+      ]
+    },
+    {
+      "label": "chapter-08-display-2",
+      "number": "un-numbered display 2",
+      "tex": "T_E=\\begin{pmatrix}\n0.1&0.9&0&0\\\\\n0.1&0&0.9&0\\\\\n0&0.1&0&0.9\\\\\n0&0&0.1&0.9\n\\end{pmatrix},\\qquad\n\\operatorname{Obs}(\\text{non-goal}\\mid x')=(1,1,0,1).",
+      "asset": "assets/math/aeaa392b80c6a5400cb4.svg",
+      "explanations": []
+    },
+    {
+      "label": "EQV8-02",
+      "number": "8.2",
+      "tex": "\\bar r(\\mathbf{b},a)\\;=\\;\\sum_{x\\in\\mathcal{X}}\\mathbf{b}(x)\\,r(x,a).\n\\tag{8.2}",
+      "asset": "assets/math/c2b31b3a9ae02b649313.svg",
+      "explanations": [
+        "Equation (8.2) prices an action under uncertainty about where the agent is.",
+        "Average the reward the action would earn in each state, weighting each state by how much belief sits on it."
+      ]
+    },
+    {
+      "label": "EQV8-03",
+      "number": "8.3",
+      "tex": "\\begin{aligned}\nV(\\mathbf{b})\n&=\\max_{a\\in\\mathcal{A}}\\Big[\\,\\bar r(\\mathbf{b},a)\\\\\n&\\quad+\\gamma\\sum_{o}\\Pr(o\\mid \\mathbf{b},a)\\,\nV\\big(\\mathbf{b}'(\\mathbf{b},a,o)\\big)\\Big].\n\\end{aligned}\n\\tag{8.3}",
+      "asset": "assets/math/cd4610a982670be0201e.svg",
+      "explanations": [
+        "Equation (8.3) values a belief by the best action available from it and the beliefs that action can lead to.",
+        "Take the immediate expected reward, add the discounted average value of the belief each possible observation would produce, and keep the best action."
+      ]
+    },
+    {
+      "label": "chapter-08-display-5",
+      "number": "8.4",
+      "tex": "V_H(\\mathbf b)=\\max_{\\alpha\\in\\Gamma_H}\\alpha^\\top\\mathbf b.\n\\tag{8.4}",
+      "asset": "assets/math/a29d857519b0a313b7c7.svg",
+      "explanations": [
+        "Equation (8.4) represents finite-horizon belief value as best dot product from finite policy-vector set.",
+        "Score each contingent plan against current belief, then select largest expected return."
+      ]
+    },
+    {
+      "label": "EQV8-04",
+      "number": "8.5",
+      "tex": "\\begin{aligned}\n\\operatorname{VOI}(O)\n&=\\sum_{o}\\Pr(o\\mid\\mathbf{b})\\,\n\\max_{a\\in\\mathcal{A}}\\bar r\\big(\\mathbf{b}'(\\mathbf{b},o),a\\big)\\\\\n&\\quad-\\max_{a\\in\\mathcal{A}}\\bar r(\\mathbf{b},a).\n\\end{aligned}\n\\tag{8.5}",
+      "asset": "assets/math/56c0b286f79d620e6ec3.svg",
+      "explanations": [
+        "Equation (8.5) prices a look by how much better the decision becomes once its answer is known.",
+        "Average the best achievable reward across the beliefs each possible answer would leave, then subtract the best achievable reward without looking."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C08-D01",
+      "title": "The belief update, one stage at a time",
+      "notebook_anchor": "demo-c08-d01",
+      "source_section": "The update, worked",
+      "source_anchor": "the-update-worked",
+      "equations": [
+        "\\mathbf{b}_{t+1}(x') \\;=\\;\n\\frac{\\begin{gathered}\n\\operatorname{Obs}(o\\mid x',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x'\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}\n{\\begin{gathered}\n\\sum_{x''\\in\\mathcal{X}}\\operatorname{Obs}(o\\mid x'',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x''\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}.",
+        "T_E=\\begin{pmatrix}\n0.1&0.9&0&0\\\\\n0.1&0&0.9&0\\\\\n0&0.1&0&0.9\\\\\n0&0&0.1&0.9\n\\end{pmatrix},\\qquad\n\\operatorname{Obs}(\\text{non-goal}\\mid x')=(1,1,0,1)."
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Case",
+          "values": [
+            "move1",
+            "move2",
+            "default",
+            "transfer"
+          ],
+          "default": "move1",
+          "value_labels": [
+            "Corridor, first move",
+            "Corridor, second move",
+            "Notebook default",
+            "Notebook transfer"
+          ]
+        },
+        {
+          "key": "stage",
+          "label": "Step",
+          "values": [
+            0,
+            1,
+            2
+          ],
+          "default": 2,
+          "value_labels": [
+            "1. Prior belief",
+            "2. Prediction",
+            "3. Report and rescaling"
+          ]
+        }
+      ],
+      "function": "update_picture",
+      "states": 12
+    },
+    {
+      "id": "C08-D02",
+      "title": "The same report under different instruments",
+      "notebook_anchor": "demo-c08-d02",
+      "source_section": "Where the observation kernel comes from",
+      "source_anchor": "where-the-observation-kernel-comes-from",
+      "equations": [
+        "\\mathbf{b}_{t+1}(x') \\;=\\;\n\\frac{\\begin{gathered}\n\\operatorname{Obs}(o\\mid x',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x'\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}\n{\\begin{gathered}\n\\sum_{x''\\in\\mathcal{X}}\\operatorname{Obs}(o\\mid x'',a)\\\\\n\\cdot\\sum_{x\\in\\mathcal{X}}P(x''\\mid x,a)\\,\\mathbf{b}_t(x)\n\\end{gathered}}."
+      ],
+      "controls": [
+        {
+          "key": "kernel",
+          "label": "Instrument",
+          "values": [
+            "run03",
+            "run30",
+            "sensor",
+            "aliased"
+          ],
+          "default": "run03",
+          "value_labels": [
+            "Runner, false-positive 0.03",
+            "Runner, false-positive 0.30",
+            "Informative sensor (notebook default)",
+            "Aliased sensor (notebook changed)"
+          ]
+        },
+        {
+          "key": "prior",
+          "label": "Prior probability of the first state",
+          "values": [
+            0.2,
+            0.5,
+            0.8
+          ],
+          "default": 0.5
+        }
+      ],
+      "function": "instrument_picture",
+      "states": 12
+    },
+    {
+      "id": "C08-D03",
+      "title": "A belief is valued by its best plan",
+      "notebook_anchor": "demo-c08-d03",
+      "source_section": "Where an agent's belief actually lives",
+      "source_anchor": "where-an-agents-belief-actually-lives",
+      "equations": [
+        "\\bar r(\\mathbf{b},a)\\;=\\;\\sum_{x\\in\\mathcal{X}}\\mathbf{b}(x)\\,r(x,a).",
+        "\\begin{aligned}\nV(\\mathbf{b})\n&=\\max_{a\\in\\mathcal{A}}\\Big[\\,\\bar r(\\mathbf{b},a)\\\\\n&\\quad+\\gamma\\sum_{o}\\Pr(o\\mid \\mathbf{b},a)\\,\nV\\big(\\mathbf{b}'(\\mathbf{b},a,o)\\big)\\Big].\n\\end{aligned}",
+        "V_H(\\mathbf b)=\\max_{\\alpha\\in\\Gamma_H}\\alpha^\\top\\mathbf b."
+      ],
+      "controls": [
+        {
+          "key": "setting",
+          "label": "Setting",
+          "values": [
+            "alpha",
+            "auth",
+            "fmt",
+            "detour"
+          ],
+          "default": "alpha",
+          "value_labels": [
+            "Two contingent plans",
+            "Memory keeps authorization",
+            "Memory keeps formatting",
+            "Costly detour"
+          ]
+        },
+        {
+          "key": "case",
+          "label": "Case within the setting (named in the figure)",
+          "values": [
+            0,
+            1,
+            2
+          ],
+          "default": 1,
+          "value_labels": [
+            "First case",
+            "Second case",
+            "Third case"
+          ]
+        }
+      ],
+      "function": "belief_picture",
+      "states": 12
+    },
+    {
+      "id": "C08-D04",
+      "title": "A look pays only near the threshold",
+      "notebook_anchor": "demo-c08-d04",
+      "source_section": "The condition that makes a look worthless",
+      "source_anchor": "the-condition-that-makes-a-look-worthless",
+      "equations": [
+        "\\begin{aligned}\n\\operatorname{VOI}(O)\n&=\\sum_{o}\\Pr(o\\mid\\mathbf{b})\\,\n\\max_{a\\in\\mathcal{A}}\\bar r\\big(\\mathbf{b}'(\\mathbf{b},o),a\\big)\\\\\n&\\quad-\\max_{a\\in\\mathcal{A}}\\bar r(\\mathbf{b},a).\n\\end{aligned}"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Case",
+          "values": [
+            "tool",
+            "default",
+            "changed",
+            "transfer"
+          ],
+          "default": "tool",
+          "value_labels": [
+            "Chapter verification tool, prior 0.6",
+            "Notebook default",
+            "Notebook changed (identical rows)",
+            "Notebook transfer"
+          ]
+        },
+        {
+          "key": "price",
+          "label": "Price of the look",
+          "values": [
+            "free",
+            "case",
+            "even"
+          ],
+          "default": "free",
+          "value_labels": [
+            "Free",
+            "The case's own price",
+            "Break-even price"
+          ]
+        }
+      ],
+      "function": "look_picture",
+      "states": 12
+    }
+  ]
+}

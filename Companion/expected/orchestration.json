@@ -1,0 +1,27 @@
+{
+  "kind": "constructed demonstration",
+  "result": {
+    "timing_boundary": "Evidence checks and supervisor dispatch/combine only; final verification duration is excluded. Total work costs include final verification.",
+    "serial": {
+      "elapsed": 6.0,
+      "total_work_cost": 5
+    },
+    "team": {
+      "elapsed": 5.0,
+      "total_work_cost": 8
+    },
+    "shared_source": {
+      "marginal_failure": 0.14500000000000002,
+      "joint_failure": 0.10225000000000001,
+      "product_of_marginals": 0.021025000000000005
+    },
+    "independent_source": {
+      "marginal_failure": 0.05,
+      "joint_failure": 0.0025000000000000005,
+      "product_of_marginals": 0.0025000000000000005
+    },
+    "child_capabilities": [
+      "read"
+    ]
+  }
+}

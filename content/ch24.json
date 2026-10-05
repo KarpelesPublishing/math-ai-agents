@@ -225,5 +225,6 @@
     "Default matched mean is 0.25 over four pairs.",
     "Changed candidate mixture rate is 0.55.",
     "Unmatched transfer returns null difference and missing mixture estimates."
-  ]
+  ],
+  "agent_application": "Evaluate the complete agent procedure, including retries, tools, budget and stopping rule. Pair comparable task/run outcomes and report missing pairs. A success average does not identify a stepwise error law or a causal improvement."
 }

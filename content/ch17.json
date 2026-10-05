@@ -109,7 +109,7 @@
     },
     {
       "question": "What happens when a stored idempotency key is reused with a different payload?",
-      "answer": "Validation rejects the conflicting key/payload contract."
+      "answer": "The service raises an error and applies nothing. The stored key is bound to its first payload, so a different payload under the same key is ambiguous: it is neither deduplicated as a repeat nor counted as a new effect."
     }
   ],
   "routes": [
@@ -121,5 +121,6 @@
     "Nonidempotent default counts two effects.",
     "Idempotent changed trace counts one effect.",
     "Transfer verification confirms without adding an effect."
-  ]
+  ],
+  "agent_application": "A tool may perform an effect even when its acknowledgement is lost. Keep the effect ledger separate from what the agent knows, then compare verification with another request. An idempotency key works only when the tool stores and enforces its contract."
 }

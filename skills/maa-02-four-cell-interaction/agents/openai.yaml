@@ -1,0 +1,6 @@
+interface:
+  display_name: "Chapter 2: How to Measure Emergence"
+  short_description: "Calculate and interpret Chapter 2 agent methods"
+  default_prompt: "Use $maa-02-four-cell-interaction to analyze my supplied inputs and explain the result."
+policy:
+  allow_implicit_invocation: true

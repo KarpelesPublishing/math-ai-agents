@@ -1,0 +1,30 @@
+{
+  "status": "built",
+  "offline": true,
+  "equation_renderer": "Local MathJax SVG glyph paths, rasterized at five pixels per point for PDF inline placement",
+  "unique_equations_rendered": 182,
+  "code_sha256": "556096ad080ff89bc73543eb7c04d56b75b76f5b00d24e1554cb5a11cae99a98",
+  "source_sha256": {
+    "workbook/workbook.md": "d3359379894342ddbdf686c92fc095a882d09bc885499ebe500005d409ef5284",
+    "workbook/solutions.md": "5c021433fd626d9b666f27e41be4b7641cea4913032a11d792e5485caddd2a6a",
+    "workbook/notation-guide.md": "70ea57f973c8e8629c25ab985b1ace6764a1a9f2530dcc2688bb7876e02f52f7",
+    "START-HERE.md": "9948e584e252a90818a65126b4ac44dffacea647a591b5736775cee16cc3e6ad",
+    "chapter-map.json": "9dd093d669fe0d7e64aa8de18b3cc220095628475cd7d78b3cfc40801c9352d0"
+  },
+  "output_sha256": {
+    "workbook/workbook.pdf": "3b15732e9bc262db3e5194ccc81f8a49f5e211aaa736b05c151aab17a7d6482a",
+    "workbook/solutions.pdf": "b3abb286dde45aabe236c7643cb369999a874ea3f38a2561e3cd43ba1f8747b6",
+    "workbook/notation-guide.pdf": "f276b60276b0a8297882ad004ba51528940f19f9d984a42f01b6de7d0ccb644b",
+    "guide/field-guide.pdf": "c98c0c2b86a1c39d2ba6413e8c362a9c681ec409e32457877b64abee1b94d159"
+  },
+  "exercise_inventory": {
+    "original_questions": 23,
+    "new_questions": 81,
+    "answers": "Separate solutions PDF"
+  },
+  "limitations": [
+    "Inline equation images retain visual notation but are not searchable mathematical text.",
+    "PDF pages do not execute notebooks.",
+    "Fresh builds need declared local rendering dependencies and fonts; they make no network calls."
+  ]
+}

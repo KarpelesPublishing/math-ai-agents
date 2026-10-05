@@ -1,0 +1,234 @@
+{
+  "chapter": 6,
+  "title": "The Price of a Choice",
+  "source_path": "Manuscript/part-ii/06-the-price-of-a-choice.md",
+  "source_sha256": "0169993bfa3dd779d179296c14088fd236bc6debf23d73c22be0d0b2f87f29da",
+  "notebook": "notebooks/06-expected-utility.ipynb",
+  "skill": "maa-06-expected-utility",
+  "skill_path": "skills/maa-06-expected-utility/SKILL.md",
+  "method": "expected-utility",
+  "outcome": "Return an expected-utility choice and a break-even value under declared stakes.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "Weighted averages"
+  ],
+  "routes": [
+    "compare declared action utility",
+    "break-even stakes decision",
+    "price abstention alternative"
+  ],
+  "input_fields": {
+    "actions": "Nonempty list of uniquely named alternatives. Each has name:string, probabilities:normalized numeric list, utilities:aligned finite numeric list, cost:nonnegative number. Include abstention explicitly."
+  },
+  "example_input": "data/examples/ch06.json",
+  "reader": "readers/06-expected-utility/reader.html",
+  "equations": [
+    {
+      "label": "EQV6-01",
+      "number": "6.1",
+      "tex": "y_1 \\succ y_2 \\iff u(y_1) > u(y_2).\n\\tag{6.1}",
+      "asset": "assets/math/5be7ec724fae81adf423.svg",
+      "explanations": [
+        "Equation (6.1) converts a ranking of outcomes into numbers, so that comparisons the system could already make become arithmetic it can do.",
+        "One outcome is preferred to another exactly when the first is assigned the larger number."
+      ]
+    },
+    {
+      "label": "EQV6-02",
+      "number": "6.2",
+      "tex": "\\operatorname{EU}(a)=\\sum_{y}p(y\\mid a)\\,u(y).\n\\tag{6.2}",
+      "asset": "assets/math/239d97ab52b608b1b761.svg",
+      "explanations": [
+        "Equation (6.2) collapses an entire distribution over outcomes into the single number an agent needs in order to compare one action against another.",
+        "For the action under consideration, multiply each outcome's worth by its probability under that action, then add the products."
+      ]
+    },
+    {
+      "label": "EQV6-03",
+      "number": "6.3",
+      "tex": "a^{\\star}=\\arg\\max_{a\\in\\mathcal{A}}\\operatorname{EU}(a).\n\\tag{6.3}",
+      "asset": "assets/math/3b4eb1e76781ca7fa986.svg",
+      "explanations": [
+        "Equation (6.3) states the rule the rest of this book's decision-making rests on: take the action whose expected utility is highest.",
+        "Compute the expected utility of every available action, then select the action achieving the maximum."
+      ]
+    },
+    {
+      "label": "EQV6-04",
+      "number": "6.4",
+      "tex": "u(\\operatorname{CE})=\\operatorname{E}\\!\\left[u(Y)\\right].\n\\tag{6.4}",
+      "asset": "assets/math/0548bb8cbea42c084933.svg",
+      "explanations": [
+        "Equation (6.4) defines the certain amount an agent would accept in place of a gamble, which turns an attitude toward risk into a measurable quantity.",
+        "Find the guaranteed outcome whose worth equals the average worth of the gamble; that outcome is the certainty equivalent."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C06-D01",
+      "title": "Three actions, one rule, and where the order flips",
+      "notebook_anchor": "demo-c06-d01",
+      "source_section": "The decision rule",
+      "source_anchor": "the-decision-rule",
+      "equations": [
+        "\\operatorname{EU}(a)=\\sum_{y}p(y\\mid a)\\,u(y)",
+        "a^{\\star}=\\arg\\max_{a\\in\\mathcal{A}}\\operatorname{EU}(a)"
+      ],
+      "controls": [
+        {
+          "key": "table",
+          "label": "Decision table",
+          "values": [
+            "book",
+            "lab",
+            "transfer"
+          ],
+          "default": "book",
+          "value_labels": [
+            "Book Table 6.1: release, evidence, escalate",
+            "Notebook default: release, review, abstain",
+            "Notebook transfer: retry or escalate"
+          ]
+        },
+        {
+          "key": "worse",
+          "label": "Value of the failure outcome",
+          "values": [
+            "asis",
+            "worse"
+          ],
+          "default": "asis",
+          "value_labels": [
+            "As supplied (0, -50 or -12)",
+            "Made worse (-400, -100 or -24)"
+          ]
+        }
+      ],
+      "function": "table_picture",
+      "states": 6
+    },
+    {
+      "id": "C06-D02",
+      "title": "Elicit one number: the price of an hour",
+      "notebook_anchor": "demo-c06-d02",
+      "source_section": "Eliciting one number",
+      "source_anchor": "eliciting-one-number",
+      "equations": [
+        "a^{\\star}=\\arg\\max_{a\\in\\mathcal{A}}\\operatorname{EU}(a)",
+        "\\operatorname{EU}(a)=\\sum_{y}p(y\\mid a)\\,u(y)"
+      ],
+      "controls": [
+        {
+          "key": "hour_cost",
+          "label": "Price of an hour of delay",
+          "values": [
+            0,
+            5,
+            12,
+            15
+          ],
+          "default": 5
+        },
+        {
+          "key": "support",
+          "label": "Support probability when releasing now",
+          "values": [
+            "p85",
+            "p90",
+            "range"
+          ],
+          "default": "p85",
+          "value_labels": [
+            "0.85",
+            "0.90",
+            "Shaky: anywhere from 0.80 to 0.90"
+          ]
+        }
+      ],
+      "function": "hour_price_picture",
+      "states": 12
+    },
+    {
+      "id": "C06-D03",
+      "title": "Risk is the shape of the utility curve",
+      "notebook_anchor": "demo-c06-d03",
+      "source_section": "A worked certainty equivalent",
+      "source_anchor": "a-worked-certainty-equivalent",
+      "equations": [
+        "u(\\operatorname{CE})=\\operatorname{E}\\!\\left[u(Y)\\right]",
+        "\\operatorname{EU}(a)=\\sum_{y}p(y\\mid a)\\,u(y)",
+        "y_1 \\succ y_2 \\iff u(y_1) > u(y_2)"
+      ],
+      "controls": [
+        {
+          "key": "shape",
+          "label": "Utility curve",
+          "values": [
+            "sqrt",
+            "linear",
+            "square"
+          ],
+          "default": "sqrt",
+          "value_labels": [
+            "Bends down: square root",
+            "Straight line",
+            "Bends up: square"
+          ]
+        },
+        {
+          "key": "gamble",
+          "label": "Gamble",
+          "values": [
+            "half",
+            "eighty",
+            "petersburg"
+          ],
+          "default": "half",
+          "value_labels": [
+            "Pays 100 with probability 0.5",
+            "Pays 100 with probability 0.8",
+            "Pays 2^k with probability 2^(-k), without limit"
+          ]
+        }
+      ],
+      "function": "certainty_picture",
+      "states": 9
+    },
+    {
+      "id": "C06-D04",
+      "title": "Declining is an action with a price",
+      "notebook_anchor": "demo-c06-d04",
+      "source_section": "The cost of declining, measured",
+      "source_anchor": "the-cost-of-declining-measured",
+      "equations": [
+        "a^{\\star}=\\arg\\max_{a\\in\\mathcal{A}}\\operatorname{EU}(a)",
+        "\\operatorname{EU}(a)=\\sum_{y}p(y\\mid a)\\,u(y)"
+      ],
+      "controls": [
+        {
+          "key": "wrong",
+          "label": "Utility of a wrong answer",
+          "values": [
+            -1,
+            -4,
+            -9
+          ],
+          "default": -4
+        },
+        {
+          "key": "decline",
+          "label": "Utility of declining",
+          "values": [
+            -1,
+            -0.5,
+            0
+          ],
+          "default": 0
+        }
+      ],
+      "function": "coverage_picture",
+      "states": 9
+    }
+  ]
+}

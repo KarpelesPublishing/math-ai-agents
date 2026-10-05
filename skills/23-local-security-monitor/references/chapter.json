@@ -1,0 +1,258 @@
+{
+  "chapter": 23,
+  "title": "When the Environment Gives Instructions: The Mathematics of Agent Security",
+  "source_path": "Manuscript/part-vi/23-when-the-environment-gives-instructions.md",
+  "source_sha256": "03e86886afd3eaf7e35b4fc066f0aa2024768d095f90a5db26fbfea59d6f4960",
+  "notebook": "notebooks/23-local-security-monitor.ipynb",
+  "skill": "maa-23-local-security-monitor",
+  "skill_path": "skills/maa-23-local-security-monitor/SKILL.md",
+  "method": "local-security-monitor",
+  "outcome": "Replay a fictitious attack trace against capability, provenance, and review checks.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "untrusted data control promotion",
+    "capability provenance monitor trace",
+    "stale review adversarial publish"
+  ],
+  "input_fields": {
+    "capabilities": "List of permitted action names in the local contract.",
+    "current_version": "Current protected document version.",
+    "events": "Ordered data/review/action events. data:instruction_attempt,promoted_to_control booleans; review:valid boolean,version; action:action,authority_source=user/system/untrusted-data,version for publish,executed boolean."
+  },
+  "example_input": "data/examples/ch23.json",
+  "reader": "readers/23-local-security-monitor/reader.html",
+  "equations": [
+    {
+      "label": "EQV23-01",
+      "number": "23.1",
+      "tex": "\\mathcal C_{\\mathrm{child}}\\subseteq\\mathcal C_{\\mathrm{parent}}.\n\\tag{23.1}",
+      "asset": "assets/math/fae92fb7f1ff352e87db.svg",
+      "explanations": [
+        "Bounds a delegated process's capability set by its parent's, so nothing reached through delegation can exceed the parent's own authority.",
+        "A child inherits at most what it is given; delegation can narrow authority, never widen it."
+      ]
+    },
+    {
+      "label": "EQV23-02",
+      "number": "23.2",
+      "tex": "M_{t+1}=\\operatorname{Mon}(M_t,e_t).\n\\tag{23.2}",
+      "asset": "assets/math/6e64e529954cfb809340.svg",
+      "explanations": [
+        "Advances the monitor's record from its previous state and one observed event, so authorization can be re-checked against current knowledge.",
+        "Only real, observed events move `M_t` forward; a sentence claiming an event happened is not the event."
+      ]
+    },
+    {
+      "label": "EQV23-03",
+      "number": "23.3",
+      "tex": "\\operatorname{Publish}(\\delta,v,r,M_t)=1 \\iff (\\delta,v,r)\\in\\operatorname{Approved}(M_t).\n\\tag{23.3}",
+      "asset": "assets/math/679b0268a3ff46a285ee.svg",
+      "explanations": [
+        "Authorizes release only when the exact document, version, and recipient triple currently appears in the monitor's approval record.",
+        "No partial match counts: the right document at the wrong version, or the right version to the wrong recipient, both fail the lookup."
+      ]
+    },
+    {
+      "label": "EQV23-04",
+      "number": "23.4",
+      "tex": "\\operatorname{Risk}(\\mathcal F)=\\max_{f\\in\\mathcal F}\\Pr[\\text{violation}\\mid f].\n\\tag{23.4}",
+      "asset": "assets/math/ccccf4aef7aa7f16f306.svg",
+      "explanations": [
+        "Defines exposure as the single worst violation chance across a declared attack family, not an average over the family.",
+        "One member of `\\mathcal F` sets the value; a family with nine safe attacks and one dangerous one still reports the dangerous one's chance."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C23-D01",
+      "title": "A child can never hold more than its parent",
+      "notebook_anchor": "demo-c23-d01",
+      "source_section": "Data may inform; control may direct",
+      "source_anchor": "data-may-inform-control-may-direct",
+      "equations": [
+        "\\mathcal C_{\\mathrm{child}}\\subseteq\\mathcal C_{\\mathrm{parent}}"
+      ],
+      "controls": [
+        {
+          "key": "request",
+          "label": "What the text asks for",
+          "values": [
+            "extract",
+            "upload",
+            "link",
+            "secret"
+          ],
+          "default": "upload",
+          "value_labels": [
+            "Genuine summary: read the source",
+            "Web page: upload stored records",
+            "Calendar entry: open a changed link",
+            "Document: send a secret"
+          ]
+        },
+        {
+          "key": "grant",
+          "label": "Capabilities in force",
+          "values": [
+            "chapter",
+            "browser",
+            "narrow"
+          ],
+          "default": "chapter",
+          "value_labels": [
+            "Read, draft, release (the chapter's trace)",
+            "Parent also holds open_link",
+            "Child narrowed to read and draft"
+          ]
+        }
+      ],
+      "function": "containment_picture",
+      "states": 12
+    },
+    {
+      "id": "C23-D02",
+      "title": "The monitor moves only on observed events",
+      "notebook_anchor": "demo-c23-d02",
+      "source_section": "A monitor's memory only advances from observed events",
+      "source_anchor": "a-monitors-memory-only-advances-from-observed-events",
+      "equations": [
+        "M_{t+1}=\\operatorname{Mon}(M_t,e_t)"
+      ],
+      "controls": [
+        {
+          "key": "scenario",
+          "label": "What happens around the approval",
+          "values": [
+            "approved",
+            "claim",
+            "revoked",
+            "replaced"
+          ],
+          "default": "revoked",
+          "value_labels": [
+            "Approval event, then quiet",
+            "Page claims approval",
+            "Approval, then user revokes",
+            "Approval, then source replaced"
+          ]
+        },
+        {
+          "key": "check",
+          "label": "When authority is checked",
+          "values": [
+            "entry",
+            "recheck"
+          ],
+          "default": "entry",
+          "value_labels": [
+            "At planning only",
+            "Again just before the effect"
+          ]
+        }
+      ],
+      "function": "monitor_picture",
+      "states": 8
+    },
+    {
+      "id": "C23-D03",
+      "title": "Release needs the exact triple, from a real event",
+      "notebook_anchor": "demo-c23-d03",
+      "source_section": "Publish needs identity, version, recipient, and current approval",
+      "source_anchor": "publish-needs-identity-version-recipient-and-current-approval",
+      "equations": [
+        "\\operatorname{Publish}(\\delta,v,r,M_t)=1 \\iff (\\delta,v,r)\\in\\operatorname{Approved}(M_t)"
+      ],
+      "controls": [
+        {
+          "key": "changed",
+          "label": "Field changed in the proposal",
+          "values": [
+            "none",
+            "document",
+            "version",
+            "recipient"
+          ],
+          "default": "version",
+          "value_labels": [
+            "Nothing changed",
+            "Different document",
+            "Newer version (5)",
+            "Different recipient"
+          ]
+        },
+        {
+          "key": "source",
+          "label": "Where the approval came from",
+          "values": [
+            "event",
+            "sentence",
+            "laundered"
+          ],
+          "default": "event",
+          "value_labels": [
+            "An observed approval event",
+            "A sentence in the source document",
+            "A sentence relabeled trusted, admitted with no re-check"
+          ]
+        }
+      ],
+      "function": "release_picture",
+      "states": 12
+    },
+    {
+      "id": "C23-D04",
+      "title": "Risk is the worst member; two scores are not one",
+      "notebook_anchor": "demo-c23-d04",
+      "source_section": "A security case needs a declared adversary",
+      "source_anchor": "a-security-case-needs-a-declared-adversary",
+      "equations": [
+        "\\operatorname{Risk}(\\mathcal F)=\\max_{f\\in\\mathcal F}\\Pr[\\text{violation}\\mid f]"
+      ],
+      "controls": [
+        {
+          "key": "trace",
+          "label": "Trace replayed on the right",
+          "values": [
+            "default",
+            "changed",
+            "transfer"
+          ],
+          "default": "default",
+          "value_labels": [
+            "Default: injection kept as data",
+            "Changed: injection promoted and executed",
+            "Transfer: stale review of A, current B"
+          ]
+        },
+        {
+          "key": "family",
+          "label": "Declared family",
+          "values": [
+            "three",
+            "four"
+          ],
+          "default": "three",
+          "value_labels": [
+            "Three attacks",
+            "Three plus the retry path (0.45)"
+          ]
+        },
+        {
+          "key": "deputy",
+          "label": "Chance for the confused-deputy attack",
+          "values": [
+            0.1,
+            0.6
+          ],
+          "default": 0.6
+        }
+      ],
+      "function": "risk_picture",
+      "states": 12
+    }
+  ]
+}

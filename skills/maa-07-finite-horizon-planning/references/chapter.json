@@ -1,0 +1,251 @@
+{
+  "chapter": 7,
+  "title": "The Equation That Looks Ahead",
+  "source_path": "Manuscript/part-ii/07-the-equation-that-looks-ahead.md",
+  "source_sha256": "33548770f2d3be560a6ec807473b5be345f98a7dd4c0c41e67edf0c97ffad89d",
+  "notebook": "notebooks/07-finite-horizon-planning.ipynb",
+  "skill": "maa-07-finite-horizon-planning",
+  "skill_path": "skills/maa-07-finite-horizon-planning/SKILL.md",
+  "method": "finite-horizon-planning",
+  "outcome": "Compute a finite-horizon optimal policy and its value by backward induction.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "backward induction finite policy",
+    "future reward stopping decision",
+    "remaining horizon Bellman value"
+  ],
+  "input_fields": {
+    "horizon": "Integer decision count 1..200.",
+    "discount": "Gamma in [0,1].",
+    "start": "State key.",
+    "states": "Object mapping states to optional terminal:number and actions:list. Action has name,reward:number,probabilities:normalized list,next_states:aligned registered state keys."
+  },
+  "example_input": "data/examples/ch07.json",
+  "reader": "readers/07-finite-horizon-planning/reader.html",
+  "equations": [
+    {
+      "label": "EQV7-01",
+      "number": "7.1",
+      "tex": "\\operatorname{Ret}_t=\\sum_{k=0}^{\\infty}\\gamma^{k}r_{t+k}.\n\\tag{7.1}",
+      "asset": "assets/math/676a39e05b5e3136feb4.svg",
+      "explanations": [
+        "Equation (7.1) collapses a whole future of rewards into one number, weighting later rewards less than earlier ones.",
+        "Add up every future reward, multiplying each by the discount factor raised to the number of steps away it is."
+      ]
+    },
+    {
+      "label": "EQV7-02",
+      "number": "7.2",
+      "tex": "V^{\\pi}(x)=\\operatorname{E}_{\\pi}\\!\\left[\\operatorname{Ret}_t \\mid x_t=x\\right].\n\\tag{7.2}",
+      "asset": "assets/math/29045c6784efcc8a7fd3.svg",
+      "explanations": [
+        "Equation (7.2) attaches a single number to a state, saying what the agent can expect to collect from there onward under a given way of behaving.",
+        "Average the return over everything that could happen from this state, under the policy the agent is following."
+      ]
+    },
+    {
+      "label": "EQV7-03",
+      "number": "7.3",
+      "tex": "\\begin{aligned}\nV^{\\pi}(x)\n&=\\sum_{a}\\pi(a\\mid x)\\sum_{x'}P(x'\\mid x,a)\\\\\n&\\quad\\cdot\\Bigl[r(x,a,x')+\\gamma V^{\\pi}(x')\\Bigr].\n\\end{aligned}\n\\tag{7.3}",
+      "asset": "assets/math/f5b42c519e200f14b460.svg",
+      "explanations": [
+        "Equation (7.3) expresses a state's value in terms of the values of the states it leads to, turning a question about an infinite future into a relationship between neighbours.",
+        "Average over the actions the policy might take and the states each might lead to, taking the immediate reward plus the discounted value of where the agent arrives."
+      ]
+    },
+    {
+      "label": "EQV7-04",
+      "number": "7.4",
+      "tex": "V^{\\star}(x)=\\max_{a}\\sum_{x'}P(x'\\mid x,a)\\Bigl[r(x,a,x')+\\gamma V^{\\star}(x')\\Bigr].\n\\tag{7.4}",
+      "asset": "assets/math/5bfe728026d5e6cb786c.svg",
+      "explanations": [
+        "Equation (7.4) characterizes the best achievable value from every state, and the policy that achieves it falls out of the same expression.",
+        "For each action, average the immediate reward plus discounted next-state value over where it might lead, then keep the largest."
+      ]
+    },
+    {
+      "label": "chapter-07-display-5",
+      "number": "7.5",
+      "tex": "\\|V-V^\\star\\|_\\infty\\leq \\frac{\\|TV-V\\|_\\infty}{1-\\gamma}.\n\\tag{7.5}",
+      "asset": "assets/math/bb891e918caf9b7356c6.svg",
+      "explanations": [
+        "Equation (7.5) turns a Bellman residual into an upper bound on value error for declared discounted model.",
+        "Divide largest one-step inconsistency by remaining contraction margin $1-\\gamma$."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C07-D01",
+      "title": "What a discount does to a distant reward",
+      "notebook_anchor": "demo-c07-d01",
+      "source_section": "What discounting does to a number",
+      "source_anchor": "what-discounting-does-to-a-number",
+      "equations": [
+        "\\operatorname{Ret}_t=\\sum_{k=0}^{\\infty}\\gamma^{k}r_{t+k}"
+      ],
+      "controls": [
+        {
+          "key": "gamma",
+          "label": "Discount factor gamma",
+          "values": [
+            0.5,
+            0.9,
+            0.95,
+            0.99
+          ],
+          "default": 0.9
+        },
+        {
+          "key": "steps",
+          "label": "Steps until the reward arrives",
+          "values": [
+            10,
+            50,
+            100
+          ],
+          "default": 10
+        }
+      ],
+      "function": "discount_picture",
+      "states": 12
+    },
+    {
+      "id": "C07-D02",
+      "title": "Three states, computed backward",
+      "notebook_anchor": "demo-c07-d02",
+      "source_section": "Three states, computed backward",
+      "source_anchor": "three-states-computed-backward",
+      "equations": [
+        "V^{\\pi}(x)=\\operatorname{E}_{\\pi}\\!\\left[\\operatorname{Ret}_t \\mid x_t=x\\right]",
+        "\\begin{aligned}V^{\\pi}(x)&=\\sum_{a}\\pi(a\\mid x)\\sum_{x'}P(x'\\mid x,a)\\\\&\\quad\\cdot\\Bigl[r(x,a,x')+\\gamma V^{\\pi}(x')\\Bigr].\\end{aligned}"
+      ],
+      "controls": [
+        {
+          "key": "scenario",
+          "label": "Scenario",
+          "values": [
+            "book",
+            "tie",
+            "wb1",
+            "wb3"
+          ],
+          "default": "book",
+          "value_labels": [
+            "Chapter controller: cost 5",
+            "Chapter controller: break-even cost 12",
+            "Workbench II.1: 80, 95, cost 6, discount 0.90",
+            "Workbench II.3: discount 0.75"
+          ]
+        },
+        {
+          "key": "stage",
+          "label": "Backward step",
+          "values": [
+            0,
+            1,
+            2
+          ],
+          "default": 0,
+          "value_labels": [
+            "1. Terminal state",
+            "2. Verified state",
+            "3. Start state"
+          ]
+        }
+      ],
+      "function": "backward_picture",
+      "states": 12
+    },
+    {
+      "id": "C07-D03",
+      "title": "How many decisions are left can change the answer",
+      "notebook_anchor": "demo-c07-d03",
+      "source_section": "Horizons, and why agents have short ones",
+      "source_anchor": "horizons-and-why-agents-have-short-ones",
+      "equations": [
+        "V^{\\star}(x)=\\max_{a}\\sum_{x'}P(x'\\mid x,a)\\Bigl[r(x,a,x')+\\gamma V^{\\star}(x')\\Bigr]"
+      ],
+      "controls": [
+        {
+          "key": "model",
+          "label": "Model",
+          "values": [
+            "prep",
+            "wait"
+          ],
+          "default": "prep",
+          "value_labels": [
+            "Cash or prepare (notebook default and changed)",
+            "Now or later (notebook transfer)"
+          ]
+        },
+        {
+          "key": "horizon",
+          "label": "Decisions remaining",
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "default": 2
+        },
+        {
+          "key": "discount",
+          "label": "Discount factor gamma",
+          "values": [
+            1.0,
+            0.5
+          ],
+          "default": 1.0
+        }
+      ],
+      "function": "horizon_picture",
+      "states": 12
+    },
+    {
+      "id": "C07-D04",
+      "title": "A residual bounds the error of a value guess",
+      "notebook_anchor": "demo-c07-d04",
+      "source_section": "Where the reward comes from",
+      "source_anchor": "where-the-reward-comes-from",
+      "equations": [
+        "\\|V-V^\\star\\|_\\infty\\leq \\frac{\\|TV-V\\|_\\infty}{1-\\gamma}",
+        "V^{\\star}(x)=\\max_{a}\\sum_{x'}P(x'\\mid x,a)\\Bigl[r(x,a,x')+\\gamma V^{\\star}(x')\\Bigr]"
+      ],
+      "controls": [
+        {
+          "key": "discount",
+          "label": "Discount factor gamma",
+          "values": [
+            0.9,
+            0.95,
+            0.99,
+            1.0
+          ],
+          "default": 0.95
+        },
+        {
+          "key": "stage",
+          "label": "Candidate value function",
+          "values": [
+            0,
+            1,
+            2
+          ],
+          "default": 0,
+          "value_labels": [
+            "1. All zeros",
+            "2. Value of releasing at once",
+            "3. After the improvement step"
+          ]
+        }
+      ],
+      "function": "residual_picture",
+      "states": 12
+    }
+  ]
+}

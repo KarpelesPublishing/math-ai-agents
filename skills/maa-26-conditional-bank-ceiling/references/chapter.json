@@ -1,0 +1,248 @@
+{
+  "chapter": 26,
+  "title": "How Much More Could the System Become?",
+  "source_path": "Manuscript/part-vi/26-how-much-more-could-the-system-become.md",
+  "source_sha256": "a8afc2c5a31dacc711bdea52f621127341ec84e5f24f8221afc4178fadbf58f3",
+  "notebook": "notebooks/26-conditional-bank-ceiling.ipynb",
+  "skill": "maa-26-conditional-bank-ceiling",
+  "skill_path": "skills/maa-26-conditional-bank-ceiling/SKILL.md",
+  "method": "conditional-bank-ceiling",
+  "outcome": "Separate bank oracle coverage, actual choice, and permission-filtered success.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "finite candidate bank oracle ceiling",
+    "actual selector capability extraction",
+    "permission-filtered deployment coverage"
+  ],
+  "input_fields": {
+    "success_matrix": "Candidate by task matrix of exact boolean task success.",
+    "task_weights": "Normalized task-distribution weights.",
+    "selected_candidates": "Zero-based candidate index chosen for each task.",
+    "deployment_allowed": "Exact boolean deployment permission for each task.",
+    "independent_candidate_success": "Probability for a separate constructed independent-candidate saturation curve."
+  },
+  "example_input": "data/examples/ch26.json",
+  "reader": "readers/26-conditional-bank-ceiling/reader.html",
+  "equations": [
+    {
+      "label": "EQV26-01",
+      "number": "26.1",
+      "tex": "\\widehat{\\operatorname{Cov}}_{\\mathcal K}(k)\n= \\frac{1}{|\\mathcal K|}\\sum_{i\\in\\mathcal K}\n\\left(1 - \\frac{\\binom{n_i-c_i}{k}}{\\binom{n_i}{k}}\\right),\n\\qquad 1\\le k\\le \\min_{i\\in\\mathcal K}n_i.\n\\tag{26.1}",
+      "asset": "assets/math/8c0ce21a65e838ffa6e4.svg",
+      "explanations": [
+        "Averages each task's finite-pool chance that a size-`k` subset contains a unit-test-passing candidate.",
+        "The shared `k` stays within every `n_i`, and each term removes the all-failing-subset probability."
+      ]
+    },
+    {
+      "label": "EQV26-02",
+      "number": "26.2",
+      "tex": "\\operatorname{Sel}(k) \\le \\operatorname{Cov}(k).\n\\tag{26.2}",
+      "asset": "assets/math/2dd89b58bbec985c8a65.svg",
+      "explanations": [
+        "States that a selector cannot return a correct candidate more often than correct candidates appear in its bank.",
+        "Selection can lose available successes; it cannot create a correct candidate absent from generation."
+      ]
+    },
+    {
+      "label": "EQV26-03",
+      "number": "26.3",
+      "tex": "\\operatorname{Cov}(k)-\\operatorname{Sel}(k) \\ge 0.\n\\tag{26.3}",
+      "asset": "assets/math/cf8ade37c7be05477e86.svg",
+      "explanations": [
+        "Names available success left undispatched by the actual selector under one matched candidate bank and evaluator.",
+        "A large gap points toward selection or evidence; a small gap points back toward generation or budget."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C26-D01",
+      "title": "A bank is a finite object, and its pool depends on how it was sampled",
+      "notebook_anchor": "demo-c26-d01",
+      "source_section": "Stage two: a bank is a finite object",
+      "source_anchor": "stage-two-a-bank-is-a-finite-object",
+      "equations": [
+        "\\widehat{\\operatorname{Cov}}_{\\mathcal K}(k)= \\frac{1}{|\\mathcal K|}\\sum_{i\\in\\mathcal K}\\left(1 - \\frac{\\binom{n_i-c_i}{k}}{\\binom{n_i}{k}}\\right),\\qquad 1\\le k\\le \\min_{i\\in\\mathcal K}n_i"
+      ],
+      "controls": [
+        {
+          "key": "pool",
+          "label": "Bank of ten-program pools",
+          "values": [
+            "chapter",
+            "low",
+            "high"
+          ],
+          "default": "chapter",
+          "value_labels": [
+            "Chapter's worked pool (one task, 2 passing)",
+            "Low temperature (passes 8, 8, 0, 0)",
+            "High temperature (passes 3, 3, 2, 2)"
+          ]
+        },
+        {
+          "key": "subset",
+          "label": "Subset size k",
+          "values": [
+            1,
+            3,
+            5,
+            8
+          ],
+          "default": 3
+        }
+      ],
+      "function": "bank_picture",
+      "states": 12
+    },
+    {
+      "id": "C26-D02",
+      "title": "Coverage is a ceiling, and each rung can only lose success",
+      "notebook_anchor": "demo-c26-d02",
+      "source_section": "Stage three: oracle coverage is an information ceiling",
+      "source_anchor": "stage-three-oracle-coverage-is-an-information-ceiling",
+      "equations": [
+        "\\operatorname{Sel}(k) \\le \\operatorname{Cov}(k)"
+      ],
+      "controls": [
+        {
+          "key": "bank",
+          "label": "Bank",
+          "values": [
+            "diag",
+            "prefix",
+            "xfer"
+          ],
+          "default": "diag",
+          "value_labels": [
+            "Three specialists (notebook default)",
+            "First two specialists only",
+            "Two candidates, two tasks (notebook transfer)"
+          ]
+        },
+        {
+          "key": "selector",
+          "label": "Selector",
+          "values": [
+            "notebook",
+            "oracle"
+          ],
+          "default": "notebook",
+          "value_labels": [
+            "The notebook case's selector",
+            "Oracle: sees the pass labels"
+          ]
+        },
+        {
+          "key": "deploy",
+          "label": "Deployment permission",
+          "values": [
+            "all",
+            "denied"
+          ],
+          "default": "all",
+          "value_labels": [
+            "Every task allowed",
+            "The notebook's denied tasks"
+          ]
+        }
+      ],
+      "function": "ladder_picture",
+      "states": 12
+    },
+    {
+      "id": "C26-D03",
+      "title": "What actual selection leaves behind",
+      "notebook_anchor": "demo-c26-d03",
+      "source_section": "Stage four: what actual selection leaves behind",
+      "source_anchor": "stage-four-what-actual-selection-leaves-behind",
+      "equations": [
+        "\\operatorname{Cov}(k)-\\operatorname{Sel}(k) \\ge 0"
+      ],
+      "controls": [
+        {
+          "key": "point",
+          "label": "Coverage and selection pair",
+          "values": [
+            "codexs",
+            "codex12",
+            "near",
+            "low"
+          ],
+          "default": "codexs",
+          "value_labels": [
+            "Codex-S, mean log-probability (44.5 of 77.5)",
+            "Codex-12B, one sample against pass@100 (28.81, 72.31)",
+            "Constructed: selector near the ceiling",
+            "Constructed: low ceiling"
+          ]
+        },
+        {
+          "key": "share",
+          "label": "Hypothetical share of the gap collected",
+          "values": [
+            0,
+            0.5,
+            1.0
+          ],
+          "default": 0.5,
+          "value_labels": [
+            "0",
+            "0.5",
+            "1.0"
+          ]
+        }
+      ],
+      "function": "gap_picture",
+      "states": 12
+    },
+    {
+      "id": "C26-D04",
+      "title": "A saturation forecast depends on the curve",
+      "notebook_anchor": "demo-c26-d04",
+      "source_section": "A saturation forecast",
+      "source_anchor": "a-saturation-forecast",
+      "equations": [
+        "A - B e^{-k/\\tau}",
+        "A - B/(k+h)",
+        "A - B k^{-a}"
+      ],
+      "controls": [
+        {
+          "key": "family",
+          "label": "Highlighted curve family",
+          "values": [
+            "exp",
+            "hyp",
+            "pow"
+          ],
+          "default": "exp",
+          "value_labels": [
+            "Exponential approach",
+            "Hyperbolic approach",
+            "Power-law approach"
+          ]
+        },
+        {
+          "key": "selector",
+          "label": "Hypothetical selected success at k = 50",
+          "values": [
+            "near",
+            "far"
+          ],
+          "default": "far",
+          "value_labels": [
+            "0.60 (selector near the ceiling)",
+            "0.30 (selector far below it)"
+          ]
+        }
+      ],
+      "function": "saturation_picture",
+      "states": 6
+    }
+  ]
+}

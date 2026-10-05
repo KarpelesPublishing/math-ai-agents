@@ -1,0 +1,15 @@
+{
+  "seed": 0,
+  "runs": [
+    {
+      "version": "v2",
+      "approval_for": "v2",
+      "seed": 0
+    },
+    {
+      "version": "v2",
+      "approval_for": "v1",
+      "seed": 0
+    }
+  ]
+}

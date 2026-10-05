@@ -1,0 +1,244 @@
+{
+  "chapter": 9,
+  "title": "Searching the Future",
+  "source_path": "Manuscript/part-iii/09-searching-the-future.md",
+  "source_sha256": "71e534577f8a67e0d4cf6f5e7e9c33f9b70af4039e801210d58ed83ed3cd1c81",
+  "notebook": "notebooks/09-astar-audit.ipynb",
+  "skill": "maa-09-astar-audit",
+  "skill_path": "skills/maa-09-astar-audit/SKILL.md",
+  "method": "astar-audit",
+  "outcome": "Execute A* and audit supplied heuristic admissibility and cost.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "A-star heuristic admissibility audit",
+    "search expansion and heuristic cost",
+    "misleading future-cost estimate"
+  ],
+  "input_fields": {
+    "nodes": "Unique graph identifiers.",
+    "start": "Registered search start.",
+    "goal": "Registered goal.",
+    "edges": "Directed from/to identifiers with finite nonnegative cost.",
+    "heuristic": "Object mapping each node to a nonnegative estimated remaining cost.",
+    "heuristic_cost": "Nonnegative declared cost of one heuristic evaluation, separate from path cost."
+  },
+  "example_input": "data/examples/ch09.json",
+  "reader": "readers/09-astar-audit/reader.html",
+  "equations": [
+    {
+      "label": "EQV9-01",
+      "number": "9.1",
+      "tex": "f(v) \\;=\\; g(v) \\;+\\; h(v).\n\\tag{9.1}",
+      "asset": "assets/math/d644bc5f6d134538bbc7.svg",
+      "explanations": [
+        "Equation (9.1) gives the cost of the best route that is forced to pass through a particular vertex.",
+        "Add the cheapest way of getting to the vertex to the cheapest way of finishing from it."
+      ]
+    },
+    {
+      "label": "EQV9-02",
+      "number": "9.2",
+      "tex": "\\hat f(v) \\;=\\; \\hat g(v) \\;+\\; \\hat h(v).\n\\tag{9.2}",
+      "asset": "assets/math/c87fd983fba2133d2416.svg",
+      "explanations": [
+        "Equation (9.2) is the computable stand-in for Equation (9.1), and it is what the search actually sorts on.",
+        "Add what the search has already spent reaching the vertex to what it guesses finishing will cost."
+      ]
+    },
+    {
+      "label": "EQV9-03",
+      "number": "9.3",
+      "tex": "\\hat h(v) \\;\\le\\; h(v) \\qquad \\text{for every vertex } v.\n\\tag{9.3}",
+      "asset": "assets/math/0363a1925aa679905892.svg",
+      "explanations": [
+        "Equation (9.3) is the condition under which the search cannot be talked out of the best path.",
+        "Never guess that finishing will cost more than it actually will."
+      ]
+    },
+    {
+      "label": "EQV9-04",
+      "number": "9.4",
+      "tex": "h(u,v) \\;+\\; \\hat h(v) \\;\\ge\\; \\hat h(u).\n\\tag{9.4}",
+      "asset": "assets/math/b63e0576c12f18c007c1.svg",
+      "explanations": [
+        "Equation (9.4) requires the estimate to be consistent with itself from one vertex to the next.",
+        "The true cost of getting from one vertex to another, plus the estimate at the second, must be at least the estimate at the first."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C09-D01",
+      "title": "Following the search one selection at a time",
+      "notebook_anchor": "demo-c09-d01",
+      "source_section": "The trace, worked",
+      "source_anchor": "the-trace-worked",
+      "equations": [
+        "\\hat f(v) \\;=\\; \\hat g(v) \\;+\\; \\hat h(v)"
+      ],
+      "controls": [
+        {
+          "key": "trace",
+          "label": "Trace",
+          "values": [
+            "fig91",
+            "zero",
+            "flow"
+          ],
+          "default": "fig91",
+          "value_labels": [
+            "Four-vertex bookkeeping graph",
+            "Two-route graph, zero estimate",
+            "Research workflow, structural estimate"
+          ]
+        },
+        {
+          "key": "step",
+          "label": "Selection",
+          "values": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "default": 1,
+          "value_labels": [
+            "1st",
+            "2nd",
+            "3rd",
+            "4th"
+          ]
+        }
+      ],
+      "function": "trace_picture",
+      "states": 12
+    },
+    {
+      "id": "C09-D02",
+      "title": "One overestimate can hide the cheaper route",
+      "notebook_anchor": "demo-c09-d02",
+      "source_section": "The condition that makes it correct",
+      "source_anchor": "the-condition-that-makes-it-correct",
+      "equations": [
+        "f(v) \\;=\\; g(v) \\;+\\; h(v)",
+        "\\hat h(v) \\;\\le\\; h(v) \\qquad \\text{for every vertex } v"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Graph",
+          "values": [
+            "tworoute",
+            "notebook",
+            "transfer"
+          ],
+          "default": "tworoute",
+          "value_labels": [
+            "Chapter two-route graph",
+            "Notebook graph (default, changed)",
+            "Notebook transfer graph"
+          ]
+        },
+        {
+          "key": "level",
+          "label": "Estimate at the cheap route's first vertex",
+          "values": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "default": 1,
+          "value_labels": [
+            "Zero at this vertex",
+            "Exact",
+            "Over by a little",
+            "Over by a lot"
+          ]
+        }
+      ],
+      "function": "overestimate_picture",
+      "states": 12
+    },
+    {
+      "id": "C09-D03",
+      "title": "An estimate must not contradict itself",
+      "notebook_anchor": "demo-c09-d03",
+      "source_section": "The condition that makes it efficient",
+      "source_anchor": "the-condition-that-makes-it-efficient",
+      "equations": [
+        "h(u,v) \\;+\\; \\hat h(v) \\;\\ge\\; \\hat h(u)",
+        "\\hat h(u) \\le \\operatorname{cost}(u,v)+\\hat h(v)"
+      ],
+      "controls": [
+        {
+          "key": "h_upper",
+          "label": "Estimate at the upper vertex",
+          "values": [
+            1,
+            2,
+            5,
+            8
+          ],
+          "default": 1
+        },
+        {
+          "key": "h_start",
+          "label": "Estimate at the start",
+          "values": [
+            8,
+            7,
+            6
+          ],
+          "default": 7
+        }
+      ],
+      "function": "consistency_picture",
+      "states": 12
+    },
+    {
+      "id": "C09-D04",
+      "title": "What an estimate buys and what it costs",
+      "notebook_anchor": "demo-c09-d04",
+      "source_section": "When the estimate costs more than the vertex",
+      "source_anchor": "when-the-estimate-costs-more-than-the-vertex",
+      "equations": [
+        "\\hat f(v) \\;=\\; \\hat g(v) \\;+\\; \\hat h(v)",
+        "h(u,v) \\;+\\; \\hat h(v) \\;\\ge\\; \\hat h(u)"
+      ],
+      "controls": [
+        {
+          "key": "graph",
+          "label": "Graph and informed estimate",
+          "values": [
+            "notebook",
+            "tworoute",
+            "workflow"
+          ],
+          "default": "notebook",
+          "value_labels": [
+            "Notebook graph, exact estimate",
+            "Two-route graph, exact estimate",
+            "Research workflow, structural estimate"
+          ]
+        },
+        {
+          "key": "price",
+          "label": "Time to compute one estimate (ms)",
+          "values": [
+            0,
+            100,
+            400,
+            900
+          ],
+          "default": 900
+        }
+      ],
+      "function": "spending_picture",
+      "states": 12
+    }
+  ]
+}

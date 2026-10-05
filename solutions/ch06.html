@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch06</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 6: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Calculate release utility in the default case.</p>
+<p>0.9&#42;10+0.1&#42;(-50)=4 utility units.</p>
+<h2>Question 2</h2>
+<p>What first-outcome probability ties review under the default utilities?</p>
+<p>60p-50=2, so p=52/60, approximately 0.8667.</p>
+<h2>Question 3</h2>
+<p>Why does the transfer case not have a unique utility winner?</p>
+<p>Retry and escalation both have expected utility 1; input order resolves the computational tie, not the valuation.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>In the book's table with an unsupported release worth -400 and a day costing 40, what does releasing now score?</p>
+<p>0.85 x 100 + 0.15 x (-400) = 85 - 60 = 25. Requesting evidence scores 92 - 12 = 80, so it still wins, and escalation (57.5) now beats releasing now.</p>
+<p><strong>Prediction answer:</strong> Release now loses most (85 to 25); evidence still wins, and escalation overtakes release.</p>
+<p>Release now falls from 85.0 to 25.0, evidence from 92.0 to 80.0 and escalation from 59.5 to 57.5, so evidence still wins and escalation passes release.</p>
+<p><strong>If you chose another answer:</strong> Choose the book table and 'Made worse': release now falls by 60 (85.0 to 25.0), evidence by 12 and escalation by 2, so evidence still wins and escalation passes release even though no probability moved.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>If releasing now had support probability 0.90, what hour price would make the two actions tie?</p>
+<p>97 - 90 = 7 points. Below 7 requesting evidence wins; above 7 releasing now wins.</p>
+<p><strong>Prediction answer:</strong> Neither: they tie exactly at 85.0.</p>
+<p>Request evidence scores 97 - 12 = 85 and releasing now scores 0.85 x 100 = 85: an exact tie, which Equation (6.3) does not break.</p>
+<p><strong>If you chose another answer:</strong> Set the hour price to 12 with release support 0.85: request evidence scores 97 - 12 = 85 and releasing now 85, an exact tie that the rule does not break.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>With a square-root utility and a gamble paying 100 with probability 0.8, what is the certainty equivalent?</p>
+<p>E[u] = 0.8 x 10 = 8, so CE = 8 x 8 = 64, which is 16 below the mean payoff of 80.</p>
+<p><strong>Prediction answer:</strong> Below the mean: 25.</p>
+<p>With a square-root utility E[u] = 0.5 x 10 = 5, so CE = 25: the agent gives up 25 of mean payoff to remove the variance.</p>
+<p><strong>If you chose another answer:</strong> Choose the square-root curve with the gamble that pays 100 half the time: E[u] = 5, so CE = 25, below the mean of 50. The straight line gives 50 and the square gives about 70.7.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>With a wrong answer worth -4 and declining worth 0, what is the answer threshold t?</p>
+<p>t = (0 - (-4)) / (1 - (-4)) = 4 / 5 = 0.80, so only the 40 cases with p above 0.80 are answered.</p>
+<p><strong>Prediction answer:</strong> Coverage falls to 0.20 and the error rate falls to 0.050.</p>
+<p>The threshold rises from 0.80 to 0.90, so 20 cases are answered instead of 40 and the error rate among them falls from 0.100 to 0.050.</p>
+<p><strong>If you chose another answer:</strong> Compare wrong answer -4 with -9 at declining 0: the threshold goes from 0.80 to 0.90, so coverage falls from 0.40 to 0.20 and the error rate from 0.100 to 0.050.</p></body></html>

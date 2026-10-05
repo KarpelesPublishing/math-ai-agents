@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch16</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 16: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute default n=5 coverage and selection.</p>
+<p>Coverage is 1-0.6^5=0.92224. Selected success is 0.92224&#42;0.9=0.830016, because the selector finds a correct candidate with probability 0.9 when one exists.</p>
+<h2>Question 2</h2>
+<p>Why prefer n1 under shared error?</p>
+<p>With a shared error, coverage stays 0.4 whatever the count. A bank with a correct candidate then holds only correct candidates, so for two or more candidates selected success is 0.4&#42;1+0.6&#42;0=0.4 whatever the selector accuracy. Success ties at 0.4, but the extra samples and the selector add cost, so one candidate (cost 1) is preferred.</p>
+<h2>Question 3</h2>
+<p>What if no allocation is feasible?</p>
+<p>selected_allocation is unavailable; revise the allowed contract or abstain.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>At p = 0.2 with every problem sharing p, what is the coverage of five samples, and what does a blind pick from them deliver?</p>
+<p>Cov(5) = 1 - 0.8^5 = 1 - 0.32768 = 0.6723. A blind pick delivers p = 0.2, so 0.4723 of coverage is not delivered.</p>
+<p><strong>Prediction answer:</strong> About 0.40.</p>
+<p>Cov(10) = 1 - 0.95^10 = 1 - 0.5987 = 0.4013, the chapter's 0.40. A blind pick from those ten still delivers only p = 0.05.</p>
+<p><strong>If you chose another answer:</strong> Cov(10) = 1 - 0.95^10 = 1 - 0.5987 = 0.4013, about 0.40: far above one sample (0.05) but far below 0.90. Choose the shared setting, p = 0.05 and k = 10 to see it.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>With independent samples, p = 0.4 and selector success 0.75, what is Sel(3)?</p>
+<p>Cov(3) = 1 - 0.6^3 = 0.784, so Sel(3) = 0.784 x 0.75 = 0.588, which beats the blind 0.40 by 0.188.</p>
+<p><strong>Prediction answer:</strong> Five samples beat 0.40.</p>
+<p>Sel(5) = 0.92224 x 0.5 = 0.4611, above 0.40 by 0.0611. Two samples would give 0.64 x 0.5 = 0.32, below the blind line: a weak selector can cost more than it earns for small banks.</p>
+<p><strong>If you chose another answer:</strong> Sel(5) = 0.92224 x 0.5 = 0.4611, which is above 0.40. Choose the notebook default setting and selector 0.5 to see it; at two samples the same selector gives 0.64 x 0.5 = 0.32, below the blind line.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>Short samples cost 1 unit and long ones 4. With 20 short samples verified at 0.25 each, how many units are used, and what is Sel if pi = 0.6 and p = 0.2?</p>
+<p>Units: 20 x 1 + 20 x 0.25 = 25. Cov(20) = 1 - 0.8^20 = 1 - 0.0115 = 0.9885, so Sel = 0.9885 x 0.6 = 0.593.</p>
+<p><strong>Prediction answer:</strong> 4. Length with a selector.</p>
+<p>Length with a selector: Cov(12) = 0.9943 and Sel = 0.9943 x 0.785 = 0.781, just above volume with a selector (0.99998 x 0.73 = 0.730). Both beat the two blind allocations (0.35 and 0.20).</p>
+<p><strong>If you chose another answer:</strong> Length with a selector is highest: 0.9943 x 0.785 = 0.781, against 0.730 for volume with a selector and 0.35 and 0.20 for the two blind allocations. Choose the book values to see the four bars.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>A procedure costs 3 per attempt and completes 0.5 of 100 attempts. What is its cost per success?</p>
+<p>Total cost 100 x 3 = 300 and successes 100 x 0.5 = 50, so 300 / 50 = 6 per success.</p>
+<p><strong>Prediction answer:</strong> B.</p>
+<p>B: its completion 0.80 meets the floor 0.75 and its 2 seconds meet the 3 second deadline. A completes only 0.60 and C takes 5 seconds. A has the lowest cost per success (1.6667) yet is not feasible.</p>
+<p><strong>If you chose another answer:</strong> Only B is feasible: 0.80 is at least 0.75 and 2 s is at most 3 s. A completes 0.60, below the floor, and C takes 5 s, past the deadline. Choose a 3 second deadline and a floor of 0.75 to see it.</p></body></html>

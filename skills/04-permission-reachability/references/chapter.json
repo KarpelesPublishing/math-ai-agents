@@ -1,0 +1,244 @@
+{
+  "chapter": 4,
+  "title": "The Path from Prediction to Action",
+  "source_path": "Manuscript/revisions/part-i-v2/04-the-path-from-prediction-to-action.md",
+  "source_sha256": "01a4ed59ee47b9d1124cce1f55b35f3370830e43d1bd7d6068e4cf4ed3656f5e",
+  "notebook": "notebooks/04-permission-reachability.ipynb",
+  "skill": "maa-04-permission-reachability",
+  "skill_path": "skills/maa-04-permission-reachability/SKILL.md",
+  "method": "permission-reachability",
+  "outcome": "Return reachable states, a permitted path, and sinks under frozen permissions.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "allowed action graph reachability",
+    "permission bridge removal",
+    "reachable workflow sinks"
+  ],
+  "input_fields": {
+    "nodes": "Unique nonempty state identifiers.",
+    "start": "Registered initial node.",
+    "goal": "Registered desired node.",
+    "edges": "Directed edge list with from,to:registered identifiers and allowed:exact boolean."
+  },
+  "example_input": "data/examples/ch04.json",
+  "reader": "readers/04-permission-reachability/reader.html",
+  "equations": [
+    {
+      "label": "EQV4-01",
+      "number": "4.1",
+      "tex": "\\operatorname{Reach}_G(V_0)=\n\\bigcup_{t\\geq0}\\operatorname{step}^{t}(V_0).\n\\tag{4.1}",
+      "asset": "assets/math/bed64e2dcf2437c58994.svg",
+      "explanations": [
+        "Equation (4.1) asks the most literal question available about a system: starting here, what states can it get to at all?",
+        "Take the initial states, apply the transition relation zero times, once, twice, and so on, and collect everything reachable in any number of steps."
+      ]
+    },
+    {
+      "label": "EQV4-02",
+      "number": "4.2",
+      "tex": "\\operatorname{Allowed}_{\\mathcal G}(v)=\\mathcal{G}\\bigl(\\operatorname{Act}(v)\\bigr).\n\\tag{4.2}",
+      "asset": "assets/math/3a0a8d81e19f9cf8e5b5.svg",
+      "explanations": [
+        "Equation (4.2) says a permission system does not comment on a proposed action, it decides which proposals can be attempted at all.",
+        "Take every candidate action available at the state, pass the whole set through the grant rule, and keep what survives."
+      ]
+    },
+    {
+      "label": "EQV4-03",
+      "number": "4.3",
+      "tex": "\\begin{gathered}\n\\Pi_{G,v}(p)=\\Pr_p\\{|C_p(v)|=\\infty\\},\\\\\np_c(G,v)=\\inf\\{p:\\Pi_{G,v}(p)>0\\}.\n\\end{gathered}\n\\tag{4.3}",
+      "asset": "assets/math/fa364432e1111d4198e2.svg",
+      "explanations": [
+        "Equation (4.3) defines, for the declared infinite graph and independent edge-retention model, the probability that the starting vertex belongs to an infinite open cluster, and the threshold for that probability to become positive.",
+        "The first quantity is the chance that the cluster containing the starting vertex is infinite; the threshold is the infimum of edge probabilities making that chance positive, and need not itself have positive survival probability."
+      ]
+    },
+    {
+      "label": "EQV4-04",
+      "number": "4.4",
+      "tex": "p_c=\\frac{1}{d}.\n\\tag{4.4}",
+      "asset": "assets/math/f90dc3b1b6125fdae3df.svg",
+      "explanations": [
+        "Equation (4.4) gives the exact threshold for one solvable graph shape, so the whole argument has a number rather than an intuition.",
+        "Divide one by the number of children each vertex has; that edge probability is where isolated pockets give way to an unbounded cluster."
+      ]
+    },
+    {
+      "label": "chapter-04-display-5",
+      "number": "un-numbered display 5",
+      "tex": "1-[1-0.6(1-0.4^2)]^2=0.753984.",
+      "asset": "assets/math/d443a7a79a40512d1cac.svg",
+      "explanations": []
+    },
+    {
+      "label": "chapter-04-display-6",
+      "number": "un-numbered display 6",
+      "tex": "p = p_{\\text{format}}\\times p_{\\text{parse}}\\times p_{\\text{grant}}\\times p_{\\text{tool}}.",
+      "asset": "assets/math/3d80cc5345e1f3c227ed.svg",
+      "explanations": []
+    },
+    {
+      "label": "chapter-04-display-7",
+      "number": "un-numbered display 7",
+      "tex": "p = 0.95\\times0.98\\times0.90\\times0.80 = 0.67032,",
+      "asset": "assets/math/8d6a53c3f7a2ddb2e2b2.svg",
+      "explanations": []
+    },
+    {
+      "label": "chapter-04-display-8",
+      "number": "un-numbered display 8",
+      "tex": "p = 0.95\\times0.98\\times0.40\\times0.80 = 0.29792,\n\\qquad\npd = 0.59584.",
+      "asset": "assets/math/4a0b93e9247d55068352.svg",
+      "explanations": []
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C04-D01",
+      "title": "A permission deletes a move, and the path with it",
+      "notebook_anchor": "demo-c04-d01",
+      "source_section": "Permission is a filter, not an opinion",
+      "source_anchor": "permission-is-a-filter-not-an-opinion",
+      "equations": [
+        "\\operatorname{Reach}_G(V_0)=\\bigcup_{t\\geq0}\\operatorname{step}^{t}(V_0).",
+        "\\operatorname{Allowed}_{\\mathcal G}(v)=\\mathcal{G}\\bigl(\\operatorname{Act}(v)\\bigr)."
+      ],
+      "controls": [
+        {
+          "key": "denied",
+          "label": "Workflow and denied move",
+          "values": [
+            "none",
+            "review_release",
+            "draft_review",
+            "transfer"
+          ],
+          "default": "none",
+          "value_labels": [
+            "Document: every move granted",
+            "Document: review to release denied",
+            "Document: draft to review denied",
+            "Transfer: queued to approved denied"
+          ]
+        }
+      ],
+      "function": "permission_picture",
+      "states": 4
+    },
+    {
+      "id": "C04-D02",
+      "title": "A finite drawing is not the threshold",
+      "notebook_anchor": "demo-c04-d02",
+      "source_section": "How many edges are enough",
+      "source_anchor": "how-many-edges-are-enough",
+      "equations": [
+        "\\begin{gathered}\\Pi_{G,v}(p)=\\Pr_p\\{|C_p(v)|=\\infty\\},\\\\p_c(G,v)=\\inf\\{p:\\Pi_{G,v}(p)>0\\}.\\end{gathered}",
+        "p_c=\\frac{1}{d}."
+      ],
+      "controls": [
+        {
+          "key": "edge_probability",
+          "label": "Edge probability p",
+          "values": [
+            0.3,
+            0.5,
+            0.7
+          ],
+          "default": 0.5,
+          "value_labels": [
+            "0.30 (below 1/2)",
+            "0.50 (at 1/2)",
+            "0.70 (above 1/2)"
+          ]
+        },
+        {
+          "key": "sample",
+          "label": "Random draw",
+          "values": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "default": 1
+        }
+      ],
+      "function": "sample_picture",
+      "states": 12
+    },
+    {
+      "id": "C04-D03",
+      "title": "Possible, expected and completed are three numbers",
+      "notebook_anchor": "demo-c04-d03",
+      "source_section": "Reachability, expected descendants, and completion",
+      "source_anchor": "reachability-expected-descendants-and-completion",
+      "equations": [
+        "1-[1-0.6(1-0.4^2)]^2=0.753984.",
+        "(dp)^T"
+      ],
+      "controls": [
+        {
+          "key": "children",
+          "label": "Children per vertex d",
+          "values": [
+            2,
+            3
+          ],
+          "default": 2
+        },
+        {
+          "key": "edge_probability",
+          "label": "Edge probability p",
+          "values": [
+            0.4,
+            0.6,
+            0.8
+          ],
+          "default": 0.6
+        }
+      ],
+      "function": "completion_picture",
+      "states": 6
+    },
+    {
+      "id": "C04-D04",
+      "title": "Four rates make one edge, and failure logs cannot tell rare from missing",
+      "notebook_anchor": "demo-c04-d04",
+      "source_section": "The permission graph, with numbers",
+      "source_anchor": "the-permission-graph-with-numbers",
+      "equations": [
+        "p = p_{\\text{format}}\\times p_{\\text{parse}}\\times p_{\\text{grant}}\\times p_{\\text{tool}}.",
+        "p_c=\\frac{1}{d}.",
+        "(dp)^T"
+      ],
+      "controls": [
+        {
+          "key": "grant",
+          "label": "Grant rate p_grant",
+          "values": [
+            0.9,
+            0.7,
+            0.4,
+            0.0
+          ],
+          "default": 0.9
+        },
+        {
+          "key": "steps",
+          "label": "Steps T in one chain",
+          "values": [
+            3,
+            10,
+            20
+          ],
+          "default": 3
+        }
+      ],
+      "function": "chain_picture",
+      "states": 12
+    }
+  ]
+}

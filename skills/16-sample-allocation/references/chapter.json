@@ -1,0 +1,268 @@
+{
+  "chapter": 16,
+  "title": "Thought as Search",
+  "source_path": "Manuscript/part-iv/16-thought-as-search.md",
+  "source_sha256": "4dc3315aff9caf5064313405062a73d380fa3136a00fc794e79101638323539f",
+  "notebook": "notebooks/16-sample-allocation.ipynb",
+  "skill": "maa-16-sample-allocation",
+  "skill_path": "skills/maa-16-sample-allocation/SKILL.md",
+  "method": "sample-allocation",
+  "outcome": "Separate candidate coverage from actual selector success and choose a feasible allocation.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "candidate selector compute allocation",
+    "shared-error sampling saturation",
+    "sample budget deadline frontier"
+  ],
+  "input_fields": {
+    "candidate_success": "Marginal correctness probability in [0,1].",
+    "selector_accuracy": "Conditional probability of choosing a correct candidate when one exists.",
+    "sample_cost": "Nonnegative cost per generated candidate.",
+    "sample_latency": "Nonnegative serial time per candidate.",
+    "selector_cost": "Nonnegative selector expense for n>1.",
+    "selector_latency": "Nonnegative selector time for n>1.",
+    "deadline": "Nonnegative total time limit.",
+    "budget": "Nonnegative total expense limit.",
+    "shared_error": "Exact boolean choosing shared versus independent correctness construction.",
+    "sample_counts": "Nonempty list of positive integer candidate counts up to 1000."
+  },
+  "example_input": "data/examples/ch16.json",
+  "reader": "readers/16-sample-allocation/reader.html",
+  "equations": [
+    {
+      "label": "EQV16-01",
+      "number": "16.1",
+      "tex": "\\operatorname{Cov}(k) \\;=\\; 1 - (1-p)^{k}.\n\\tag{16.1}",
+      "asset": "assets/math/5e2812ebe7973eccf096.svg",
+      "explanations": [
+        "Equation (16.1) gives the chance that at least one of `k` samples is correct.",
+        "One minus the chance that every single sample is wrong."
+      ]
+    },
+    {
+      "label": "EQV16-02",
+      "number": "16.2",
+      "tex": "\\operatorname{Sel}(k) \\;=\\; \\mathrm{E}\\!\\left[\\frac{m}{k}\\right] \\;=\\; p .\n\\tag{16.2}",
+      "asset": "assets/math/9376402bf0c75d691016.svg",
+      "explanations": [
+        "Equation (16.2) gives the chance the returned sample is correct when the selector is blind.",
+        "The expected fraction of correct samples among the `k` drawn is `p`, whatever `k` is."
+      ]
+    },
+    {
+      "label": "EQV16-03",
+      "number": "16.3",
+      "tex": "\\operatorname{Sel}(k) \\;=\\; \\operatorname{Cov}(k)\\cdot \\pi(k) \\;+\\; \\big(1-\\operatorname{Cov}(k)\\big)\\cdot 0 ,\n\\tag{16.3}",
+      "asset": "assets/math/948f3cacbf230e54c9e1.svg",
+      "explanations": [
+        "Equation (16.3) splits the returned answer's correctness into whether a correct sample was present and whether the selector found it.",
+        "Multiply the chance that a correct sample exists among the `k` by the chance the selector ranks one of them top."
+      ]
+    },
+    {
+      "label": "EQV16-04",
+      "number": "16.4",
+      "tex": "\\operatorname{Cov}(k+1) - \\operatorname{Cov}(k) \\;=\\; p\\,(1-p)^{k}.\n\\tag{16.4}",
+      "asset": "assets/math/54144b0cebaad6ba0716.svg",
+      "explanations": [
+        "Equation (16.4) gives the value of drawing one more sample, before any selector is applied.",
+        "The gain from sample number `k` plus one is the chance it is correct times the chance all the previous ones were not."
+      ]
+    },
+    {
+      "label": "EQV16-05",
+      "number": "16.5",
+      "tex": "\\widehat c_{\\mathrm{success}}\n=\n\\frac{\\sum_{i=1}^{N}c_i}\n{\\sum_{i=1}^{N}\\mathbf 1\\{\\text{authorized confirmed completion in run }i\\}}.\n\\tag{16.5}",
+      "asset": "assets/math/65a73d2e35e3d927a4fe.svg",
+      "explanations": [
+        "Equation (16.5) allocates all observed attempt costs across the observed authorized completions.",
+        "Add every run's cost, then divide by the number of runs that actually satisfied the declared completion contract."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C16-D01",
+      "title": "Sampling fills the bank, but a blind pick ignores it",
+      "notebook_anchor": "demo-c16-d01",
+      "source_section": "What sampling buys",
+      "source_anchor": "what-sampling-buys",
+      "equations": [
+        "\\operatorname{Cov}(k) = 1 - (1-p)^{k}",
+        "\\operatorname{Sel}(k) = \\mathrm{E}\\!\\left[\\frac{m}{k}\\right] = p",
+        "\\operatorname{Cov}(k+1) - \\operatorname{Cov}(k) = p\\,(1-p)^{k}"
+      ],
+      "controls": [
+        {
+          "key": "spread",
+          "label": "How the chance is spread over problems",
+          "values": [
+            "shared",
+            "thin"
+          ],
+          "default": "shared",
+          "value_labels": [
+            "Every problem has the same p (Equation 16.1)",
+            "Overconfident: half the problems at 2p, half at 0 (same average p)"
+          ]
+        },
+        {
+          "key": "p",
+          "label": "Average chance one sample is correct (p)",
+          "values": [
+            0.05,
+            0.2,
+            0.3
+          ],
+          "default": 0.2
+        },
+        {
+          "key": "k",
+          "label": "Samples drawn (k)",
+          "values": [
+            10,
+            100
+          ],
+          "default": 10
+        }
+      ],
+      "function": "coverage_picture",
+      "states": 12
+    },
+    {
+      "id": "C16-D02",
+      "title": "The selector turns coverage into delivery",
+      "notebook_anchor": "demo-c16-d02",
+      "source_section": "The selector needs its own measured success rate",
+      "source_anchor": "the-selector-needs-its-own-measured-success-rate",
+      "equations": [
+        "\\operatorname{Sel}(k) = \\operatorname{Cov}(k)\\cdot \\pi(k) + \\big(1-\\operatorname{Cov}(k)\\big)\\cdot 0",
+        "\\operatorname{Cov}(k) = 1 - (1-p)^{k}",
+        "\\operatorname{Sel}(k) = \\mathrm{E}\\!\\left[\\frac{m}{k}\\right] = p"
+      ],
+      "controls": [
+        {
+          "key": "setting",
+          "label": "Case and limits",
+          "values": [
+            "default",
+            "shared",
+            "transfer",
+            "none"
+          ],
+          "default": "default",
+          "value_labels": [
+            "Notebook default: p 0.4, limits 6 and 6",
+            "Changed: the samples share one failure",
+            "Transfer: p 0.7, dearer samples, limits 3 s and 6",
+            "No allocation feasible: budget 0.5"
+          ]
+        },
+        {
+          "key": "selector",
+          "label": "Selector success when a correct sample exists",
+          "values": [
+            0.5,
+            0.9,
+            1.0
+          ],
+          "default": 0.9
+        }
+      ],
+      "function": "selector_picture",
+      "states": 12
+    },
+    {
+      "id": "C16-D03",
+      "title": "Length, volume or a selector: spending sixty units",
+      "notebook_anchor": "demo-c16-d03",
+      "source_section": "Three levers, one budget",
+      "source_anchor": "three-levers-one-budget",
+      "equations": [
+        "\\operatorname{Sel}(k) = \\operatorname{Cov}(k)\\cdot \\pi(k) + \\big(1-\\operatorname{Cov}(k)\\big)\\cdot 0",
+        "\\operatorname{Sel}(k) = \\mathrm{E}\\!\\left[\\frac{m}{k}\\right] = p",
+        "\\operatorname{Cov}(k) = 1 - (1-p)^{k}",
+        "\\operatorname{Cov}(k+1) - \\operatorname{Cov}(k) = p\\,(1-p)^{k}"
+      ],
+      "controls": [
+        {
+          "key": "selector",
+          "label": "Selector success (allocations 3 and 4)",
+          "values": [
+            "book",
+            "strong",
+            "weak",
+            "worse"
+          ],
+          "default": "book",
+          "value_labels": [
+            "Book values: 0.73 and 0.785",
+            "Strong: 0.95 for both",
+            "Weak: 0.50 for both",
+            "Worse than random: 0.15 for both"
+          ]
+        },
+        {
+          "key": "long_p",
+          "label": "Chance one long-reasoning sample is correct",
+          "values": [
+            0.35,
+            0.25
+          ],
+          "default": 0.35
+        }
+      ],
+      "function": "allocation_picture",
+      "states": 8
+    },
+    {
+      "id": "C16-D04",
+      "title": "What a completed task costs, and who is allowed to be slow",
+      "notebook_anchor": "demo-c16-d04",
+      "source_section": "What the budget actually buys",
+      "source_anchor": "what-the-budget-actually-buys",
+      "equations": [
+        "\\widehat c_{\\mathrm{success}} = \\frac{\\sum_{i=1}^{N}c_i}{\\sum_{i=1}^{N}\\mathbf 1\\{\\text{authorized confirmed completion in run }i\\}}"
+      ],
+      "controls": [
+        {
+          "key": "deadline",
+          "label": "Deadline (seconds, declared rates only)",
+          "values": [
+            3,
+            10
+          ],
+          "default": 10
+        },
+        {
+          "key": "required",
+          "label": "Minimum completion rate required (declared rates only)",
+          "values": [
+            0.5,
+            0.75,
+            0.82
+          ],
+          "default": 0.75
+        },
+        {
+          "key": "evidence",
+          "label": "What the ratio is computed from",
+          "values": [
+            "declared",
+            "observed"
+          ],
+          "default": "declared",
+          "value_labels": [
+            "The three procedures' declared rates",
+            "Two observed attempts, neither succeeded"
+          ]
+        }
+      ],
+      "function": "cost_picture",
+      "states": 12
+    }
+  ]
+}

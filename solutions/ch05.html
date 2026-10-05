@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch05</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 5: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute the default first kernel row.</p>
+<p>[0.8&#42;0.9+0.2&#42;0.2,0.8&#42;0.1+0.2&#42;0.8]=[0.76,0.24].</p>
+<h2>Question 2</h2>
+<p>Why can an independent-step model and a shared good-or-bad-condition model both have step marginals p?</p>
+<p>A marginal fixes only each step's own success rate, not how steps depend on each other. In the independent model each step succeeds with probability p on its own. In the shared model one condition is good with probability p and every step succeeds exactly when it is good, so each single step still succeeds with probability p. Same marginals, different joint laws: p^n versus p for all n steps.</p>
+<h2>Question 3</h2>
+<p>Compute the transfer conditional product.</p>
+<p>0.9&#42;0.8&#42;0.7=0.504.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>If a blind call requested 0.60 of the time, what would the fully connected assembly (row 5) score?</p>
+<p>Blind rate = (1 - 0.60) / 2 = 0.20. Row 5 = 0.20 + 0.60 x 0.775 = 0.20 + 0.465 = 0.665.</p>
+<p><strong>Prediction answer:</strong> Row 6 rises from 0.300 to 0.420, the value of row 4.</p>
+<p>Row 6 becomes 0.30 + 0.40 x 0.30 = 0.42, the same as row 4: a denied tool adds no information, only a second blind try.</p>
+<p><strong>If you chose another answer:</strong> Choose 'Makes a second blind call' with two calls allowed: only row 6 moves, from 0.300 to 0.420, because a second blind call rescues some requests but the denied tool adds no information.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>With the default tool, what is the chance of state 0 after two transitions when the system starts in state 0?</p>
+<p>K(0,0) = 0.76 and K(1,0) = 0.3 x 0.9 + 0.7 x 0.2 = 0.41. After two steps: 0.76 x 0.76 + 0.24 x 0.41 = 0.5776 + 0.0984 = 0.676.</p>
+<p><strong>Prediction answer:</strong> Down, from about 0.68 to about 0.38.</p>
+<p>The default tool gives 0.76 x 0.76 + 0.24 x 0.41 = 0.676 and the changed tool gives 0.50 x 0.50 + 0.50 x 0.25 = 0.375.</p>
+<p><strong>If you chose another answer:</strong> Compare the default tool and the changed tool at two transitions: 0.676 against 0.375. The chooser's rows are the same, but the recurrent system is not, because K also contains the tool.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>A tool is right with probability 0.75. How many bits does it deliver, and what is H(Y | O)?</p>
+<p>H(Y | O) = 0.25 x 2.000 + 0.75 x 0.415 = 0.500 + 0.311 = 0.811 bits, so I = 1 - 0.811 = 0.189 bits.</p>
+<p><strong>Prediction answer:</strong> The information stays 0.531 bits and success stays at the model-only 0.300.</p>
+<p>The report still delivers 0.531 bits, but no later call reads it, so success stays at 0.30: the bits arrived where no decision uses them.</p>
+<p><strong>If you chose another answer:</strong> Set the report to 'The run stops (tool, no recurrence)' at accuracy 0.90: the information is still 0.531 bits because it depends only on the tool, and success is still 0.300 because nothing reads the report.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>With per-step success 0.90 and one retry per step, what is the chance of finishing 2 steps?</p>
+<p>q = 1 - 0.10 x 0.10 = 0.99. Two steps: 0.99 x 0.99 = 0.9801.</p>
+<p><strong>Prediction answer:</strong> Closer to 0.1.</p>
+<p>0.95^40 = 0.129: forty required steps at 0.95 leave about one run in eight intact, and the half-success horizon is about 14 steps.</p>
+<p><strong>If you chose another answer:</strong> Choose per-step 0.95 with independent steps: after 40 steps the chance is 0.129, closer to 0.1. The product falls fast even when each factor is near 1.</p></body></html>

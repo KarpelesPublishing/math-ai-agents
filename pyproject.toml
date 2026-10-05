@@ -5,12 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "math-ai-agents-lab"
 version = "1.0.0"
-description = "Companion computations for The Mathematics of AI Agents"
+description = "Local chapter laboratories and skills for The Mathematics of Artificial Intelligence Agents"
 requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
 notebooks = ["numpy", "matplotlib", "nbformat", "nbclient", "ipykernel", "jupyterlab"]
+publishing = ["nbconvert", "markdown", "reportlab"]
 
 [project.scripts]
 math-ai-agents = "math_ai_agents.__main__:main"

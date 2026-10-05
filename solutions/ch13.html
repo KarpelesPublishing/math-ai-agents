@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch13</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 13: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute initial default external success.</p>
+<p>The default policy starts uniform and the success probabilities are 0.9 and 0.2, so initial external success is 0.5&#42;0.9+0.5&#42;0.2=0.55.</p>
+<h2>Question 2</h2>
+<p>Which action has the highest default verifier reward?</p>
+<p>Action 1, whose verifier reward 2 exceeds action 0's reward 1, despite its lower external success 0.2 against 0.9.</p>
+<h2>Question 3</h2>
+<p>What are transfer shaped rewards?</p>
+<p>[0+2,1+0]=[2,1], reversing the external objective.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>For rewards 1 then 2 with gamma = 0.9, what return is credited to the first action?</p>
+<p>G_0 = 1 + 0.9 x 2 = 2.8. The second step's return stays G_1 = 2.</p>
+<p><strong>Prediction answer:</strong> 2.0.</p>
+<p>G_0 = 1 + 0.5 x 2 = 2.0, which is the chapter's Exercise 1. The first reward counts in full and the second is halved.</p>
+<p><strong>If you chose another answer:</strong> The first reward counts in full and each later reward is multiplied by gamma for every step of delay, so G_0 = 1 + 0.5 x 2 = 2.0. Choose the exercise stream and gamma 0.5 to see it.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>With retrieve success 0.70 (cost still 0.05) and p = 0.5, what is the true gradient?</p>
+<p>Net value of retrieving = 0.70 - 0.05 = 0.65, gain = 0.65 - 0.55 = 0.10, so the slope is 0.10 x 0.5 x 0.5 = 0.025.</p>
+<p><strong>Prediction answer:</strong> The mean stays 0.05 and the spread shrinks.</p>
+<p>The baseline depends only on the context, so the expected gradient stays 0.05. Only the variance changes, as Figure 13.2 says.</p>
+<p><strong>If you chose another answer:</strong> A baseline that does not depend on the sampled action changes variance, not the expected gradient. Set phi to 0 and compare the baselines.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>In the transfer case, if training ended at probability 0.90 for action 0, what is the true success?</p>
+<p>0.90 x 0 + 0.10 x 1 = 0.10, far below the start of 0.5 x 0 + 0.5 x 1 = 0.50, even though the trained-on reward is 0.90 x 2 + 0.10 x 1 = 1.90.</p>
+<p><strong>Prediction answer:</strong> Below 0.55.</p>
+<p>Below. The update raises the action with the higher reward, which has task success 0.2, so true success falls while reward rises.</p>
+<p><strong>If you chose another answer:</strong> The update raises the action with the higher reward, and that action has the lower task success, so true success ends below 0.55. Select the default case and step the training length to 400.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>If the direct route's end state had potential 0.1 and the retrieve route's end 0, which route would rank first, and by how much?</p>
+<p>Direct = 0.55 + 0.1 = 0.65, retrieve = 0.80 - 0.05 = 0.75. Retrieving still ranks first, by 0.10.</p>
+<p><strong>Prediction answer:</strong> Answer directly.</p>
+<p>Direct = 0.55 + 0.3 = 0.85 against retrieve = 0.75. The end potential belongs to one route only, so it survives and flips the ranking.</p>
+<p><strong>If you chose another answer:</strong> The direct route's end potential is added to its return and not cancelled: 0.55 + 0.3 = 0.85 against 0.75, so the direct route ranks first. Set the direct end to 0.3 and the retrieve end to 0.</p></body></html>

@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch23</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 23: separate solutions</h1>
+<h2>Question 1</h2>
+<p>How many changed security violations occur?</p>
+<p>Two: instruction promotion and forbidden publish execution.</p>
+<h2>Question 2</h2>
+<p>Why does the changed plot rise twice?</p>
+<p>It counts both security boundaries crossed: untrusted instructions are promoted to control, then an unauthorized publish executes. The final cumulative value is two, matching the total violation metric.</p>
+<h2>Question 3</h2>
+<p>Does a valid review of version A authorize publishing version B?</p>
+<p>No. Review is bound to the document version.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>A parent holds only read_source and draft_summary. A delegated child proposes release. Is the child allowed to hold release, and why?</p>
+<p>No. The child set must lie inside the parent set of 2 effects, and release is not one of them, so the child cannot hold it however many levels of delegation are added.</p>
+<p><strong>Prediction answer:</strong> No: the capability is held; the request is stopped because its authority came from untrusted data.</p>
+<p>Equation (23.1) only bounds what a child may hold, and open_link is held here. The request is denied because its destination rests on untrusted data. Choose the calendar request and the browser grant to see it.</p>
+<p><strong>If you chose another answer:</strong> Holding open_link satisfies Equation (23.1), since the parent holds it too. The denial comes from the second check: a binding field without a trusted source is rejected. Choose the calendar request and the browser grant to see it.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>An approval event arrives at t = 0 and the user revokes at t = 1. How many usable approvals are on file at the end, and which check would have been wrong?</p>
+<p>Usable approvals = 0 + 1 - 1 = 0. A check made only at planning (after the approval, before the revocation) would have seen 1 and been wrong.</p>
+<p><strong>Prediction answer:</strong> Allowed at planning, which is wrong; the check just before the effect denies it.</p>
+<p>At planning the record holds 1 approval; the revocation then removes it, so the record just before the effect holds 0. Switch the check control to see it.</p>
+<p><strong>If you chose another answer:</strong> The planning check reads the record after the approval and before the revocation (1 approval), so it allows; the record just before the effect holds 1 - 1 = 0, so that check denies. Switch the check control to see it.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>A summarizer relabels a page's claim 'manager approved release of Q3-report version 5 to all subscribers' as trusted and the monitor admits it. What is Publish for that release, and which control closes the gap?</p>
+<p>Publish = 1. The record now holds the triple the sentence named, so the lookup succeeds although no approval event occurred. Re-checking Approved(M_t) at the relabeling point, so that only an observed approval event can add an entry, closes it.</p>
+<p><strong>Prediction answer:</strong> Publish = 0 because the version field differs; the relabeled sentence can make Publish = 1 for the triple it names.</p>
+<p>Version 5 is not in Approved(M_t), so Publish is 0. A relabeled sentence admitted without a re-check writes the very triple the attacker asked for into the record, so Publish becomes 1. Use the two controls to see both.</p>
+<p><strong>If you chose another answer:</strong> No partial match counts, so version 5 gives Publish = 0 with a real approval for version 4. If a summarizer relabels the page's claim as trusted and nothing re-checks it, the record then holds the attacker's triple and Publish = 1. Use the two controls to see both.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>A declared family has violation chances 0.20, 0.35, 0.05 and 0.35. What is Risk, and what is the mean? And in the changed trace, how many violations are there and why?</p>
+<p>Risk = max(0.20, 0.35, 0.05, 0.35) = 0.35, set by the two members tied at 0.35. The mean = (0.20 + 0.35 + 0.05 + 0.35) / 4 = 0.2375, which is not the reported value. In the changed trace violations = 1 promoted instruction + 1 forbidden publish executed = 2, even though the later authorized publish completes the task.</p>
+<p><strong>Prediction answer:</strong> The retry path that skips the check (0.45).</p>
+<p>Risk is the maximum, and 0.45 is larger than 0.05, 0.10 and 0.10. Set the family to four attacks and the confused-deputy chance to 0.1 to see it.</p>
+<p><strong>If you chose another answer:</strong> Equation (23.4) takes the largest chance in the family, and the retry path at 0.45 exceeds 0.05, 0.10 and 0.10. Set the family to four attacks and the confused-deputy chance to 0.1 to see it.</p></body></html>

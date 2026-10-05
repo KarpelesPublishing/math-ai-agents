@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch20</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 20: separate solutions</h1>
+<h2>Question 1</h2>
+<p>Compute default disagreement.</p>
+<p>0.51^2-0.3^2=0.1701.</p>
+<h2>Question 2</h2>
+<p>Why can Bob know acknowledgement receipt at zero drops?</p>
+<p>The declared model removes every world where the acknowledgement was lost.</p>
+<h2>Question 3</h2>
+<p>Compute transfer agreement.</p>
+<p>1-(0.75^3-0.5^3)=0.703125.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>If 4 messages are delivered out of 4 planned, what is the highest level of mutual knowledge of message 1, and how many link steps lead back to the silent run?</p>
+<p>Highest level = 4 - 1 = 3. Level 4 fails because B sent message 4 and cannot tell run 3 from run 4. The walk back crosses 4 - 0 = 4 links to run 0, where message 1 was not delivered, so common knowledge fails.</p>
+<p><strong>Prediction answer:</strong> Level 2, blocked by A.</p>
+<p>Highest level = 3 - 1 = 2. A sent message 3 and cannot tell run 2 from run 3, so A does not know level 2 and level 3 fails.</p>
+<p><strong>If you chose another answer:</strong> Highest level = 3 - 1 = 2, and message 3 was sent by A, who cannot tell run 2 from run 3, so A blocks level 3. Set Messages delivered to 3 to see it.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>If A needed 1 and B needed 1, in which run does only B attack?</p>
+<p>In run 1 only the proposal arrived: B has received (1 + 1) / 2 = 1, enough, and A has received 1 / 2 = 0.5, rounded down to 0. So B attacks alone.</p>
+<p><strong>Prediction answer:</strong> Run 2.</p>
+<p>In run 2 A has received 1 message and attacks, while B has received (2 + 1) / 2 = 1.5, rounded down to 1, and holds. Dashed boxes show A cannot tell run 2 from run 3.</p>
+<p><strong>If you chose another answer:</strong> Run 2 is the unsafe run: A has received 1 message and attacks, while B has received 1 and needs 2. In run 3 both attack, and A cannot tell run 2 from run 3.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>With two private decisions and 3 messages delivered, who holds the token, and how many of the four runs end with exactly one owner?</p>
+<p>A has received 3 / 2 = 1.5, rounded down to 1, and releases; B has received (3 + 1) / 2 = 2 and takes it. B holds it. Only run 2 strands the token, so 4 - 1 = 3 of 4 runs end with exactly one owner.</p>
+<p><strong>Prediction answer:</strong> Run 2.</p>
+<p>In run 2 A has received 1 message and releases the token, while B has received 1 and needs 2, so nobody holds it. Select 2 messages delivered.</p>
+<p><strong>If you chose another answer:</strong> Run 2 strands the token: A has received 1 message and releases it, while B has received 1 and needs 2. Select 2 messages delivered to see it.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>With a drop probability of 0.2 and 2 rounds, what is the chance that Bob commits and Alice does not?</p>
+<p>A round in which the reply does not get back to Alice has probability 1 - 0.8 x 0.8 = 0.36. So Bob commits alone with probability 0.36^2 - 0.2^2 = 0.1296 - 0.04 = 0.0896, and agreement is 0.9104.</p>
+<p><strong>Prediction answer:</strong> Lower than 0.75.</p>
+<p>With R = 2, Bob commits alone with probability 0.75^2 - 0.5^2 = 0.3125, so agreement is 0.6875, below 0.75. Select 2 rounds at 0.5.</p>
+<p><strong>If you chose another answer:</strong> With R = 2, Bob commits alone with probability 0.75^2 - 0.5^2 = 0.3125, so agreement is 0.6875, below 0.75. Select 2 rounds at 0.5.</p></body></html>

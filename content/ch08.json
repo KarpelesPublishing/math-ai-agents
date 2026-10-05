@@ -169,5 +169,6 @@
     "Default posterior is [0.9,0.1].",
     "Identical likelihood rows give zero gross information value.",
     "Impossible observed signals are rejected."
-  ]
+  ],
+  "agent_application": "The agent cannot directly observe every fact needed for release. Represent uncertainty as a belief, then compare acting now with acquiring an observation and choosing afterwards. A highly probable observation can still have no decision value."
 }

@@ -1014,7 +1014,7 @@
     },
     {
       "question": "Why can an independent-step model and a shared good-or-bad-condition model both have step marginals p?",
-      "answer": "They describe independent step failures and one shared good/bad condition, respectively."
+      "answer": "A marginal fixes only each step's own success rate, not how steps depend on each other. In the independent model each step succeeds with probability p on its own. In the shared model one condition is good with probability p and every step succeeds exactly when it is good, so each single step still succeeds with probability p. Same marginals, different joint laws: p^n versus p for all n steps."
     },
     {
       "question": "Compute the transfer conditional product.",
@@ -1033,5 +1033,6 @@
     "All composed kernels have normalized rows.",
     "The transfer assembly comparison reports unequal resource allowances.",
     "Different transition depths are reported instead of treated as identical recurrences."
-  ]
+  ],
+  "agent_application": "Use the composed kernel to describe the agent built around the same frozen model. Compare memory, retrieval and tool assemblies, then distinguish a step success rate from the probability that the complete workflow succeeds."
 }

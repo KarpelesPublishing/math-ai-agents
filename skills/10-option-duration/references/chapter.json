@@ -1,0 +1,239 @@
+{
+  "chapter": 10,
+  "title": "Plans Within Plans: Hierarchical Actions and Reusable Skills",
+  "source_path": "Manuscript/part-iii/10-plans-within-plans.md",
+  "source_sha256": "ed9441f3227bb1b766903397abab72049933cbccbdce830732ae400ccb3db2bd",
+  "notebook": "notebooks/10-option-duration.ipynb",
+  "skill": "maa-10-option-duration",
+  "skill_path": "skills/maa-10-option-duration/SKILL.md",
+  "method": "option-duration",
+  "outcome": "Compute option returns with duration discounting and explicit completion.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "variable-duration option return",
+    "skill interruption termination contract",
+    "option deadline continuation discount"
+  ],
+  "input_fields": {
+    "discount": "Gamma in [0,1].",
+    "deadline": "Nonnegative integer primitive-step deadline.",
+    "start_time": "Nonnegative elapsed time, same unit as deadline.",
+    "interrupt_after": "Optional nonnegative integer executed-step cap for each option.",
+    "options": "Each option has name,initiation:boolean,rewards:nonempty primitive reward list,terminated:boolean,continuation_value:number."
+  },
+  "example_input": "data/examples/ch10.json",
+  "reader": "readers/10-option-duration/reader.html",
+  "equations": [
+    {
+      "label": "EQV10-01",
+      "number": "10.1",
+      "tex": "o=(\\mathcal{I}_o,\\pi_o,\\beta_o).\n\\tag{10.1}",
+      "asset": "assets/math/7197ed5ea6f0ca3a60f7.svg",
+      "explanations": [
+        "Equation (10.1) separates where an option may start, how it acts while running, and how it stops.",
+        "Start only in `\\mathcal{I}_o`; use `\\pi_o` for primitive choices; use `\\beta_o` to determine termination."
+      ]
+    },
+    {
+      "label": "EQV10-02",
+      "number": "10.2",
+      "tex": "Q^{\\mu}(x,o)=\\operatorname E_\\mu\\!\\left[\n\\sum_{k=0}^{\\tau-1}\\gamma^k r_{t+k}\n+\\gamma^\\tau V^\\mu(x_{t+\\tau})\\;\\middle|\\;x_t=x,o_t=o\n\\right].\n\\tag{10.2}",
+      "asset": "assets/math/fce95d2aa964417b0ea0.svg",
+      "explanations": [
+        "Equation (10.2) values rewards inside an option and value remaining after variable-duration completion.",
+        "Discount internal primitive rewards, then discount continuation by actual primitive steps used."
+      ]
+    },
+    {
+      "label": "EQV10-03",
+      "number": "10.3",
+      "tex": "T_{\\mathrm{release}}=\\max\\{2+3+1,\\;4\\}=6\\text{ minutes},\n\\qquad C_{\\mathrm{tools}}=4+7+2+3=16\\text{ credits}.\n\\tag{10.3}",
+      "asset": "assets/math/83bd672b4dcd183bfb16.svg",
+      "explanations": [
+        "Equation (10.3) keeps completion delay separate from total tool cost in parallel workflow.",
+        "Take longest dependency chain for time; add all required activity credits for cost."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C10-D01",
+      "title": "An option has three parts",
+      "notebook_anchor": "demo-c10-d01",
+      "source_section": "A skill is not a label",
+      "source_anchor": "a-skill-is-not-a-label",
+      "equations": [
+        "o=(\\mathcal{I}_o,\\pi_o,\\beta_o)"
+      ],
+      "controls": [
+        {
+          "key": "min_records",
+          "label": "Start rule: at least this many records left",
+          "values": [
+            1,
+            4,
+            7
+          ],
+          "default": 1
+        },
+        {
+          "key": "stop_at",
+          "label": "Early stop on a missing approval",
+          "values": [
+            0,
+            2,
+            4
+          ],
+          "default": 0,
+          "value_labels": [
+            "No early stop",
+            "Stop when 2 records remain",
+            "Stop when 4 records remain"
+          ]
+        }
+      ],
+      "function": "parts_picture",
+      "states": 9
+    },
+    {
+      "id": "C10-D02",
+      "title": "Discount by the steps the option really took",
+      "notebook_anchor": "demo-c10-d02",
+      "source_section": "Value when duration varies",
+      "source_anchor": "value-when-duration-varies",
+      "equations": [
+        "Q^{\\mu}(x,o)=\\operatorname E_\\mu\\!\\left[\\sum_{k=0}^{\\tau-1}\\gamma^k r_{t+k}+\\gamma^\\tau V^\\mu(x_{t+\\tau})\\;\\middle|\\;x_t=x,o_t=o\\right]"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Case",
+          "values": [
+            "chapter",
+            "transfer"
+          ],
+          "default": "chapter",
+          "value_labels": [
+            "Chapter example: rewards 2 and 3, value 10",
+            "Workbook transfer: rewards 0 and 4, value 8"
+          ]
+        },
+        {
+          "key": "duration",
+          "label": "Duration of the option (primitive steps)",
+          "values": [
+            2,
+            3,
+            4
+          ],
+          "default": 2
+        },
+        {
+          "key": "gamma",
+          "label": "Discount per primitive step",
+          "values": [
+            0.5,
+            0.9
+          ],
+          "default": 0.9
+        }
+      ],
+      "function": "duration_picture",
+      "states": 12
+    },
+    {
+      "id": "C10-D03",
+      "title": "Release time is not release cost",
+      "notebook_anchor": "demo-c10-d03",
+      "source_section": "A release workflow has two totals",
+      "source_anchor": "a-release-workflow-has-two-totals",
+      "equations": [
+        "T_{\\mathrm{release}}=\\max\\{2+3+1,\\;4\\}=6\\text{ minutes},\\qquad C_{\\mathrm{tools}}=4+7+2+3=16\\text{ credits}"
+      ],
+      "controls": [
+        {
+          "key": "audit_minutes",
+          "label": "Audit duration (minutes)",
+          "values": [
+            4,
+            6,
+            8
+          ],
+          "default": 4
+        },
+        {
+          "key": "mode",
+          "label": "Audit schedule",
+          "values": [
+            "parallel",
+            "after"
+          ],
+          "default": "parallel",
+          "value_labels": [
+            "In parallel from minute 0",
+            "After Publish"
+          ]
+        },
+        {
+          "key": "source",
+          "label": "Source during Verify",
+          "values": [
+            "same",
+            "changed"
+          ],
+          "default": "same",
+          "value_labels": [
+            "Unchanged",
+            "Changes from v17 to v18"
+          ]
+        }
+      ],
+      "function": "totals_picture",
+      "states": 12
+    },
+    {
+      "id": "C10-D04",
+      "title": "An interrupted option is scored here without continuation",
+      "notebook_anchor": "demo-c10-d04",
+      "source_section": "Interruption changes what completion means",
+      "source_anchor": "interruption-changes-what-completion-means",
+      "equations": [
+        "Q^{\\mu}(x,o)=\\operatorname E_\\mu\\!\\left[\\sum_{k=0}^{\\tau-1}\\gamma^k r_{t+k}+\\gamma^\\tau V^\\mu(x_{t+\\tau})\\;\\middle|\\;x_t=x,o_t=o\\right]",
+        "o=(\\mathcal{I}_o,\\pi_o,\\beta_o)"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Case",
+          "values": [
+            "none",
+            "two",
+            "one",
+            "transfer"
+          ],
+          "default": "none",
+          "value_labels": [
+            "No interruption",
+            "Interrupted after 2 steps",
+            "Interrupted after 1 step",
+            "Workbook case: inspect and a disabled option"
+          ]
+        },
+        {
+          "key": "gamma",
+          "label": "Discount per primitive step",
+          "values": [
+            0.9,
+            0.5
+          ],
+          "default": 0.9
+        }
+      ],
+      "function": "interruption_picture",
+      "states": 8
+    }
+  ]
+}

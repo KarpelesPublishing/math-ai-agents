@@ -1,0 +1,212 @@
+{
+  "chapter": 15,
+  "title": "What an Agent Should Remember: Retrieval, Compression, and Experience",
+  "source_path": "Manuscript/part-iv/15-what-an-agent-should-remember.md",
+  "source_sha256": "8366d861583b410f38b592c793c3b20cc77b7b0b56636f264bd21f5ae165377a",
+  "notebook": "notebooks/15-memory-budget.ipynb",
+  "skill": "maa-15-memory-budget",
+  "skill_path": "skills/maa-15-memory-budget/SKILL.md",
+  "method": "memory-budget",
+  "outcome": "Choose fresh valid records and inspect action preservation under compression.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "retrieval knapsack token budget",
+    "stale version-bound memory authority",
+    "decision-preserving compression"
+  ],
+  "input_fields": {
+    "budget": "Nonnegative integer token budget up to 10000.",
+    "now": "Nonnegative current time.",
+    "current_version": "Current document or state version identifier.",
+    "records": "At most 20 records. Each has id,tokens:positive integer,decision_value:nonnegative number,timestamp,ttl:nonnegative numbers,authority:boolean,version:string.",
+    "original_action_values": "Finite values for each original decision alternative.",
+    "compressed_action_values": "Aligned values after compression."
+  },
+  "example_input": "data/examples/ch15.json",
+  "reader": "readers/15-memory-budget/reader.html",
+  "equations": [
+    {
+      "label": "EQV15-01",
+      "number": "15.1",
+      "tex": "R^\\star\\in\\arg\\max_{R:\\,\\sum_{m\\in R}c(m)\\le B}\n\\left\\{\\operatorname E[\\text{decision value}\\mid R]-\\lambda\\sum_{m\\in R}c(m)\\right\\}.\n\\tag{15.1}",
+      "asset": "assets/math/f7d464531063a86995f9.svg",
+      "explanations": [
+        "Equation (15.1) selects records by expected decision value under a stated context budget.",
+        "Include records only when expected decision improvement exceeds the decision-value-priced token cost within budget."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C15-D01",
+      "title": "Records chosen under a token budget",
+      "notebook_anchor": "demo-c15-d01",
+      "source_section": "Retrieval is an action under budget",
+      "source_anchor": "retrieval-is-an-action-under-budget",
+      "equations": [
+        "R^\\star\\in\\arg\\max_{R:\\,\\sum_{m\\in R}c(m)\\le B}\\left\\{\\operatorname E[\\text{decision value}\\mid R]-\\lambda\\sum_{m\\in R}c(m)\\right\\}"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Case",
+          "values": [
+            "chapter",
+            "default",
+            "changed",
+            "transfer"
+          ],
+          "default": "chapter",
+          "value_labels": [
+            "Chapter example: budget 2",
+            "Default case: budget 6",
+            "Changed case: budget 2",
+            "Transfer case: budget 3, expired record"
+          ]
+        },
+        {
+          "key": "lam",
+          "label": "Price of a token, lambda (value units per token)",
+          "values": [
+            0,
+            1,
+            2
+          ],
+          "default": 1
+        }
+      ],
+      "function": "budget_picture",
+      "states": 12
+    },
+    {
+      "id": "C15-D02",
+      "title": "How much can a summary lose?",
+      "notebook_anchor": "demo-c15-d02",
+      "source_section": "Compression that preserves action",
+      "source_anchor": "compression-that-preserves-action",
+      "equations": [
+        "2\\varepsilon"
+      ],
+      "controls": [
+        {
+          "key": "summary",
+          "label": "What the summary did",
+          "values": [
+            "worst",
+            "dropped",
+            "default",
+            "changed"
+          ],
+          "default": "worst",
+          "value_labels": [
+            "Errors placed against the best action",
+            "Dropped the revocation",
+            "Default case: values 3, 5",
+            "Changed case: values 6, 5"
+          ]
+        },
+        {
+          "key": "epsilon",
+          "label": "Claimed summary error epsilon",
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "default": 1
+        }
+      ],
+      "function": "compression_picture",
+      "states": 12
+    },
+    {
+      "id": "C15-D03",
+      "title": "Stale approval is not support",
+      "notebook_anchor": "demo-c15-d03",
+      "source_section": "Stale approval is not support",
+      "source_anchor": "stale-approval-is-not-support",
+      "equations": [
+        "R^\\star\\in\\arg\\max_{R:\\,\\sum_{m\\in R}c(m)\\le B}\\left\\{\\operatorname E[\\text{decision value}\\mid R]-\\lambda\\sum_{m\\in R}c(m)\\right\\}"
+      ],
+      "controls": [
+        {
+          "key": "revocation_similarity",
+          "label": "Similarity of the current revocation",
+          "values": [
+            0.72,
+            0.99
+          ],
+          "default": 0.72
+        },
+        {
+          "key": "authority",
+          "label": "Can the current authority be reached?",
+          "values": [
+            "reachable",
+            "unreachable"
+          ],
+          "default": "reachable",
+          "value_labels": [
+            "Yes",
+            "No, the lookup fails"
+          ]
+        },
+        {
+          "key": "deletion",
+          "label": "How far deletion of the old approval reached",
+          "values": [
+            "none",
+            "store",
+            "all"
+          ],
+          "default": "none",
+          "value_labels": [
+            "Not deleted",
+            "Visible store only (a summary index keeps a copy)",
+            "Every view"
+          ]
+        }
+      ],
+      "function": "stale_picture",
+      "states": 12
+    },
+    {
+      "id": "C15-D04",
+      "title": "A record that may no longer be current",
+      "notebook_anchor": "demo-c15-d04",
+      "source_section": "Exercises",
+      "source_anchor": "exercises",
+      "equations": [
+        "0.6\\times 8+0.4\\times 0=4.8"
+      ],
+      "controls": [
+        {
+          "key": "p_current",
+          "label": "Probability the record is still current, p",
+          "values": [
+            0.25,
+            0.5,
+            0.6,
+            0.8
+          ],
+          "default": 0.6
+        },
+        {
+          "key": "lam",
+          "label": "Price of a token, lambda",
+          "values": [
+            1,
+            2,
+            4
+          ],
+          "default": 1
+        }
+      ],
+      "function": "lifecycle_picture",
+      "states": 12
+    }
+  ]
+}

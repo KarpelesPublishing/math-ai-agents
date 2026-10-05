@@ -148,5 +148,6 @@
     "Default expected utilities are 4,2,0.",
     "Changed loss reverses release to review.",
     "Probability normalization and aligned vector lengths are enforced."
-  ]
+  ],
+  "agent_application": "A document-release agent must choose among release, review and abstention using the stated consequences. Change the loss of an incorrect release before changing the probability estimate. The preferred action depends on both; the calculation supplies no new authority."
 }

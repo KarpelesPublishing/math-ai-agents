@@ -109,5 +109,6 @@
     "Selected allocation meets both resource limits.",
     "Default coverage increases under independence.",
     "Shared errors make one candidate optimal here."
-  ]
+  ],
+  "agent_application": "Generating more candidate actions helps only if the controller can select a correct one within its budget and deadline. Compare coverage with actual selection, then replace independent errors with a shared failure. More attempts cannot remove a failure common to every attempt."
 }

@@ -1,0 +1,260 @@
+{
+  "chapter": 17,
+  "title": "State and Consequence",
+  "source_path": "Manuscript/part-iv/17-state-and-consequence.md",
+  "source_sha256": "b431fe6cf065ca328eca697bfe8d9dd1c898963d6e5512e826a93d4296680d02",
+  "notebook": "notebooks/17-effect-and-retry.ipynb",
+  "skill": "maa-17-effect-and-retry",
+  "skill_path": "skills/maa-17-effect-and-retry/SKILL.md",
+  "method": "effect-and-retry",
+  "outcome": "Separate effects from acknowledgements and price a next recovery step.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "Event traces and conditional probability"
+  ],
+  "routes": [
+    "lost acknowledgement tool effect",
+    "price verification versus retry",
+    "idempotency key duplicate trace"
+  ],
+  "input_fields": {
+    "idempotent": "Exact boolean. True declares server-side key/payload deduplication.",
+    "events": "Ordered event list: request has kind,key,payload,effect:boolean,ack:boolean; verify has observed_effect:boolean. All requests must concern one logical payload; distinct operations require separate traces.",
+    "verify_cost": "Nonnegative one-step cost of perfect verification.",
+    "retry_cost": "Nonnegative one-step request cost.",
+    "effect_probability": "Probability [0,1] that the unresolved original request already took effect.",
+    "duplicate_cost": "Nonnegative extra harm from a duplicate effect."
+  },
+  "example_input": "data/examples/ch17.json",
+  "reader": "readers/17-effect-and-retry/reader.html",
+  "equations": [
+    {
+      "label": "EQV17-01",
+      "number": "17.1",
+      "tex": "\\operatorname{eff}_{I}\\!\\big(\\operatorname{eff}(T,\\operatorname{eff}(T,x))\\big) \\;=\\; \\operatorname{eff}_{I}\\!\\big(\\operatorname{eff}(T,x)\\big)\n\\qquad\\text{for every reachable } x .\n\\tag{17.1}",
+      "asset": "assets/math/521f3b91c8104d451a8b.svg",
+      "explanations": [
+        "Equation (17.1) requires repeated application to preserve the same intended effect as one application.",
+        "Compare the resulting requested-effect coordinates after one application and after two, keeping the request semantics fixed."
+      ]
+    },
+    {
+      "label": "EQV17-02",
+      "number": "17.2",
+      "tex": "\\mathbf{b}'(\\text{applied}) \\;=\\;\n\\frac{\\operatorname{Obs}(\\varnothing \\mid \\text{applied})\\;\\Pr(\\text{applied})}\n{\\begin{gathered}\n\\operatorname{Obs}(\\varnothing \\mid \\text{applied})\\,\\Pr(\\text{applied}) \\\\\n{}+\\; \\operatorname{Obs}(\\varnothing \\mid \\text{not applied})\\,\\Pr(\\text{not applied})\n\\end{gathered}}.\n\\tag{17.2}",
+      "asset": "assets/math/9fd25b8ba498db8f883f.svg",
+      "explanations": [
+        "Equation (17.2) converts a missing response into a probability that the action already happened.",
+        "Weigh how likely silence is when the effect landed against how likely silence is when it did not."
+      ]
+    },
+    {
+      "label": "EQV17-03",
+      "number": "17.3",
+      "tex": "\\operatorname{EU}(\\text{retry}) - \\operatorname{EU}(\\text{decline}) \\;=\\; (1-\\beta)\\,c_{\\text{miss}} \\;-\\; \\beta\\,c_{\\text{dup}} .\n\\tag{17.3}",
+      "asset": "assets/math/06754fe168697c58639b.svg",
+      "explanations": [
+        "Equation (17.3) says whether sending the request again is worth it.",
+        "Weigh the chance the action is still needed, times the cost of skipping it, against the chance it already happened, times the cost of doing it twice."
+      ]
+    },
+    {
+      "label": "EQV17-04",
+      "number": "17.4",
+      "tex": "\\operatorname{Rep}(x) \\;=\\; \\Big\\{\\, T \\;:\\; \\operatorname{Ready}(T,x)\\;\\land\\;\\big[\\text{(17.1) holds for this request}\\;\\lor\\;\\operatorname{Absent}(T,x)\\;\\lor\\;\\operatorname{Restored}(T,x)\\big] \\,\\Big\\}.\n\\tag{17.4}",
+      "asset": "assets/math/574a1266b01fa51afc80.svg",
+      "explanations": [
+        "Equation (17.4) identifies repeat attempts whose duplicate-effect risk is resolved and whose current execution conditions have been checked.",
+        "Check authority and preconditions, then require applicable idempotent semantics, proof of terminal non-application, or verified restoration after completed recovery."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C17-D01",
+      "title": "Send it twice: what is different afterward?",
+      "notebook_anchor": "demo-c17-d01",
+      "source_section": "The classification the specification actually uses",
+      "source_anchor": "the-classification-the-specification-actually-uses",
+      "equations": [
+        "\\operatorname{eff}_{I}\\!\\big(\\operatorname{eff}(T,\\operatorname{eff}(T,x))\\big) \\;=\\; \\operatorname{eff}_{I}\\!\\big(\\operatorname{eff}(T,x)\\big) \\qquad\\text{for every reachable } x ."
+      ],
+      "controls": [
+        {
+          "key": "kind",
+          "label": "Kind of request (three identical requests are sent)",
+          "values": [
+            "read",
+            "put",
+            "delete",
+            "charge"
+          ],
+          "default": "put",
+          "value_labels": [
+            "Read the record (safe, GET-like)",
+            "Set the record to 150 (idempotent, PUT-like)",
+            "Delete the record (idempotent, DELETE-like)",
+            "Add a charge of 50 (POST-like)"
+          ]
+        },
+        {
+          "key": "key",
+          "label": "Key for the charge (no effect on the other kinds)",
+          "values": [
+            "none",
+            "stored",
+            "lost"
+          ],
+          "default": "none",
+          "value_labels": [
+            "No key",
+            "Key stored by the service",
+            "Key lost or past its retention window"
+          ]
+        }
+      ],
+      "function": "repeat_picture",
+      "states": 12
+    },
+    {
+      "id": "C17-D02",
+      "title": "From silence to a decision: retry, decline or read",
+      "notebook_anchor": "demo-c17-d02",
+      "source_section": "Stage three: the retry decision, priced",
+      "source_anchor": "stage-three-the-retry-decision-priced",
+      "equations": [
+        "\\mathbf{b}'(\\text{applied}) \\;=\\; \\frac{\\operatorname{Obs}(\\varnothing \\mid \\text{applied})\\;\\Pr(\\text{applied})}{\\begin{gathered}\\operatorname{Obs}(\\varnothing \\mid \\text{applied})\\,\\Pr(\\text{applied}) \\\\{}+\\; \\operatorname{Obs}(\\varnothing \\mid \\text{not applied})\\,\\Pr(\\text{not applied})\\end{gathered}}.",
+        "\\operatorname{EU}(\\text{retry}) - \\operatorname{EU}(\\text{decline}) \\;=\\; (1-\\beta)\\,c_{\\text{miss}} \\;-\\; \\beta\\,c_{\\text{dup}} ."
+      ],
+      "controls": [
+        {
+          "key": "prior",
+          "label": "Belief before silence",
+          "values": [
+            0.3,
+            0.99
+          ],
+          "default": 0.3
+        },
+        {
+          "key": "silence_if_applied",
+          "label": "Chance of silence if the effect landed",
+          "values": [
+            0.5,
+            0.9
+          ],
+          "default": 0.5
+        },
+        {
+          "key": "c_dup",
+          "label": "Cost of a duplicate effect",
+          "values": [
+            0,
+            10,
+            40
+          ],
+          "default": 40,
+          "value_labels": [
+            "0 (idempotent interface)",
+            "10 (balanced)",
+            "40 (workbench IV.1)"
+          ]
+        }
+      ],
+      "function": "decision_picture",
+      "states": 12
+    },
+    {
+      "id": "C17-D03",
+      "title": "Recovery before a repeat: how an undo can fail",
+      "notebook_anchor": "demo-c17-d03",
+      "source_section": "The four ways an undo fails",
+      "source_anchor": "the-four-ways-an-undo-fails",
+      "equations": [
+        "\\operatorname{Rep}(x) \\;=\\; \\Big\\{\\, T \\;:\\; \\operatorname{Ready}(T,x)\\;\\land\\;\\big[\\text{(17.1) holds for this request}\\;\\lor\\;\\operatorname{Absent}(T,x)\\;\\lor\\;\\operatorname{Restored}(T,x)\\big] \\,\\Big\\}."
+      ],
+      "controls": [
+        {
+          "key": "stage",
+          "label": "Stage of the recovery sequence",
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "default": 1,
+          "value_labels": [
+            "1. Observe: read what happened",
+            "2. Run the undo",
+            "3. Verify, then check preconditions"
+          ]
+        },
+        {
+          "key": "outcome",
+          "label": "How the undo goes",
+          "values": [
+            "works",
+            "unavailable",
+            "partial",
+            "lost"
+          ],
+          "default": "works",
+          "value_labels": [
+            "The undo works and is verified",
+            "No undo can run (absent or expired)",
+            "Partial: the refund returns the money, the rest stays",
+            "The undo call is itself lost (no verifying read yet)"
+          ]
+        }
+      ],
+      "function": "recovery_picture",
+      "states": 12
+    },
+    {
+      "id": "C17-D04",
+      "title": "Which repeats are eligible: the six-step plan",
+      "notebook_anchor": "demo-c17-d04",
+      "source_section": "A trajectory, classified",
+      "source_anchor": "a-trajectory-classified",
+      "equations": [
+        "\\operatorname{Rep}(x) \\;=\\; \\Big\\{\\, T \\;:\\; \\operatorname{Ready}(T,x)\\;\\land\\;\\big[\\text{(17.1) holds for this request}\\;\\lor\\;\\operatorname{Absent}(T,x)\\;\\lor\\;\\operatorname{Restored}(T,x)\\big] \\,\\Big\\}."
+      ],
+      "controls": [
+        {
+          "key": "step",
+          "label": "Step whose reply was lost",
+          "values": [
+            "merge",
+            "delete",
+            "notify",
+            "audit"
+          ],
+          "default": "merge",
+          "value_labels": [
+            "Step 3: write the merged record",
+            "Step 4: delete the older record",
+            "Step 5: notify the customer",
+            "Step 6: log the change to the audit system"
+          ]
+        },
+        {
+          "key": "evidence",
+          "label": "Evidence in hand",
+          "values": [
+            "none",
+            "absent",
+            "expired"
+          ],
+          "default": "none",
+          "value_labels": [
+            "No extra evidence",
+            "A read proves terminal non-application (Absent)",
+            "Authority has expired (not Ready)"
+          ]
+        }
+      ],
+      "function": "plan_picture",
+      "states": 12
+    }
+  ]
+}

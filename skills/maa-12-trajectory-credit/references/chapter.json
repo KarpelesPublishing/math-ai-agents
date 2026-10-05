@@ -1,0 +1,227 @@
+{
+  "chapter": 12,
+  "title": "Credit for Consequences",
+  "source_path": "Manuscript/part-iii/12-credit-for-consequences.md",
+  "source_sha256": "1effe1f88c1852d5a6dd27bccfeacb39bb37f2f29d01b3286133a8d2c8cbf934",
+  "notebook": "notebooks/12-trajectory-credit.ipynb",
+  "skill": "maa-12-trajectory-credit",
+  "skill_path": "skills/maa-12-trajectory-credit/SKILL.md",
+  "method": "trajectory-credit",
+  "outcome": "Compare Monte Carlo, TD(0), and accumulating TD(lambda) updates on one trajectory.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "Monte Carlo TD credit comparison",
+    "eligibility trace consequence update",
+    "terminal versus truncated bootstrap"
+  ],
+  "input_fields": {
+    "states": "Trajectory state identifiers, one more than reward count.",
+    "rewards": "Finite observed immediate rewards.",
+    "discount": "Gamma in [0,1].",
+    "learning_rate": "Step size in [0,1].",
+    "lambda": "Trace decay parameter in [0,1].",
+    "terminal": "Exact boolean distinguishing true termination from truncation.",
+    "values": "Initial finite value for every trajectory state."
+  },
+  "example_input": "data/examples/ch12.json",
+  "reader": "readers/12-trajectory-credit/reader.html",
+  "equations": [
+    {
+      "label": "EQV12-01",
+      "number": "12.1",
+      "tex": "\\hat V_{t+1}(x_t) \\;=\\; \\hat V_t(x_t) \\;+\\; \\alpha\\big[\\operatorname{Ret}_t - \\hat V_t(x_t)\\big].\n\\tag{12.1}",
+      "asset": "assets/math/d6697e3cc821de210964.svg",
+      "explanations": [
+        "Equation (12.1) drags each state's estimate toward the return that actually followed it.",
+        "Take the gap between what happened and what was predicted, keep a fraction of it, and add that to the prediction."
+      ]
+    },
+    {
+      "label": "EQV12-02",
+      "number": "12.2",
+      "tex": "\\delta_t \\;=\\; r_t \\;+\\; \\gamma\\,\\hat V_t(x_{t+1}) \\;-\\; \\hat V_t(x_t).\n\\tag{12.2}",
+      "asset": "assets/math/cc2c6da6e8a537b237b5.svg",
+      "explanations": [
+        "Equation (12.2) measures how much the agent's own opinion changed between one step and the next.",
+        "Compare what was predicted from here against the reward received plus what is predicted from there."
+      ]
+    },
+    {
+      "label": "EQV12-03",
+      "number": "12.3",
+      "tex": "\\hat V_{t+1}(x_t) \\;=\\; \\hat V_t(x_t) \\;+\\; \\alpha\\,\\delta_t.\n\\tag{12.3}",
+      "asset": "assets/math/bea157a42325799a5a1c.svg",
+      "explanations": [
+        "Equation (12.3) moves each estimate toward the estimate that came immediately after it.",
+        "Nudge the earlier prediction in the direction its own successor disagreed with it."
+      ]
+    },
+    {
+      "label": "EQV12-04",
+      "number": "12.4",
+      "tex": "\\operatorname{Ret}^{\\lambda}_t \\;=\\; (1-\\lambda)\\sum_{k=1}^{N-t-1}\\lambda^{\\,k-1}\\Big[\\textstyle\\sum_{j=0}^{k-1}\\gamma^{\\,j} r_{t+j} \\;+\\; \\gamma^{\\,k}\\hat V_t(x_{t+k})\\Big] \\;+\\; \\lambda^{N-t-1}\\operatorname{Ret}_t.\n\\tag{12.4}",
+      "asset": "assets/math/3def44a4bcac72579801.svg",
+      "explanations": [
+        "Equation (12.4) combines geometrically weighted intermediate targets with the remaining weight on the complete terminal return.",
+        "Weight intermediate lookahead targets geometrically, then place all remaining weight on the realized return through termination."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C12-D01",
+      "title": "One run, three update rules, pass by pass",
+      "notebook_anchor": "demo-c12-d01",
+      "source_section": "The two rules on one trajectory",
+      "source_anchor": "the-two-rules-on-one-trajectory",
+      "equations": [
+        "\\hat V_{t+1}(x_t) = \\hat V_t(x_t) + \\alpha\\big[\\operatorname{Ret}_t - \\hat V_t(x_t)\\big].",
+        "\\delta_t = r_t + \\gamma\\,\\hat V_t(x_{t+1}) - \\hat V_t(x_t).",
+        "\\hat V_{t+1}(x_t) = \\hat V_t(x_t) + \\alpha\\,\\delta_t."
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Run",
+          "values": [
+            "book",
+            "default",
+            "changed",
+            "transfer"
+          ],
+          "default": "book",
+          "value_labels": [
+            "Book: four actions, final reward 1",
+            "Notebook default: draft, review, done",
+            "Notebook changed: the run is truncated",
+            "Notebook transfer: a, b, c, d"
+          ]
+        },
+        {
+          "key": "passes_done",
+          "label": "Passes through the run",
+          "values": [
+            1,
+            2,
+            3
+          ],
+          "default": 1
+        }
+      ],
+      "function": "trajectory_picture",
+      "states": 12
+    },
+    {
+      "id": "C12-D02",
+      "title": "Eight episodes, two answers about state A",
+      "notebook_anchor": "demo-c12-d02",
+      "source_section": "Eight episodes, two answers",
+      "source_anchor": "eight-episodes-two-answers",
+      "equations": [
+        "\\hat V_{t+1}(x_t) = \\hat V_t(x_t) + \\alpha\\big[\\operatorname{Ret}_t - \\hat V_t(x_t)\\big].",
+        "\\delta_t = r_t + \\gamma\\,\\hat V_t(x_{t+1}) - \\hat V_t(x_t).",
+        "\\hat V_{t+1}(x_t) = \\hat V_t(x_t) + \\alpha\\,\\delta_t."
+      ],
+      "controls": [
+        {
+          "key": "ones_in_b_only",
+          "label": "B-only episodes that pay 1 (out of 7)",
+          "values": [
+            3,
+            6,
+            7
+          ],
+          "default": 6
+        },
+        {
+          "key": "a_final",
+          "label": "Reward at the end of the one A episode",
+          "values": [
+            0,
+            1
+          ],
+          "default": 0
+        }
+      ],
+      "function": "eight_episodes_picture",
+      "states": 6
+    },
+    {
+      "id": "C12-D03",
+      "title": "One dial between the two rules",
+      "notebook_anchor": "demo-c12-d03",
+      "source_section": "The family between the two rules",
+      "source_anchor": "the-family-between-the-two-rules",
+      "equations": [
+        "\\operatorname{Ret}^{\\lambda}_t = (1-\\lambda)\\sum_{k=1}^{N-t-1}\\lambda^{\\,k-1}\\Big[\\textstyle\\sum_{j=0}^{k-1}\\gamma^{\\,j} r_{t+j} + \\gamma^{\\,k}\\hat V_t(x_{t+k})\\Big] + \\lambda^{N-t-1}\\operatorname{Ret}_t."
+      ],
+      "controls": [
+        {
+          "key": "lam",
+          "label": "Blending parameter lambda",
+          "values": [
+            0,
+            0.3,
+            0.9,
+            1
+          ],
+          "default": 0.9
+        },
+        {
+          "key": "protocol",
+          "label": "How each training set is presented",
+          "values": [
+            "repeated",
+            "once"
+          ],
+          "default": "repeated",
+          "value_labels": [
+            "Repeatedly, until the weights stop changing",
+            "Once, with the best step size"
+          ]
+        }
+      ],
+      "function": "lambda_picture",
+      "states": 8
+    },
+    {
+      "id": "C12-D04",
+      "title": "A positive error for a useless search, and a value that switches the action",
+      "notebook_anchor": "demo-c12-d04",
+      "source_section": "When a learned value changes the next action",
+      "source_anchor": "when-a-learned-value-changes-the-next-action",
+      "equations": [
+        "\\delta_t = r_t + \\gamma\\,\\hat V_t(x_{t+1}) - \\hat V_t(x_t).",
+        "\\hat V_{t+1}(x_t) = \\hat V_t(x_t) + \\alpha\\,\\delta_t."
+      ],
+      "controls": [
+        {
+          "key": "successor",
+          "label": "Estimate after the search",
+          "values": [
+            0.1,
+            0.5,
+            0.8
+          ],
+          "default": 0.5
+        },
+        {
+          "key": "alpha",
+          "label": "Step size for training the estimate of y",
+          "values": [
+            0.3,
+            0.4,
+            0.5,
+            0.8
+          ],
+          "default": 0.8
+        }
+      ],
+      "function": "td_error_picture",
+      "states": 12
+    }
+  ]
+}

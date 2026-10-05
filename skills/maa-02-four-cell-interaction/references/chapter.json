@@ -1,0 +1,255 @@
+{
+  "chapter": 2,
+  "title": "How to Measure Emergence",
+  "source_path": "Manuscript/revisions/part-i-v2/02-where-the-ability-lives.md",
+  "source_sha256": "ebcc918ed2a874bb711ea3f7f0c1a2dbe2d194e74ab08f14a6e132d6e8fadbd6",
+  "notebook": "notebooks/02-four-cell-interaction.ipynb",
+  "skill": "maa-02-four-cell-interaction",
+  "skill_path": "skills/maa-02-four-cell-interaction/SKILL.md",
+  "method": "four-cell-interaction",
+  "outcome": "Compute the signed four-cell contrast, positive amount, and valid share.",
+  "prerequisites": [
+    "Python lists and dictionaries",
+    "The mapped chapter and its notation"
+  ],
+  "routes": [
+    "matched four-cell component ablation",
+    "positive joint interaction share",
+    "ablation budget confounding"
+  ],
+  "input_fields": {
+    "scores": "Four finite scores ordered neither,first only,second only,both.",
+    "budgets": "Four nonnegative matched resource budgets in the same order."
+  },
+  "example_input": "data/examples/ch02.json",
+  "reader": "readers/02-four-cell-interaction/reader.html",
+  "equations": [
+    {
+      "label": "EQ02-01",
+      "number": "2.1",
+      "tex": "\\Gamma(p;i)=U(\\{\\theta,p,i\\})-U(\\{\\theta,p\\})-U(\\{\\theta,i\\})+U(\\{\\theta\\}).\n\\tag{2.1}",
+      "asset": "assets/math/0455ae92c832192c606a.svg",
+      "explanations": [
+        "Equation (2.1) asks whether anything is left over after each operation is credited for what it accomplishes alone.",
+        "Take the score with both operations, subtract each single-operation score, then add the neither score back once because the subtractions removed it twice."
+      ]
+    },
+    {
+      "label": "chapter-02-display-2",
+      "number": "un-numbered display 2",
+      "tex": "\\Gamma(p;i)=0.80-0.30-0.25+0.20=0.45.",
+      "asset": "assets/math/f8f3b7fef61f02d4b8b9.svg",
+      "explanations": []
+    },
+    {
+      "label": "EQ02-02",
+      "number": "2.2",
+      "tex": "\\begin{aligned}\nU(\\{\\theta,p,i\\})-U(\\{\\theta\\})\n&=\\bigl[U(\\{\\theta,p\\})-U(\\{\\theta\\})\\bigr]\\\\\n&\\quad+\\bigl[U(\\{\\theta,i\\})-U(\\{\\theta\\})\\bigr]\n+\\Gamma(p;i).\n\\end{aligned}\n\\tag{2.2}",
+      "asset": "assets/math/ede400791d188b0b3e27.svg",
+      "explanations": [
+        "Equation (2.2) splits the whole improvement from neither operation to both into three named pieces: what each buys alone, plus what the pair adds.",
+        "The left side is the total gain; the first two right-hand terms are the isolated gains; the last term is whatever the pair achieves beyond them."
+      ]
+    },
+    {
+      "label": "EQ02-03",
+      "number": "2.3",
+      "tex": "\\rho_\\Gamma=\\frac{\\Gamma(p;i)}{U(\\{\\theta,p,i\\})-U(\\{\\theta\\})}.\n\\tag{2.3}",
+      "asset": "assets/math/9dd75e9343450161ef1c.svg",
+      "explanations": [
+        "Equation (2.3) reports the interaction as a share of the total joint gain, so the size of a contrast can be compared against what was available to win.",
+        "Divide the interaction contrast by the whole improvement from neither operation to both."
+      ]
+    }
+  ],
+  "demonstrations": [
+    {
+      "id": "C02-D01",
+      "title": "Four cells, one contrast",
+      "notebook_anchor": "demo-c02-d01",
+      "source_section": "Why all four cells",
+      "source_anchor": "why-all-four-cells",
+      "equations": [
+        "\\Gamma(p;i)=U(\\{\\theta,p,i\\})-U(\\{\\theta,p\\})-U(\\{\\theta,i\\})+U(\\{\\theta\\})",
+        "\\begin{aligned}U(\\{\\theta,p,i\\})-U(\\{\\theta\\})&=\\bigl[U(\\{\\theta,p\\})-U(\\{\\theta\\})\\bigr]\\\\&\\quad+\\bigl[U(\\{\\theta,i\\})-U(\\{\\theta\\})\\bigr]+\\Gamma(p;i).\\end{aligned}",
+        "\\rho_\\Gamma=\\frac{\\Gamma(p;i)}{U(\\{\\theta,p,i\\})-U(\\{\\theta\\})}"
+      ],
+      "controls": [
+        {
+          "key": "case",
+          "label": "Four-cell scores",
+          "values": [
+            "table",
+            "additive",
+            "second",
+            "workbench"
+          ],
+          "default": "table",
+          "value_labels": [
+            "Table 2.1: 0.20, 0.30, 0.25, 0.80",
+            "Additive: 0.20, 0.30, 0.25, 0.35",
+            "Second example: 0.20, 0.55, 0.50, 0.70",
+            "Workbench I.1 and I.3: 0.40, 0.52, 0.49, 0.58"
+          ]
+        },
+        {
+          "key": "run",
+          "label": "Run and scale",
+          "values": [
+            "matched",
+            "doubled",
+            "cubed"
+          ],
+          "default": "matched",
+          "value_labels": [
+            "Matched budgets",
+            "Joint run had twice the allowance",
+            "Matched, scores cubed first"
+          ]
+        }
+      ],
+      "function": "four_cells_picture",
+      "states": 12
+    },
+    {
+      "id": "C02-D02",
+      "title": "Why the neither cell matters",
+      "notebook_anchor": "demo-c02-d02",
+      "source_section": "Why all four cells",
+      "source_anchor": "why-all-four-cells",
+      "equations": [
+        "\\Gamma(p;i)=U(\\{\\theta,p,i\\})-U(\\{\\theta,p\\})-U(\\{\\theta,i\\})+U(\\{\\theta\\})",
+        "\\begin{aligned}U(\\{\\theta,p,i\\})-U(\\{\\theta\\})&=\\bigl[U(\\{\\theta,p\\})-U(\\{\\theta\\})\\bigr]\\\\&\\quad+\\bigl[U(\\{\\theta,i\\})-U(\\{\\theta\\})\\bigr]+\\Gamma(p;i).\\end{aligned}"
+      ],
+      "controls": [
+        {
+          "key": "baseline_b",
+          "label": "Baseline of System B (neither score)",
+          "values": [
+            0.3,
+            0.5,
+            0.7
+          ],
+          "default": 0.7,
+          "value_labels": [
+            "0.30",
+            "0.50",
+            "0.70"
+          ]
+        },
+        {
+          "key": "method",
+          "label": "Estimate of the pair's contribution",
+          "values": [
+            "four",
+            "three"
+          ],
+          "default": "four",
+          "value_labels": [
+            "Four cells, Equation (2.1)",
+            "Three cells (neither score left out)"
+          ]
+        }
+      ],
+      "function": "baseline_picture",
+      "states": 6
+    },
+    {
+      "id": "C02-D03",
+      "title": "The maple-river route and a leaking removal control",
+      "notebook_anchor": "demo-c02-d03",
+      "source_section": "What the experiment has to hold still",
+      "source_anchor": "what-the-experiment-has-to-hold-still",
+      "equations": [
+        "\\Gamma(p;i)=U(\\{\\theta,p,i\\})-U(\\{\\theta,p\\})-U(\\{\\theta,i\\})+U(\\{\\theta\\})",
+        "\\begin{aligned}U(\\{\\theta,p,i\\})-U(\\{\\theta\\})&=\\bigl[U(\\{\\theta,p\\})-U(\\{\\theta\\})\\bigr]\\\\&\\quad+\\bigl[U(\\{\\theta,i\\})-U(\\{\\theta\\})\\bigr]+\\Gamma(p;i).\\end{aligned}"
+      ],
+      "controls": [
+        {
+          "key": "cell",
+          "label": "Cell shown",
+          "values": [
+            "neither",
+            "p",
+            "i",
+            "both"
+          ],
+          "default": "neither",
+          "value_labels": [
+            "Neither operation",
+            "p only",
+            "i only",
+            "Both operations"
+          ]
+        },
+        {
+          "key": "leak",
+          "label": "Share of p's influence that survives the control",
+          "values": [
+            0.0,
+            0.5,
+            1.0
+          ],
+          "default": 0.0,
+          "value_labels": [
+            "0 (clean control)",
+            "0.50",
+            "1.00 (everything survives)"
+          ]
+        }
+      ],
+      "function": "route_picture",
+      "states": 12
+    },
+    {
+      "id": "C02-D04",
+      "title": "Is the contrast clearly different from zero?",
+      "notebook_anchor": "demo-c02-d04",
+      "source_section": "What the experiment has to hold still",
+      "source_anchor": "what-the-experiment-has-to-hold-still",
+      "equations": [
+        "\\Gamma(p;i)=U(\\{\\theta,p,i\\})-U(\\{\\theta,p\\})-U(\\{\\theta,i\\})+U(\\{\\theta\\})"
+      ],
+      "controls": [
+        {
+          "key": "trials",
+          "label": "Trials per cell",
+          "values": [
+            100,
+            400,
+            1600
+          ],
+          "default": 100
+        },
+        {
+          "key": "true_contrast",
+          "label": "True interaction contrast",
+          "values": [
+            0.05,
+            0.15
+          ],
+          "default": 0.15,
+          "value_labels": [
+            "0.05",
+            "0.15"
+          ]
+        },
+        {
+          "key": "pairs",
+          "label": "Pairs examined",
+          "values": [
+            1,
+            73536
+          ],
+          "default": 1,
+          "value_labels": [
+            "One pair, named in advance",
+            "73,536 pairs (384 heads), searched"
+          ]
+        }
+      ],
+      "function": "noise_picture",
+      "states": 12
+    }
+  ]
+}

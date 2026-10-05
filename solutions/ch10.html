@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ch10</title><style>body{max-width:920px;margin:40px auto;padding:0 24px;color:#20282c;background:#fff;font:17px/1.65 Georgia,serif}h1,h2,h3,nav,.tag{font-family:Arial,sans-serif;line-height:1.25}h1{font-size:32px}h2{margin-top:2.5em;font-size:23px}h3{margin-top:1.8em}a{color:#31586b}pre{padding:16px;background:#f3f5f5;overflow:auto;font:13px/1.5 Menlo,Consolas,monospace;white-space:pre-wrap}code{font:14px Menlo,Consolas,monospace}img,svg{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{padding:8px;border-bottom:1px solid #cdd3d6;text-align:left}.output{border-left:3px solid #ccd3d7;margin:18px 0;padding-left:16px}.tag{font-size:14px;color:#566168}.search{width:100%;box-sizing:border-box;padding:12px;font:16px Arial,sans-serif}.chapter{padding:14px 0;border-bottom:1px solid #d7dcde}.chapter p{margin:4px 0}.math-source{font-size:12px}nav{font-size:14px;margin-bottom:30px}@media print{body{margin:0;max-width:none;font-size:11pt}nav,.search{display:none}h2,h3{break-after:avoid}pre,.output{break-inside:avoid}}</style><script>window.MathJax={tex:{inlineMath:[['\\(','\\)'],['$','$']],displayMath:[['\\[','\\]'],['$$','$$']],packages:['base','ams','newcommand','noundefined']},svg:{fontCache:'local'}};</script><script defer src="../assets/mathjax/tex-svg.js"></script></head><body><nav><a href="../guide/index.html">Laboratory guide</a></nav><h1>Chapter 10: separate solutions</h1>
+<h2>Question 1</h2>
+<p>What is default continuation discount?</p>
+<p>0.9^3=0.729.</p>
+<h2>Question 2</h2>
+<p>What is interrupted review-release value?</p>
+<p>-1-0.9=-1.9, without continuation.</p>
+<h2>Question 3</h2>
+<p>Why is transfer continuation contribution 2 rather than 4?</p>
+<p>The transfer option takes 2 steps, so its continuation value 8 is discounted by 0.5^2=0.25, not 0.5, and contributes 8(0.25)=2 rather than 8(0.5)=4.</p>
+<h1>Chapter demonstration answers</h1>
+<p><a id="demonstration-1"></a></p>
+<h2>Demonstration 1</h2>
+<p>With no early stop and a start rule of at least 4, how many start states are allowed, and how long does the option run from x = 8?</p>
+<p>The allowed states are 4, 5, 6, 7 and 8, so 8 - 4 + 1 = 5 states. From x = 8 it checks one record per step, so it runs 8 x 1 = 8 steps.</p>
+<p><strong>Prediction answer:</strong> It runs 4 steps from x = 6, and it cannot start from x = 3..</p>
+<p>From x = 6 the option checks 6 - 2 = 4 records. Row x = 3 is below the start rule, so it is blocked.</p>
+<p><strong>If you chose another answer:</strong> Set the start rule to 4 and the early stop to 2 records remaining: from x = 6 the option checks 6 - 2 = 4 records, and row x = 3 is blocked because 3 is below 4.</p>
+<p><a id="demonstration-2"></a></p>
+<h2>Demonstration 2</h2>
+<p>With discount 0.9, rewards 2 and 3, and continuation 10, what is the value if the option takes 3 steps and the third step pays 0?</p>
+<p>2 + 0.9 x 3 + 0.81 x 0 + 0.729 x 10 = 2 + 2.7 + 0 + 7.29 = 11.99.</p>
+<p><strong>Prediction answer:</strong> It grows, from 0.9 to 2.439..</p>
+<p>The overstatement is 10 x (0.9 - 0.9^4) = 10 x (0.9 - 0.6561) = 2.439, up from 10 x (0.9 - 0.81) = 0.9.</p>
+<p><strong>If you chose another answer:</strong> Set the duration to 4 with the chapter example and discount 0.9: the overstatement is 10 x (0.9 - 0.9^4) = 2.439, up from 0.9 at duration 2.</p>
+<p><a id="demonstration-3"></a></p>
+<h2>Demonstration 3</h2>
+<p>In the parallel schedule with an unchanged source, how long must the audit take before it, rather than the chain Draft, Verify, Publish, sets the release time?</p>
+<p>The chain takes 2 + 3 + 1 = 6 minutes, so the audit must take more than 6 minutes. At exactly 6 the two chains tie. The cost stays 4 + 7 + 2 + 3 = 16 credits.</p>
+<p><strong>Prediction answer:</strong> The audit sets 8 minutes, and the cost stays 16 credits..</p>
+<p>T = max{2 + 3 + 1, 8} = max{6, 8} = 8 minutes, so the audit is the longest chain. The cost is still 4 + 7 + 2 + 3 = 16 credits.</p>
+<p><strong>If you chose another answer:</strong> Set the audit to 8 minutes in parallel with an unchanged source: T = max{6, 8} = 8 minutes, so the audit is the longest chain, and the cost stays 4 + 7 + 2 + 3 = 16 credits.</p>
+<p><a id="demonstration-4"></a></p>
+<h2>Demonstration 4</h2>
+<p>At discount 0.9, what is the value of review-release if it is stopped after 1 step?</p>
+<p>Only the first reward is earned and nothing is discounted yet: 1 x (-1) = -1. This demonstration adds no continuation, so archive (1) is higher.</p>
+<p><strong>Prediction answer:</strong> Review-release is worth -1.9, so archive (1) is higher..</p>
+<p>Only two rewards are earned: 1 x (-1) + 0.9 x (-1) = -1.9, with no continuation, so archive (1) is higher.</p>
+<p><strong>If you chose another answer:</strong> Choose 'interrupted after 2 steps' at discount 0.9: only two rewards are earned, 1 x (-1) + 0.9 x (-1) = -1.9, with no continuation, so archive (1) is higher.</p></body></html>
